@@ -8,26 +8,16 @@
     <style>
         body { margin: 0; padding: 0; background: #111; overflow: hidden; font-family: Arial, sans-serif; user-select: none; }
         canvas { display: block; width: 100vw; height: 100vh; }
-        
-        /* Верхняя панель */
         #hud { position: absolute; top: 20px; left: 20px; right: 20px; display: flex; justify-content: space-between; color: white; font-size: 22px; font-weight: bold; text-shadow: 0 2px 4px #000; z-index: 10; }
-        
-        /* Главное меню */
         #menu { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(17, 17, 17, 0.95); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 20; }
         #menu h1 { color: #ff9900; font-size: 36px; margin-bottom: 10px; text-shadow: 0 0 10px rgba(255,153,0,0.5); }
         #menu p { color: #aaa; margin-bottom: 30px; }
         .btn-main { background: #ff9900; color: white; border: none; padding: 15px 50px; border-radius: 30px; font-size: 24px; font-weight: bold; box-shadow: 0 4px 15px rgba(255, 153, 0, 0.4); margin-bottom: 15px; width: 200px; }
         .btn-secondary { background: #333; color: white; border: 2px solid #555; padding: 12px 30px; border-radius: 20px; font-size: 18px; font-weight: bold; margin: 5px; width: 150px; }
-
-        /* Кнопка вывода */
         #withdraw-btn { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); background: #ff9900; color: white; border: none; padding: 15px 40px; border-radius: 30px; font-size: 20px; font-weight: bold; display: none; box-shadow: 0 4px 15px rgba(255, 153, 0, 0.5); z-index: 10; }
-        
-        /* Экран проигрыша */
         #game-over { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.9); padding: 25px; border-radius: 20px; text-align: center; color: white; display: none; border: 2px solid #ff9900; width: 80%; max-width: 300px; z-index: 15; }
         #game-over h2 { color: #ff9900; margin-top: 0; }
         .btn-restart { background: #ff9900; color: white; border: none; padding: 12px 25px; font-size: 18px; border-radius: 12px; margin-top: 15px; font-weight: bold; width: 100%; }
-        
-        /* Всплывающее окно магазина */
         #shop-modal { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #222; padding: 20px; border-radius: 15px; text-align: center; color: white; display: none; border: 2px solid #ff9900; width: 80%; max-width: 300px; z-index: 30; }
         #shop-modal button { background: #ff9900; color: white; border: none; padding: 10px 20px; border-radius: 10px; margin-top: 15px; width: 100%; font-size: 16px; }
     </style>
@@ -38,7 +28,6 @@
         <div>🏆 <span id="score">0</span></div>
     </div>
 
-    <!-- Главное меню -->
     <div id="menu">
         <h1>Мишка Раннер 🐻</h1>
         <p>Беги, прыгай, собирай монеты!</p>
@@ -49,7 +38,6 @@
         </div>
     </div>
 
-    <!-- Всплывающее окно магазина -->
     <div id="shop-modal">
         <h2>Магазин 🛒</h2>
         <p>Здесь скоро можно будет купить крутые скины для мишки и бонусы за монеты!</p>
@@ -57,7 +45,6 @@
     </div>
 
     <button id="withdraw-btn" onclick="requestWithdraw()">Вывести 15⭐</button>
-    
     <canvas id="game"></canvas>
     
     <div id="game-over">
@@ -79,9 +66,14 @@
         const groundY = canvas.height - 80;
 
         let soundEnabled = true;
-        let isPlaying = false; // Игра запущена или мы в меню?
-
+        let isPlaying = false; 
         let audioCtx;
+        let musicInterval;
+
+        // Фоновая музыка (простая мелодия)
+        const melody = [261.63, 329.63, 392.00, 523.25, 392.00, 329.63]; // Ноты
+        let noteIndex = 0;
+
         function playSound(freq, type, duration) {
             if (!soundEnabled) return;
             if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -94,6 +86,20 @@
             gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + duration);
             osc.connect(gain); gain.connect(audioCtx.destination);
             osc.start(); osc.stop(audioCtx.currentTime + duration);
+        }
+
+        function toggleMusic(start) {
+            if (start && soundEnabled) {
+                if (musicInterval) clearInterval(musicInterval);
+                musicInterval = setInterval(() => {
+                    if (isPlaying && !gameOver) {
+                        playSound(melody[noteIndex], 'triangle', 0.2);
+                        noteIndex = (noteIndex + 1) % melody.length;
+                    }
+                }, 300); // Скорость мелодии
+            } else {
+                clearInterval(musicInterval);
+            }
         }
 
         let wallet = parseInt(localStorage.getItem('bearWallet')) || 0;
@@ -119,6 +125,8 @@
         function startGame() {
             document.getElementById('menu').style.display = 'none';
             isPlaying = true;
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            toggleMusic(true);
             restartGame();
         }
 
@@ -126,6 +134,7 @@
             document.getElementById('game-over').style.display = 'none';
             document.getElementById('menu').style.display = 'flex';
             isPlaying = false;
+            toggleMusic(false);
             updateUI();
             ctx.clearRect(0, 0, canvas.width, canvas.height);
         }
@@ -133,13 +142,14 @@
         function toggleSound() {
             soundEnabled = !soundEnabled;
             document.getElementById('sound-btn').innerText = soundEnabled ? "🔊 Звук" : "🔇 Без звука";
+            if (!soundEnabled) toggleMusic(false);
+            else if (isPlaying) toggleMusic(true);
         }
 
         function openShop() { document.getElementById('shop-modal').style.display = 'block'; }
         function closeShop() { document.getElementById('shop-modal').style.display = 'none'; }
 
         function jump() {
-            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             if (!player.isJumping && !gameOver && isPlaying) {
                 player.vy = player.jumpForce;
                 player.isJumping = true;
@@ -161,38 +171,21 @@
         function update() {
             if (gameOver || !isPlaying) return;
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            ctx.fillStyle = '#222';
-            ctx.fillRect(0, groundY, canvas.width, 80);
-
-            player.vy += player.gravity;
-            player.y += player.vy;
-            if (player.y > groundY - player.h) {
-                player.y = groundY - player.h; player.vy = 0; player.isJumping = false;
-            }
-
-            ctx.font = "40px Arial";
-            ctx.fillText("🐻", player.x, player.y + 40);
-
+            ctx.fillStyle = '#222'; ctx.fillRect(0, groundY, canvas.width, 80);
+            player.vy += player.gravity; player.y += player.vy;
+            if (player.y > groundY - player.h) { player.y = groundY - player.h; player.vy = 0; player.isJumping = false; }
+            ctx.font = "40px Arial"; ctx.fillText("🐻", player.x, player.y + 40);
             frameCount++;
-            if (frameCount % 80 === 0 && Math.random() > 0.3) {
-                obstacles.push({ x: canvas.width, y: groundY - 35, w: 25, h: 35 });
-            }
-            if (frameCount % 150 === 0 && Math.random() > 0.5) {
-                coinObjects.push({ x: canvas.width, y: groundY - 90 - Math.random() * 40, r: 12 });
-            }
+            if (frameCount % 80 === 0 && Math.random() > 0.3) obstacles.push({ x: canvas.width, y: groundY - 35, w: 25, h: 35 });
+            if (frameCount % 150 === 0 && Math.random() > 0.5) coinObjects.push({ x: canvas.width, y: groundY - 90 - Math.random() * 40, r: 12 });
 
             for (let i = obstacles.length - 1; i >= 0; i--) {
-                let obs = obstacles[i];
-                obs.x -= gameSpeed;
-                ctx.fillStyle = '#e74c3c';
-                ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
-
-                if (player.x < obs.x + obs.w && player.x + player.w > obs.x &&
-                    player.y < obs.y + obs.h && player.y + player.h > obs.y) {
+                let obs = obstacles[i]; obs.x -= gameSpeed;
+                ctx.fillStyle = '#e74c3c'; ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
+                if (player.x < obs.x + obs.w && player.x + player.w > obs.x && player.y < obs.y + obs.h && player.y + player.h > obs.y) {
                     playSound(150, 'sawtooth', 0.3);
                     if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
-                    gameOver = true;
+                    gameOver = true; toggleMusic(false);
                     document.getElementById('final-score').innerText = Math.floor(score);
                     document.getElementById('game-over').style.display = 'block';
                 }
@@ -200,16 +193,11 @@
             }
 
             for (let i = coinObjects.length - 1; i >= 0; i--) {
-                let coin = coinObjects[i];
-                coin.x -= gameSpeed;
-                ctx.beginPath();
-                ctx.arc(coin.x, coin.y, coin.r, 0, Math.PI * 2);
+                let coin = coinObjects[i]; coin.x -= gameSpeed;
+                ctx.beginPath(); ctx.arc(coin.x, coin.y, coin.r, 0, Math.PI * 2);
                 ctx.fillStyle = '#f1c40f'; ctx.fill();
-                
                 if (Math.hypot((player.x + 20) - coin.x, (player.y + 20) - coin.y) < 30) {
-                    wallet++;
-                    localStorage.setItem('bearWallet', wallet);
-                    updateUI();
+                    wallet++; localStorage.setItem('bearWallet', wallet); updateUI();
                     playSound(800, 'square', 0.1);
                     if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
                     coinObjects.splice(i, 1); continue;
@@ -217,20 +205,20 @@
                 if (coin.x < -50) coinObjects.splice(i, 1);
             }
 
-            score += 0.1;
-            document.getElementById('score').innerText = Math.floor(score);
+            score += 0.1; document.getElementById('score').innerText = Math.floor(score);
             if (frameCount % 600 === 0) gameSpeed += 0.5;
-
             requestAnimationFrame(update);
         }
 
+        // ОТПРАВКА ЗАЯВКИ НА ВЫВОД
         function requestWithdraw() {
             if (wallet < THRESHOLD) return;
             if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
             
             const tgUser = tg.initDataUnsafe?.user;
             if (tgUser) {
-                const link = `https://t.me/${BOT_USERNAME}?start=withdraw_${tgUser.id}_${wallet}`;
+                // Формируем ссылку: start=w_ID_МОНЕТЫ
+                const link = `https://t.me/${BOT_USERNAME}?start=w_${tgUser.id}_${wallet}`;
                 tg.openTelegramLink(link);
                 wallet = 0; 
                 localStorage.setItem('bearWallet', wallet);
@@ -238,9 +226,7 @@
             }
         }
 
-        // Первоначальная отрисовка заднего фона
-        ctx.fillStyle = '#222';
-        ctx.fillRect(0, groundY, canvas.width, 80);
+        ctx.fillStyle = '#222'; ctx.fillRect(0, groundY, canvas.width, 80);
     </script>
 </body>
 </html>
