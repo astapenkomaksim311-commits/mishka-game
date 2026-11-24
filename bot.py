@@ -1,9 +1,7 @@
 import telebot
 
 # ВСТАВЬ СЮДА СВОЙ НОВЫЙ ТОКЕН В КАВЫЧКАХ
-BOT_TOKEN = '9174710090:AAGoBcR_3WcSZSoKFHuioG0vWJFuXgNsxds
-
-'
+BOT_TOKEN = '9174710090:AAFDIxGuC-j456Fj-fdRgZzkZxKefJdmN28'
 # ВСТАВЬ СЮДА СВОЙ ID ЦИФРАМИ
 ADMIN_ID = 8834515141 
 
