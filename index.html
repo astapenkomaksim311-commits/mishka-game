@@ -8,10 +8,28 @@
     <style>
         body { margin: 0; padding: 0; background: #111; overflow: hidden; font-family: Arial, sans-serif; user-select: none; }
         canvas { display: block; width: 100vw; height: 100vh; }
-        #hud { position: absolute; top: 20px; left: 20px; right: 20px; display: flex; justify-content: space-between; color: white; font-size: 22px; font-weight: bold; text-shadow: 0 2px 4px #000; }
-        #withdraw-btn { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); background: #ff9900; color: white; border: none; padding: 15px 40px; border-radius: 30px; font-size: 20px; font-weight: bold; display: none; box-shadow: 0 4px 15px rgba(255, 153, 0, 0.5); }
-        #game-over { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.9); padding: 20px; border-radius: 15px; text-align: center; color: white; display: none; border: 2px solid #ff9900; width: 80%; max-width: 300px; }
-        button.restart { background: #ff9900; color: white; border: none; padding: 10px 20px; font-size: 18px; border-radius: 10px; margin-top: 15px; font-weight: bold; width: 100%; }
+        
+        /* Верхняя панель */
+        #hud { position: absolute; top: 20px; left: 20px; right: 20px; display: flex; justify-content: space-between; color: white; font-size: 22px; font-weight: bold; text-shadow: 0 2px 4px #000; z-index: 10; }
+        
+        /* Главное меню */
+        #menu { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(17, 17, 17, 0.95); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 20; }
+        #menu h1 { color: #ff9900; font-size: 36px; margin-bottom: 10px; text-shadow: 0 0 10px rgba(255,153,0,0.5); }
+        #menu p { color: #aaa; margin-bottom: 30px; }
+        .btn-main { background: #ff9900; color: white; border: none; padding: 15px 50px; border-radius: 30px; font-size: 24px; font-weight: bold; box-shadow: 0 4px 15px rgba(255, 153, 0, 0.4); margin-bottom: 15px; width: 200px; }
+        .btn-secondary { background: #333; color: white; border: 2px solid #555; padding: 12px 30px; border-radius: 20px; font-size: 18px; font-weight: bold; margin: 5px; width: 150px; }
+
+        /* Кнопка вывода */
+        #withdraw-btn { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); background: #ff9900; color: white; border: none; padding: 15px 40px; border-radius: 30px; font-size: 20px; font-weight: bold; display: none; box-shadow: 0 4px 15px rgba(255, 153, 0, 0.5); z-index: 10; }
+        
+        /* Экран проигрыша */
+        #game-over { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.9); padding: 25px; border-radius: 20px; text-align: center; color: white; display: none; border: 2px solid #ff9900; width: 80%; max-width: 300px; z-index: 15; }
+        #game-over h2 { color: #ff9900; margin-top: 0; }
+        .btn-restart { background: #ff9900; color: white; border: none; padding: 12px 25px; font-size: 18px; border-radius: 12px; margin-top: 15px; font-weight: bold; width: 100%; }
+        
+        /* Всплывающее окно магазина */
+        #shop-modal { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #222; padding: 20px; border-radius: 15px; text-align: center; color: white; display: none; border: 2px solid #ff9900; width: 80%; max-width: 300px; z-index: 30; }
+        #shop-modal button { background: #ff9900; color: white; border: none; padding: 10px 20px; border-radius: 10px; margin-top: 15px; width: 100%; font-size: 16px; }
     </style>
 </head>
 <body>
@@ -19,17 +37,38 @@
         <div>🪙 <span id="wallet">0</span></div>
         <div>🏆 <span id="score">0</span></div>
     </div>
+
+    <!-- Главное меню -->
+    <div id="menu">
+        <h1>Мишка Раннер 🐻</h1>
+        <p>Беги, прыгай, собирай монеты!</p>
+        <button class="btn-main" onclick="startGame()">Играть</button>
+        <div style="display: flex;">
+            <button class="btn-secondary" onclick="toggleSound()" id="sound-btn">🔊 Звук</button>
+            <button class="btn-secondary" onclick="openShop()">🛒 Магазин</button>
+        </div>
+    </div>
+
+    <!-- Всплывающее окно магазина -->
+    <div id="shop-modal">
+        <h2>Магазин 🛒</h2>
+        <p>Здесь скоро можно будет купить крутые скины для мишки и бонусы за монеты!</p>
+        <button onclick="closeShop()">Закрыть</button>
+    </div>
+
     <button id="withdraw-btn" onclick="requestWithdraw()">Вывести 15⭐</button>
+    
     <canvas id="game"></canvas>
+    
     <div id="game-over">
         <h2>Упс!</h2>
         <p>Собрано: <span id="final-score">0</span></p>
-        <button class="restart" onclick="restartGame()">Играть снова</button>
+        <button class="btn-restart" onclick="showMenu()">В меню</button>
+        <button class="btn-restart" style="margin-top: 5px; background: #444;" onclick="restartGame()">Играть снова</button>
     </div>
 
     <script>
         const BOT_USERNAME = "MishkaRunGame_bot"; 
-
         const canvas = document.getElementById('game');
         const ctx = canvas.getContext('2d');
         const tg = window.Telegram.WebApp;
@@ -39,8 +78,12 @@
         canvas.height = window.innerHeight;
         const groundY = canvas.height - 80;
 
+        let soundEnabled = true;
+        let isPlaying = false; // Игра запущена или мы в меню?
+
         let audioCtx;
         function playSound(freq, type, duration) {
+            if (!soundEnabled) return;
             if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             if (audioCtx.state === 'suspended') audioCtx.resume();
             const osc = audioCtx.createOscillator();
@@ -66,12 +109,38 @@
 
         function updateUI() {
             document.getElementById('wallet').innerText = wallet;
-            document.getElementById('withdraw-btn').style.display = wallet >= THRESHOLD ? 'block' : 'none';
+            if (wallet >= THRESHOLD) {
+                document.getElementById('withdraw-btn').style.display = isPlaying ? 'block' : 'none';
+            } else {
+                document.getElementById('withdraw-btn').style.display = 'none';
+            }
         }
+
+        function startGame() {
+            document.getElementById('menu').style.display = 'none';
+            isPlaying = true;
+            restartGame();
+        }
+
+        function showMenu() {
+            document.getElementById('game-over').style.display = 'none';
+            document.getElementById('menu').style.display = 'flex';
+            isPlaying = false;
+            updateUI();
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            document.getElementById('sound-btn').innerText = soundEnabled ? "🔊 Звук" : "🔇 Без звука";
+        }
+
+        function openShop() { document.getElementById('shop-modal').style.display = 'block'; }
+        function closeShop() { document.getElementById('shop-modal').style.display = 'none'; }
 
         function jump() {
             if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            if (!player.isJumping && !gameOver) {
+            if (!player.isJumping && !gameOver && isPlaying) {
                 player.vy = player.jumpForce;
                 player.isJumping = true;
                 playSound(400, 'sine', 0.1);
@@ -85,11 +154,12 @@
             player.y = groundY - 40; player.vy = 0; player.isJumping = false;
             document.getElementById('game-over').style.display = 'none';
             document.getElementById('score').innerText = score;
+            updateUI();
             update();
         }
 
         function update() {
-            if (gameOver) return;
+            if (gameOver || !isPlaying) return;
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
             ctx.fillStyle = '#222';
@@ -168,8 +238,9 @@
             }
         }
 
-        updateUI();
-        update();
+        // Первоначальная отрисовка заднего фона
+        ctx.fillStyle = '#222';
+        ctx.fillRect(0, groundY, canvas.width, 80);
     </script>
 </body>
 </html>
