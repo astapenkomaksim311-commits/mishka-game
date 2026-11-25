@@ -1,17 +1,17 @@
 import telebot
 import json
-import os
 from telebot.types import LabeledPrice, InlineKeyboardMarkup, InlineKeyboardButton
 
-# <<< ИЗМЕНИ ЭТИ ТРИ СТРОЧКИ ПОД СЕБЯ >>>
-BOT_TOKEN = os.getenv("BOT_TOKEN") or "9174710090:AAELUzQyyWbPxlZEMPtIIH0haf7ijYYNmMA"
+# <<< ВСТАВЬ СЮДА НОВЫЙ ТОКЕН ОТ BOTFATHER МЕЖДУ КАВЫЧЕК >>>
+BOT_TOKEN = "123456789:ABCdefGHIjklMNOpqrsTUVwxyz"
 ADMIN_ID = 8834515141
-APP_SHORT_NAME = "@MishkaRunGame_bot"
-
+APP_SHORT_NAME = "app"
 BOT_USERNAME = "MishkaRunGame_bot"
 
 SKIN_PRICES = {
-    "boost5": {"name": "Буст x5", "price": 30},
+    "boost1": {"name": "Буст x3 на 1 день", "price": 30},
+    "boost2": {"name": "Буст x3 на 2 дня",  "price": 50},
+    "boost3": {"name": "Буст x3 на 5 дней", "price": 100},
 }
 
 bot = telebot.TeleBot(BOT_TOKEN)
@@ -21,7 +21,6 @@ def game_url(startapp: str) -> str:
     return f"https://t.me/{BOT_USERNAME}/{APP_SHORT_NAME}?startapp={startapp}"
 
 
-# --- ПОПОЛНЕНИЕ ---
 @bot.message_handler(commands=['topup'])
 def topup_menu(message):
     markup = InlineKeyboardMarkup()
@@ -33,7 +32,6 @@ def topup_menu(message):
 @bot.callback_query_handler(func=lambda call: call.data.startswith('buy_stars_'))
 def process_topup(call):
     amount = int(call.data.split('_')[2])
-    prices = [LabeledPrice(label=f"Пополнение на {amount} Stars", amount=amount)]
     bot.send_invoice(
         chat_id=call.message.chat.id,
         title="Пополнение баланса",
@@ -41,19 +39,17 @@ def process_topup(call):
         invoice_payload=f"topup_{amount}",
         provider_token="",
         currency="XTR",
-        prices=prices,
+        prices=[LabeledPrice(label=f"Пополнение на {amount} Stars", amount=amount)],
         start_parameter="topup"
     )
 
 
-# --- СТАРТ / ЗАЯВКИ ---
 @bot.message_handler(commands=['start'])
 def start(message):
     text = message.text or ""
     payload = text.replace("/start", "", 1).strip() if text.startswith("/start") else ""
     name = f"@{message.from_user.username}" if message.from_user.username else f"id{message.from_user.id}"
 
-    # Заявка на вывод подарка: /start w_<user_id>_<stars>
     if payload.startswith("w_"):
         try:
             data = payload[2:].split("_")
@@ -69,25 +65,24 @@ def start(message):
                              f"🔔🔔🔔 ЗАЯВКА НА ВЫВОД ПОДАРКА!\n\n"
                              f"Игрок: {name}\nID: `{message.from_user.id}`\n"
                              f"Подарок: {gift} ({stars}⭐)\n\n"
-                             f"👉 Как отправить: открой чат с этим игроком → скрепка → Подарок → выбери на {stars} звёзд → Отправить.",
+                             f"👉 Открой чат с игроком → скрепка → Подарок → выбери на {stars} звёзд → Отправить.",
                              parse_mode="Markdown", reply_markup=markup)
             bot.send_message(message.chat.id, "✅ Заявка принята! Скоро отправим 🎁")
         except Exception as e:
             print("w_ error:", e)
     elif payload.startswith("buy_"):
         try:
-            skin_id = payload[4:]
-            if skin_id in SKIN_PRICES:
-                item = SKIN_PRICES[skin_id]
-                prices = [LabeledPrice(label=item["name"], amount=item["price"])]
+            item_id = payload[4:]
+            if item_id in SKIN_PRICES:
+                item = SKIN_PRICES[item_id]
                 bot.send_invoice(
                     chat_id=message.chat.id,
                     title=f"Покупка: {item['name']}",
-                    description="Разблокировка предмета",
-                    invoice_payload=f"pay_{skin_id}",
+                    description="Активация буста в игре",
+                    invoice_payload=f"pay_{item_id}",
                     provider_token="",
                     currency="XTR",
-                    prices=prices,
+                    prices=[LabeledPrice(label=item["name"], amount=item["price"])],
                     start_parameter="buy-item"
                 )
             else:
@@ -101,7 +96,6 @@ def start(message):
                      reply_markup=markup)
 
 
-# --- РЕШЕНИЯ ПО ПОДАРКАМ (только админ) ---
 @bot.callback_query_handler(func=lambda call: call.data.startswith("gift_ok_") or call.data.startswith("gift_no_"))
 def gift_decision(call):
     if call.from_user.id != ADMIN_ID:
@@ -117,7 +111,6 @@ def gift_decision(call):
     bot.answer_callback_query(call.id)
 
 
-# --- ОПЛАТА ---
 @bot.pre_checkout_query_handler(func=lambda query: True)
 def checkout(pre_checkout_query):
     bot.answer_pre_checkout_query(pre_checkout_query.id, ok=True)
@@ -139,14 +132,13 @@ def got_payment(message):
         item_id = payload.split('_')[1]
         item = SKIN_PRICES.get(item_id, {})
         markup = InlineKeyboardMarkup()
-        markup.add(InlineKeyboardButton("🎮 Забрать скин в игре", url=game_url(f"skin_{item_id}")))
+        markup.add(InlineKeyboardButton("🎮 Активировать в игре", url=game_url(f"boost_{item_id}")))
         bot.send_message(ADMIN_ID, f"💰 ПОКУПКА! Игрок {name} купил `{item_id}` за {amount}⭐!")
         bot.send_message(message.chat.id,
-                         f"✅ Оплата прошла: {item.get('name', item_id)}!\nНажми кнопку — скин сразу наденется:",
+                         f"✅ Оплата прошла: {item.get('name', item_id)}!\nНажми кнопку — буст активируется:",
                          reply_markup=markup)
 
 
-# --- ДАННЫЕ ИЗ ИГРЫ ---
 @bot.message_handler(content_types=['web_app_data'])
 def web_app_data(message):
     try:
