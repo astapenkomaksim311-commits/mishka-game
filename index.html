@@ -187,7 +187,7 @@
         function musicTick() {
             const ctx = getAudio();
             if (!ctx || !sound.on || !music.mode) return;
-            if (ctx.state !== 'running') { ctx.resume(); return; } // тик пропускается, но мелодия не сбрасывается
+            if (ctx.state !== 'running') { ctx.resume(); return; }
             const runner = music.mode === 'runner';
             const chord = CHORDS[Math.floor(music.step / 8) % 4];
             const arp = [chord[0], chord[1], chord[2], chord[1], chord[2], chord[0], chord[1], chord[2]];
@@ -218,7 +218,6 @@
             if (document.hidden) { clearInterval(music.timer); music.timer = null; }
             else if (music.mode && sound.on) setMusic(music.mode, true);
         });
-        // Оживление звука: ТОЛЬКО resume контекста. Музыку не перезапускаем на каждом тапе!
         const unlockAudio = () => { getAudio(); };
         ['touchstart', 'mousedown', 'keydown'].forEach(ev => document.addEventListener(ev, unlockAudio, { passive: true }));
 
@@ -282,7 +281,6 @@
         applyStartParam();
 
         function closeModal(id) { document.getElementById(id).style.display = 'none'; sfx('click'); }
-        // Купить звёзды: открывает бота с пакетами, после оплаты звёзды падают на баланс кнопкой из чата
         function topUpStars() {
             sfx('click');
             tg.openTelegramLink(`https://t.me/${BOT_USERNAME}?start=topup`);
@@ -468,6 +466,7 @@
         let obs = [], coinsArr = [], particles = [], floaters = [], clouds = [];
         let bgFar = 0, bgMid = 0, bgNear = 0;
         let speed = 4.0, score = 0, lastObstacle = 0, lastCoin = 0, nextCoinIn = 8000, showHint = 0;
+        let curBob = 0; // текущее подпрыгивание мишки (учитывается и в картинке, и в сборе)
 
         const GROUND_H = 55;
         const groundY = () => canvas.height - GROUND_H;
@@ -476,6 +475,9 @@
         const APEX = (JUMP_V * JUMP_V) / (2 * 0.6);
         const COIN_COINS = 1;
         const COIN_SCORE = 5;
+        const COLLECT_R = 42;   // радиус сбора (было 30)
+        const MAGNET_R = 110;   // с этого расстояния монета тянется к мишке
+        const MAGNET_K = 0.12;  // сила магнита (0 = выключен)
 
         function baseSpeed() {
             return 3.8 + Math.min(Math.floor(state.best) / 1500, 2.4);
@@ -497,7 +499,7 @@
             obs = []; coinsArr = []; particles = []; floaters = [];
             p.y = playerBase(); p.vy = 0;
             speed = baseSpeed(); score = 0; lastObstacle = 0; lastCoin = 0;
-            nextCoinIn = 6000 + Math.random() * 6000; // первая монета через 6-12 сек
+            nextCoinIn = 6000 + Math.random() * 6000;
             showHint = 2500; rOver = false;
         }
         function startRunner() {
@@ -656,25 +658,30 @@
             }
             ctx.globalAlpha = 1;
 
+            // Физика игрока
             p.vy += p.g; p.y += p.vy;
             if (p.y > playerBase()) { p.y = playerBase(); p.vy = 0; }
             const skin = skinsData.find(s => s.id === state.currentSkin) || skinsData[0];
             const grounded = p.y >= playerBase() - 1;
-            let bob = 0;
+
+            // Подпрыгивание при беге — ЕДИНОЕ для картинки и зоны сбора (фикс «пропускает монеты»)
             if (grounded) {
-                bob = Math.sin(t / 140) * 2.5;
-                if (skin.fx === 'bounce') bob += Math.abs(Math.sin(t / 90)) * 4;
+                curBob = Math.sin(t / 140) * 2.5;
+                if (skin.fx === 'bounce') curBob += Math.abs(Math.sin(t / 90)) * 4;
+            } else {
+                curBob = 0; // в прыжке мишка стабильна — попадания точные
             }
+            const drawY = p.y + curBob;
             ctx.font = '42px Arial'; ctx.textAlign = 'left';
-            ctx.fillText(skin.emoji, p.x, p.y + 42 + bob);
+            ctx.fillText(skin.emoji, p.x, drawY + 42);
 
             if (grounded && Math.random() < 0.35) {
-                if (skin.fx === 'flame' || skin.fx === 'fire') particles.push({ x: p.x, y: p.y + 34, vx: -1.5, vy: -Math.random() * 1.5, life: 0.6, color: skin.fx === 'fire' ? '#ff6b1a' : '#ff9c40' });
-                if (skin.fx === 'sparkle') particles.push({ x: p.x, y: p.y + 20 + Math.random() * 20, vx: -1, vy: -Math.random() * 1.5, life: 0.7, color: '#f1c40f' });
-                if (skin.fx === 'snow') particles.push({ x: p.x, y: p.y + 20, vx: -1, vy: -Math.random(), life: 0.8, color: 'rgba(180,220,255,0.8)' });
+                if (skin.fx === 'flame' || skin.fx === 'fire') particles.push({ x: p.x, y: drawY + 34, vx: -1.5, vy: -Math.random() * 1.5, life: 0.6, color: skin.fx === 'fire' ? '#ff6b1a' : '#ff9c40' });
+                if (skin.fx === 'sparkle') particles.push({ x: p.x, y: drawY + 20 + Math.random() * 20, vx: -1, vy: -Math.random() * 1.5, life: 0.7, color: '#f1c40f' });
+                if (skin.fx === 'snow') particles.push({ x: p.x, y: drawY + 20, vx: -1, vy: -Math.random(), life: 0.8, color: 'rgba(180,220,255,0.8)' });
             }
             if (grounded && Math.random() < 0.3) {
-                particles.push({ x: p.x + 8, y: p.y + 40, vx: -2, vy: -Math.random(), life: 0.5, color: 'rgba(255,255,255,0.5)' });
+                particles.push({ x: p.x + 8, y: drawY + 40, vx: -2, vy: -Math.random(), life: 0.5, color: 'rgba(255,255,255,0.5)' });
             }
 
             score += speed * 0.05;
@@ -699,20 +706,17 @@
                 ctx.globalAlpha = 1;
             }
 
-            // Спавн препятствий
             const interval = 1500 + Math.max(0, (6.5 - speed)) * 150;
             if ((!lastObstacle || t - lastObstacle > interval) && obs.length < 2) {
                 const ob = { x: canvas.width, y: groundY() - 30, w: 30, h: 30, emoji: Math.random() > 0.5 ? '🌲' : '🪨' };
                 obs.push(ob);
                 lastObstacle = t;
-                // Монета над препятствием — редко (20%), нужен риск
                 if (Math.random() < 0.2) {
-                    coinsArr.push({ x: ob.x + 5, y: groundY() - Math.min(APEX - 10, 60 + Math.random() * 35) });
+                    coinsArr.push({ x: ob.x + 5, y: groundY() - Math.min(APEX - 15, 60 + Math.random() * 35) });
                 }
             }
-            // Обычные монеты: раз в 6-12 секунд => примерно 5-12 монет в минуту
             if (!lastCoin || t - lastCoin > nextCoinIn) {
-                coinsArr.push({ x: canvas.width, y: groundY() - 45 - Math.random() * (APEX - 50) });
+                coinsArr.push({ x: canvas.width, y: groundY() - 40 - Math.random() * (APEX - 45) });
                 lastCoin = t;
                 nextCoinIn = 6000 + Math.random() * 6000;
             }
@@ -721,8 +725,9 @@
                 obs[i].x -= speed;
                 ctx.font = '36px Arial';
                 ctx.fillText(obs[i].emoji, obs[i].x, obs[i].y + 34);
+                // Хитбокс препятствий учитывает то же подпрыгивание
                 if (p.x + 9 < obs[i].x + obs[i].w && p.x + 30 - 9 > obs[i].x &&
-                    p.y + 9 < obs[i].y + obs[i].h && p.y + 42 - 9 > obs[i].y) {
+                    p.y + curBob + 9 < obs[i].y + obs[i].h && p.y + curBob + 42 - 9 > obs[i].y) {
                     rOver = true;
                     sfx('explosion'); haptic('heavy');
                     const final = Math.floor(score);
@@ -736,24 +741,32 @@
                 if (obs[i].x < -60) obs.splice(i, 1);
             }
 
+            // Монеты: магнит + увеличенный радиус сбора
+            const pcx = p.x + 20, pcy = p.y + curBob + 20; // центр мишки с учётом подпрыгивания
             for (let i = coinsArr.length - 1; i >= 0; i--) {
-                coinsArr[i].x -= speed;
+                const c = coinsArr[i];
+                c.x -= speed;
+                // Магнит: монета плавно тянется к мишке, когда близко
+                const mdx = pcx - (c.x + 12), mdy = pcy - (c.y - 12);
+                const dist = Math.hypot(mdx, mdy);
+                if (dist < MAGNET_R && dist > 1) {
+                    c.x += (mdx / dist) * MAGNET_K * dist * 0.1;
+                    c.y += (mdy / dist) * MAGNET_K * dist * 0.1;
+                }
                 ctx.font = '26px Arial';
-                ctx.fillText('🪙', coinsArr[i].x, coinsArr[i].y);
-                const dx = p.x + 20 - coinsArr[i].x - 12;
-                const dy = p.y + 20 - coinsArr[i].y + 12;
-                if (Math.hypot(dx, dy) < 30) {
+                ctx.fillText('🪙', c.x, c.y);
+                if (Math.hypot(pcx - (c.x + 12), pcy - (c.y - 12)) < COLLECT_R) {
                     const gain = COIN_COINS * getMult();
                     state.wallet += gain;
                     score += COIN_SCORE;
                     saveState();
                     sfx('coin'); haptic('light');
-                    spawnParticles(coinsArr[i].x, coinsArr[i].y, '#f1c40f', 8);
-                    floaters.push({ x: coinsArr[i].x, y: coinsArr[i].y, text: '+' + gain + ' 🪙', life: 1 });
+                    spawnParticles(c.x + 12, c.y - 12, '#f1c40f', 8);
+                    floaters.push({ x: c.x, y: c.y - 12, text: '+' + gain + ' 🪙', life: 1 });
                     coinsArr.splice(i, 1);
                     continue;
                 }
-                if (coinsArr[i] && coinsArr[i].x < -40) coinsArr.splice(i, 1);
+                if (c.x < -40) coinsArr.splice(i, 1);
             }
 
             for (let i = floaters.length - 1; i >= 0; i--) {
@@ -775,7 +788,7 @@
             }
         }
 
-        // ================== КРАШ: НЕПРЕРЫВНЫЕ РАУНДЫ ==================
+        // ================== КРАШ ==================
         const cCanvas = document.getElementById('crash-canvas');
         const cCtx = cCanvas.getContext('2d');
         let cState = 'off';
