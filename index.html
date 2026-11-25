@@ -13,18 +13,20 @@
         .hud-box { background: rgba(0,0,0,0.65); padding: 5px 10px; border-radius: 14px; font-weight: bold; font-size: 12px; display: flex; align-items: center; gap: 4px; border: 1px solid #333; backdrop-filter: blur(4px); pointer-events: auto; }
         #menu { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: radial-gradient(circle at 50% 20%, #1b2440, #0a0a0f 70%); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 20; }
         h1 { color: #3498db; font-size: 32px; margin: 0 0 4px 0; text-shadow: 0 0 25px rgba(52,152,219,0.7); }
-        .tagline { color: #8aa; font-size: 13px; margin-bottom: 18px; }
-        .btn { background: linear-gradient(135deg, #3498db, #2980b9); color: white; border: none; padding: 13px; border-radius: 14px; font-size: 15px; font-weight: 900; margin: 4px; width: 90%; max-width: 300px; box-shadow: 0 4px 15px rgba(41, 128, 185, 0.4); transition: transform 0.1s; }
+        .tagline { color: #8aa; font-size: 13px; margin-bottom: 16px; }
+        .btn { background: linear-gradient(135deg, #3498db, #2980b9); color: white; border: none; padding: 12px; border-radius: 14px; font-size: 15px; font-weight: 900; margin: 3px; width: 90%; max-width: 300px; box-shadow: 0 4px 15px rgba(41, 128, 185, 0.4); transition: transform 0.1s; }
         .btn:active { transform: scale(0.95); }
         .btn-red { background: linear-gradient(135deg, #e74c3c, #c0392b); }
         .btn-gold { background: linear-gradient(135deg, #f1c40f, #f39c12); color: #111; }
         .btn-stars { background: linear-gradient(135deg, #f39c12, #d35400); }
-        .btn-row { display: flex; width: 90%; max-width: 300px; gap: 10px; margin-top: 4px; }
-        .btn-row .btn { width: 100%; margin: 0; font-size: 13px; padding: 11px; }
+        .btn-purple { background: linear-gradient(135deg, #8e44ad, #7d3c98); }
+        .btn-row { display: flex; width: 90%; max-width: 300px; gap: 8px; margin-top: 3px; }
+        .btn-row .btn { width: 100%; margin: 0; font-size: 13px; padding: 10px; }
         .modal { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: #0a0a0f; display: none; flex-direction: column; align-items: center; padding: calc(55px + env(safe-area-inset-top)) 20px 20px; overflow-y: auto; z-index: 30; }
         .modal-header { font-size: 22px; font-weight: bold; margin-bottom: 15px; margin-top: 5px; }
         .close-modal { position: absolute; top: calc(12px + env(safe-area-inset-top)); right: 12px; background: #333; color: white; border: none; width: 36px; height: 36px; border-radius: 50%; font-size: 18px; font-weight: bold; z-index: 31; }
         .card { background: #1a1a20; border: 1px solid #333; border-radius: 14px; padding: 12px; width: 100%; max-width: 350px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; }
+        .card.me { border-color: #f1c40f; background: #2a2413; }
         .card-btn { color: white; border: none; padding: 7px 13px; border-radius: 9px; font-weight: bold; font-size: 13px; }
         @keyframes floaty { 0%,100% { transform: translateY(0) rotate(-3deg); } 50% { transform: translateY(-6px) rotate(3deg); } }
         @keyframes pulseGlow { 0%,100% { filter: drop-shadow(0 0 4px #f1c40f); } 50% { filter: drop-shadow(0 0 14px #f1c40f); } }
@@ -70,10 +72,11 @@
             <button class="btn btn-gold" onclick="renderShop()">🛒 Скины</button>
             <button class="btn" style="background:#2a2a35;" onclick="renderCase()">📦 Кейс</button>
         </div>
-        <div class="btn-row" style="margin-top: 4px;">
-            <button class="btn" style="background: #8e44ad;" onclick="renderGifts()">🎁 Подарки</button>
+        <div class="btn-row">
+            <button class="btn btn-purple" onclick="renderGifts()">🎁 Подарки</button>
+            <button class="btn" style="background:#1f6f43;" onclick="openLeaderboard()">🏆 Лидеры</button>
         </div>
-        <div class="btn-row" style="margin-top: 4px;">
+        <div class="btn-row">
             <button class="btn btn-stars" onclick="topUpStars()">⭐ Купить звёзды</button>
         </div>
     </div>
@@ -82,6 +85,12 @@
         <button class="close-modal" onclick="closeModal('shop')">✕</button>
         <div class="modal-header" style="color: #f1c40f;">Скины</div>
         <div id="skins-container" style="width: 100%; display: flex; flex-direction: column; align-items: center;"></div>
+    </div>
+
+    <div id="leaderboard" class="modal">
+        <button class="close-modal" onclick="closeModal('leaderboard')">✕</button>
+        <div class="modal-header" style="color: #f1c40f;">🏆 Лидеры</div>
+        <div id="lb-container" style="width: 100%; display: flex; flex-direction: column; align-items: center;"></div>
     </div>
 
     <div id="gifts-shop" class="modal">
@@ -146,8 +155,9 @@
         };
         try { tg.expand(); tg.ready(); } catch(e) {}
         const BOT_USERNAME = "MishkaRunGame_bot"; // <<< ИЗМЕНИ на юзернейм своего бота
+        const API = window.location.origin;      // СЕРВЕР: API живёт на том же адресе, что и игра
 
-        // ================== ПЕРЕХВАТ ОШИБОК: игра не падает молча ==================
+        // ================== ПЕРЕХВАТ ОШИБОК ==================
         let toastTimer = null, lastErrToast = 0;
         function toast(text, isErr) {
             const t = document.getElementById('toast');
@@ -204,7 +214,7 @@
             } catch(e) {}
         }
 
-        // ================== МУЗЫКА (не сбрасывается от тапа) ==================
+        // ================== МУЗЫКА ==================
         const CHORDS = [
             [220.00, 261.63, 329.63],
             [174.61, 220.00, 261.63],
@@ -218,7 +228,7 @@
             try {
                 const ctx = getAudio();
                 if (!ctx || !sound.on || !music.mode) return;
-                if (ctx.state !== 'running') { ctx.resume(); return; } // тик пропускается, мелодия не сбрасывается
+                if (ctx.state !== 'running') { ctx.resume(); return; }
                 const runner = music.mode === 'runner';
                 const chord = CHORDS[Math.floor(music.step / 8) % 4];
                 const arp = [chord[0], chord[1], chord[2], chord[1], chord[2], chord[0], chord[1], chord[2]];
@@ -250,7 +260,6 @@
             if (document.hidden) { clearInterval(music.timer); music.timer = null; }
             else if (music.mode && sound.on) setMusic(music.mode, true);
         });
-        // Оживление звука: только resume, музыку НЕ перезапускаем
         const unlockAudio = () => { getAudio(); };
         ['touchstart', 'mousedown', 'keydown'].forEach(ev => document.addEventListener(ev, unlockAudio, { passive: true }));
 
@@ -279,13 +288,17 @@
             { id: 'boost3', emoji: '⚡', name: 'Буст x3 — 5 дней',  stars: 100 },
         ];
 
-        // Санитизация битых сохранений
         if (!Array.isArray(state.ownedSkins)) state.ownedSkins = ['bear'];
         state.ownedSkins = state.ownedSkins.filter(id => skinsData.some(s => s.id === id) && !skinsData.find(s => s.id === id).stars);
         if (!state.ownedSkins.includes('bear')) state.ownedSkins.push('bear');
         if (!skinsData.some(s => s.id === state.currentSkin && !s.stars)) state.currentSkin = 'bear';
 
-        function saveState() { localStorage.setItem('mishkaV11', JSON.stringify(state)); updateHUD(); }
+        let syncDirty = false; // СЕРВЕР: копится между отправками
+        function saveState() {
+            localStorage.setItem('mishkaV11', JSON.stringify(state));
+            syncDirty = true;
+            updateHUD();
+        }
         function updateHUD() {
             document.getElementById('wallet').innerText = state.wallet;
             document.getElementById('stars').innerText = state.stars;
@@ -300,35 +313,92 @@
         function boostActive() { return state.boostUntil && Date.now() < state.boostUntil; }
         function boostLeftMs() { return Math.max(0, state.boostUntil - Date.now()); }
 
+        // ================== СИНХРОНИЗАЦИЯ С СЕРВЕРОМ ==================
+        async function syncToServer() {
+            try {
+                if (!tg.initData) return; // вне Telegram играем только локально
+                const res = await fetch(API + '/api/sync', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        initData: tg.initData,
+                        wallet: state.wallet, stars: state.stars, best: state.best,
+                        gifts: state.ownedGifts, skins: state.ownedSkins,
+                        currentSkin: state.currentSkin, boostUntil: state.boostUntil
+                    })
+                });
+                const d = await res.json();
+                if (d.ok && d.you) {
+                    // Сервер — источник истины: если там больше — забираем себе
+                    let changed = false;
+                    ['wallet', 'stars', 'best'].forEach(k => {
+                        if ((d.you[k] || 0) > (state[k] || 0)) { state[k] = d.you[k]; changed = true; }
+                    });
+                    if ((d.you.boostUntil || 0) > (state.boostUntil || 0)) { state.boostUntil = d.you.boostUntil; changed = true; }
+                    if (changed) { localStorage.setItem('mishkaV11', JSON.stringify(state)); updateHUD(); }
+                    syncDirty = false;
+                }
+            } catch(e) { /* сервер недоступен — играем локально, ошибок не показываем */ }
+        }
+        setInterval(() => { if (syncDirty) syncToServer(); }, 15000);
+
         function applyStartParam() {
             try {
                 const sp = tg.initDataUnsafe && tg.initDataUnsafe.start_param;
                 if (!sp) return;
                 if (sp.startsWith('topup_')) {
                     const n = parseInt(sp.split('_')[1]) || 0;
-                    if (n > 0) { state.stars += n; saveState(); toast(`+${n} ⭐ зачислено!`); sfx('cash'); haptic('success'); }
+                    if (n > 0) { state.stars += n; saveState(); toast(`+${n} ⭐ зачислено!`); sfx('cash'); haptic('success'); syncToServer(); }
                 } else if (sp.startsWith('skin_')) {
                     const id = sp.split('_')[1];
                     if (skinsData.some(s => s.id === id) && !state.ownedSkins.includes(id)) {
                         state.ownedSkins.push(id); state.currentSkin = id; saveState();
-                        toast('Скин куплен и надет! 🎉'); sfx('cash'); haptic('success');
+                        toast('Скин куплен и надет! 🎉'); sfx('cash'); haptic('success'); syncToServer();
                     }
                 } else if (sp.startsWith('boost_')) {
                     const id = sp.split('_')[1];
                     const days = { boost1: 1, boost2: 2, boost3: 5 }[id] || 1;
                     const base = boostActive() ? state.boostUntil : Date.now();
                     state.boostUntil = base + days * 86400000;
-                    saveState(); toast(`⚡ Буст x3 активирован на ${days} дн.!`); sfx('cash'); haptic('success');
+                    saveState(); toast(`⚡ Буст x3 активирован на ${days} дн.!`); sfx('cash'); haptic('success'); syncToServer();
                 }
             } catch(e) { console.error('startparam:', e); }
         }
         applyStartParam();
+        syncToServer(); // начальная синхронизация: подтягиваем серверный баланс
 
         function closeModal(id) { document.getElementById(id).style.display = 'none'; sfx('click'); }
         function topUpStars() {
             sfx('click');
             tg.openTelegramLink(`https://t.me/${BOT_USERNAME}?start=topup`);
             toast('Выбери пакет и оплати — звёзды появятся на балансе');
+        }
+
+        // ================== ЛИДЕРБОРД ==================
+        function openLeaderboard() {
+            sfx('click');
+            const c = document.getElementById('lb-container');
+            c.innerHTML = '<div style="color:#888; margin-top:20px;">Загрузка…</div>';
+            document.getElementById('leaderboard').style.display = 'flex';
+            const me = tg.initDataUnsafe && tg.initDataUnsafe.user ? String(tg.initDataUnsafe.user.id) : '';
+            fetch(API + '/api/leaderboard').then(r => r.json()).then(d => {
+                if (!d || !d.ok) throw new Error('bad');
+                let html = `<div style="color:#4cd137; font-weight:bold; margin-bottom:10px;">🟢 Сейчас онлайн: ${d.online} · 👥 Всего игроков: ${d.total}</div>`;
+                if (!d.top.length) html += '<div style="color:#888;">Пока никого. Стань первым!</div>';
+                d.top.forEach((p, i) => {
+                    const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i + 1);
+                    const isMe = p.id === me;
+                    html += `<div class="card${isMe ? ' me' : ''}">
+                        <div style="font-size:20px; min-width:30px; text-align:center;">${medal}</div>
+                        <div style="flex:1; text-align:left; padding-left:10px; font-weight:bold; overflow:hidden; text-overflow:ellipsis;">
+                            ${p.online ? '🟢' : '⚪'} ${p.name}${isMe ? ' <span style="color:#f1c40f;">(ты)</span>' : ''}
+                            <br><span style="color:#f1c40f; font-size:12px;">Рекорд: ${p.best} · 🪙 ${p.wallet}</span>
+                        </div></div>`;
+                });
+                c.innerHTML = html;
+            }).catch(() => {
+                c.innerHTML = '<div style="color:#e74c3c; margin-top:20px;">Сервер недоступен. Попробуй позже.</div>';
+            });
         }
 
         function renderShop() {
@@ -374,10 +444,10 @@
             sfx('click');
             const s = skinsData.find(x => x.id === id);
             if (!s) return;
-            if (state.ownedSkins.includes(id)) { state.currentSkin = id; saveState(); renderShop(); return; }
+            if (state.ownedSkins.includes(id)) { state.currentSkin = id; saveState(); renderShop(); syncToServer(); return; }
             if (state.wallet >= s.coins) {
                 state.wallet -= s.coins; state.ownedSkins.push(id); state.currentSkin = id;
-                saveState(); renderShop(); toast('Куплено и надето! 🎉'); sfx('cash');
+                saveState(); renderShop(); toast('Куплено и надето! 🎉'); sfx('cash'); syncToServer();
             } else {
                 tg.showAlert(`Мало монет! Нужно 🪙 ${s.coins}, у тебя 🪙 ${state.wallet}. Зарабатывай в раннере 🏃`);
                 haptic('heavy');
@@ -432,11 +502,11 @@
                     tg.openTelegramLink(`https://t.me/${BOT_USERNAME}?start=w_${uid}_${g.stars}`);
                 }
                 state.ownedGifts = state.ownedGifts.filter(x => x !== id);
-                saveState(); renderGifts();
+                saveState(); renderGifts(); syncToServer();
             } else {
                 if (state.wallet >= g.coins) {
                     state.wallet -= g.coins; state.ownedGifts.push(id);
-                    saveState(); renderGifts();
+                    saveState(); renderGifts(); syncToServer();
                     toast('Подарок куплен! Жми «Вывести» 🎁'); sfx('cash');
                 } else {
                     tg.showAlert(`Не хватает монет: нужно 🪙 ${g.coins}, у тебя 🪙 ${state.wallet}.`);
@@ -485,7 +555,7 @@
                     if (r < 0.80) { state.wallet += 250; document.getElementById('case-result').innerText = '🪙 +250 монет!'; }
                     else if (r < 0.95) { state.wallet += 500; document.getElementById('case-result').innerText = '🪙 +500 монет!'; }
                     else { state.stars += 25; document.getElementById('case-result').innerText = '⭐ +25 звёзд!'; }
-                    saveState(); sfx('cash'); haptic('success');
+                    saveState(); syncToServer(); sfx('cash'); haptic('success');
                 }
             }, 100);
         }
@@ -547,6 +617,7 @@
             document.getElementById('game-over').style.display = 'none';
             document.getElementById('menu').style.display = 'flex';
             setMusic('menu');
+            syncToServer();
         }
         function restartRunner() {
             resetRunner();
@@ -689,7 +760,7 @@
                 sfx('explosion'); haptic('heavy');
                 const final = Math.floor(score);
                 if (final > state.best) state.best = final;
-                saveState();
+                saveState(); syncToServer(); // СЕРВЕР: рекорд улетает сразу
                 document.getElementById('final-score').innerText = 'Счёт: ' + final + '   Рекорд: ' + Math.floor(state.best);
                 document.getElementById('game-over').style.display = 'block';
                 setMusic(null); sfx('lose');
@@ -845,7 +916,7 @@
             }
         }
 
-        // ================== КРАШ: НЕПРЕРЫВНЫЕ РАУНДЫ ==================
+        // ================== КРАШ ==================
         const cCanvas = document.getElementById('crash-canvas');
         const cCtx = cCanvas.getContext('2d');
         let cState = 'off';
@@ -953,7 +1024,6 @@
                 if (crashed) {
                     mm.innerText = 'ВЗРЫВ 💥 x' + atMult.toFixed(2); mm.style.color = '#e74c3c';
                     sfx('explosion'); haptic('heavy');
-                    // tg.sendData убран: он закрывает мини-апп — из-за него выкидывало из игры
                 } else {
                     const win = Math.floor(cBet * atMult);
                     state.stars += win; saveState();
@@ -961,6 +1031,7 @@
                     mm.style.color = '#2ecc71';
                     sfx('cash'); haptic('success');
                 }
+                syncToServer(); // СЕРВЕР: результат раунда уходит на сервер
             } else {
                 mm.innerText = 'ВЗРЫВ 💥 x' + atMult.toFixed(2);
                 mm.style.color = '#e74c3c';
@@ -991,6 +1062,7 @@
             document.getElementById('crash-screen').style.display = 'none';
             document.getElementById('menu').style.display = 'flex';
             sfx('click');
+            syncToServer();
         }
         function setBet(val) {
             sfx('click');
