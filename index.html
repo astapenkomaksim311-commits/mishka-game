@@ -3,94 +3,114 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Mishka Casino 4.0</title>
+    <title>Mishka App 5.0</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        * { box-sizing: border-box; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { margin: 0; padding: 0; background: #0a0a0f; overflow: hidden; font-family: 'Segoe UI', Tahoma, sans-serif; user-select: none; color: white;}
         canvas { display: block; width: 100vw; height: 100vh; }
         
         /* HUD */
-        #hud { position: absolute; top: 10px; left: 10px; right: 10px; display: flex; justify-content: space-between; align-items: center; z-index: 10; }
-        .hud-box { background: rgba(0,0,0,0.6); padding: 5px 15px; border-radius: 20px; font-weight: bold; font-size: 16px; display: flex; align-items: center; gap: 5px;}
+        #hud { position: absolute; top: 15px; left: 15px; right: 15px; display: flex; justify-content: space-between; align-items: center; z-index: 10; pointer-events: none;}
+        .hud-box { background: rgba(0,0,0,0.7); padding: 8px 15px; border-radius: 20px; font-weight: bold; font-size: 16px; display: flex; align-items: center; gap: 5px; border: 1px solid rgba(255,255,255,0.1);}
         
         /* Меню и Кнопки */
-        #menu { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(10, 10, 15, 0.95); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 20; }
-        h1 { color: #3498db; font-size: 36px; margin: 0 0 10px 0; text-shadow: 0 0 20px rgba(52,152,219,0.6); text-align: center;}
-        .btn { background: linear-gradient(135deg, #3498db, #2980b9); color: white; border: none; padding: 15px; border-radius: 15px; font-size: 18px; font-weight: 900; margin: 5px; width: 90%; max-width: 300px; box-shadow: 0 4px 15px rgba(41, 128, 185, 0.4); transition: transform 0.1s; }
+        #menu { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(10, 10, 15, 0.98); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 20; }
+        h1 { color: #3498db; font-size: 36px; margin: 0 0 5px 0; text-shadow: 0 0 20px rgba(52,152,219,0.6); text-align: center;}
+        .online-tag { color: #2ecc71; font-size: 14px; margin-bottom: 20px; font-weight: bold; background: rgba(46, 204, 113, 0.2); padding: 5px 10px; border-radius: 10px;}
+        
+        .btn { background: linear-gradient(135deg, #3498db, #2980b9); color: white; border: none; padding: 15px; border-radius: 15px; font-size: 16px; font-weight: 900; margin: 5px; width: 90%; max-width: 300px; box-shadow: 0 4px 15px rgba(41, 128, 185, 0.4); transition: transform 0.1s; }
         .btn:active { transform: scale(0.95); }
         .btn-red { background: linear-gradient(135deg, #e74c3c, #c0392b); box-shadow: 0 4px 15px rgba(231, 76, 60, 0.4); }
         .btn-gold { background: linear-gradient(135deg, #f1c40f, #f39c12); box-shadow: 0 4px 15px rgba(241, 196, 15, 0.4); color: #111;}
+        .btn-row { display: flex; width: 90%; max-width: 300px; gap: 10px; margin-top: 5px;}
+        .btn-row .btn { width: 100%; margin: 0; font-size: 14px; padding: 12px;}
         
         /* Модалки */
         .modal { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(10, 10, 15, 0.98); display: none; flex-direction: column; align-items: center; padding: 20px; overflow-y: auto; z-index: 30; }
-        .skin-card { background: #1e1e24; border: 1px solid #333; border-radius: 15px; padding: 15px; width: 100%; max-width: 350px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; }
+        .modal-header { font-size: 24px; font-weight: bold; margin-bottom: 20px; text-align: center;}
+        .close-modal { position: absolute; top: 15px; right: 15px; background: #333; color: white; border: none; width: 40px; height: 40px; border-radius: 50%; font-size: 20px; font-weight: bold; z-index: 31;}
         
-        /* Краш игра */
+        .card { background: #1e1e24; border: 1px solid #333; border-radius: 15px; padding: 15px; width: 100%; max-width: 350px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; }
+        
+        /* Краш */
         #crash-screen { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: #000; display: none; flex-direction: column; z-index: 15; overflow: hidden;}
         #crash-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
         #crash-ui { position: relative; z-index: 2; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: space-between; padding: 20px; pointer-events: none;}
-        #crash-multiplier { font-size: 60px; font-weight: 900; color: #fff; text-shadow: 0 0 20px #f1c40f; text-align: center; margin-top: 20vh;}
-        #crash-controls { pointer-events: auto; display: flex; flex-direction: column; align-items: center; margin-bottom: 20px;}
-        .crash-input { background: #222; border: 2px solid #444; color: white; padding: 10px; border-radius: 10px; font-size: 20px; width: 150px; text-align: center; margin-bottom: 10px;}
+        #crash-multiplier { font-size: 70px; font-weight: 900; color: #fff; text-shadow: 0 0 30px #f1c40f; text-align: center; margin-top: 15vh;}
+        #crash-controls { pointer-events: auto; display: flex; flex-direction: column; align-items: center; margin-bottom: 30px; background: rgba(0,0,0,0.8); padding: 20px; border-radius: 20px; width: 100%; max-width: 350px; margin-left: auto; margin-right: auto;}
         
+        /* Кейс */
+        #case-box { width: 120px; height: 120px; background: #222; border: 3px solid #f1c40f; border-radius: 20px; display: flex; align-items: center; justify-content: center; font-size: 70px; margin: 20px 0; }
+        
+        /* Экран смерти */
         #game-over, #crash-over { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(20, 20, 25, 0.95); padding: 20px; border-radius: 20px; text-align: center; display: none; border: 2px solid #e74c3c; width: 90%; max-width: 320px; z-index: 40; }
     </style>
 </head>
 <body>
-    <!-- HUD -->
     <div id="hud">
         <div class="hud-box">🪙 <span id="wallet">0</span></div>
-        <div class="hud-box">⭐ <span id="stars">0</span></div>
-        <div class="hud-box">🟢 <span id="online">0</span></div>
+        <div class="hud-box">⭐ <span id="stars">10</span></div>
+        <div class="hud-box">🟢 <span id="online-hud">0</span></div>
     </div>
 
     <!-- Главное Меню -->
     <div id="menu">
         <h1>🐻 Mishka App</h1>
-        <p style="color:#aaa; margin-bottom:20px;">Выбери режим игры</p>
-        <button class="btn" onclick="startGame()">🏃‍♂️ Раннер (Монеты)</button>
+        <div class="online-tag">🟢 Играют прямо сейчас: <span id="online-menu">0</span></div>
+        
+        <button class="btn" onclick="startGame()">🏃‍♂️ Раннер</button>
         <button class="btn btn-red" onclick="openCrash()">🚀 Краш (На Звезды)</button>
-        <div style="display:flex; width:90%; max-width:300px; gap: 5px;">
-            <button class="btn btn-gold" style="flex:1;" onclick="openShop()">🛒 Скины</button>
-            <button class="btn" style="flex:1; background:#2a2a35;" onclick="openCaseModal()">🎁 Кейс</button>
+        <div class="btn-row">
+            <button class="btn btn-gold" onclick="openShop()">🛒 Скины</button>
+            <button class="btn" style="background:#2a2a35;" onclick="openCaseModal()">📦 Кейс</button>
+        </div>
+        <div class="btn-row" style="margin-top: 10px;">
+            <button class="btn" style="background: #8e44ad; box-shadow: 0 4px 15px rgba(142,68,173,0.4);" onclick="openGifts()">🎁 Подарки</button>
         </div>
     </div>
 
-    <!-- Магазин -->
+    <!-- Магазин Скинов -->
     <div id="shop" class="modal">
-        <h2 style="color:#3498db;">Магазин</h2>
+        <button class="close-modal" onclick="closeModal('shop')">✕</button>
+        <div class="modal-header" style="color: #f1c40f;">Магазин Скинов</div>
         <div id="skins-container" style="width: 100%; display: flex; flex-direction: column; align-items: center;"></div>
-        <button class="btn" style="margin-top:20px; background:#e74c3c;" onclick="closeModal('shop')">Закрыть</button>
+    </div>
+
+    <!-- Магазин Подарков -->
+    <div id="gifts-shop" class="modal">
+        <button class="close-modal" onclick="closeModal('gifts-shop')">✕</button>
+        <div class="modal-header" style="color: #e74c3c;">Подарки Telegram</div>
+        <div id="gifts-container" style="width: 100%; display: flex; flex-direction: column; align-items: center;"></div>
     </div>
 
     <!-- Кейс -->
     <div id="case-modal" class="modal">
-        <h2 style="color:#f1c40f;">Ежедневный Кейс</h2>
-        <div id="case-timer" style="color:#e74c3c; font-size:20px; margin:10px 0;">Загрузка...</div>
-        <div id="case-box" style="width: 150px; height: 150px; background: #222; border: 3px solid #f1c40f; border-radius: 20px; display: flex; align-items: center; justify-content: center; font-size: 80px; margin: 20px 0;">📦</div>
-        <div id="case-result" style="font-size: 20px; font-weight: bold; color:#4cd137; height:30px;"></div>
-        <button class="btn btn-gold" id="open-case-btn" style="width:200px;" onclick="openCase()">Открыть</button>
-        <button class="btn" style="margin-top:10px; background:#333;" onclick="closeModal('case-modal')">Закрыть</button>
+        <button class="close-modal" onclick="closeModal('case-modal')">✕</button>
+        <div class="modal-header" style="color: #f1c40f;">Ежедневный Кейс</div>
+        <div id="case-timer" style="font-size:20px; margin:10px 0; font-weight:bold;">Загрузка...</div>
+        <div id="case-box" onclick="openCase()">📦</div>
+        <div id="case-result" style="font-size: 18px; font-weight: bold; color:#4cd137; height:30px; text-align:center;"></div>
+        <button class="btn btn-gold" id="open-case-btn" onclick="openCase()">Открыть</button>
     </div>
 
-    <!-- Экран Раннера -->
+    <!-- Раннер -->
     <canvas id="game"></canvas>
     <div id="game-over">
-        <h2>Ты врезался! 💥</h2>
+        <h2 style="color:#e74c3c;">💥 Ты врезался!</h2>
         <button class="btn btn-red" onclick="restartGame()">Играть снова</button>
         <button class="btn" style="background:#333;" onclick="showMenu()">В меню</button>
     </div>
 
-    <!-- Экран Краша -->
+    <!-- Краш -->
     <div id="crash-screen">
         <canvas id="crash-canvas"></canvas>
         <div id="crash-ui">
             <div id="crash-multiplier">1.00x</div>
             <div id="crash-controls">
-                <input type="number" id="crash-bet" class="crash-input" value="1" min="1" placeholder="Ставка ⭐">
-                <button class="btn btn-red" id="crash-action-btn" onclick="crashAction()">🚀 Запустить (Ставка)</button>
-                <button class="btn" style="background:#333; margin-top:5px;" onclick="exitCrash()">Выйти</button>
+                <input type="number" id="crash-bet" style="background:#222; border:2px solid #444; color:white; padding:10px; border-radius:10px; font-size:20px; width:150px; text-align:center; margin-bottom:15px;" value="1" min="1">
+                <button class="btn btn-red" id="crash-action-btn" onclick="crashAction()" style="margin:0; width:100%;">🚀 Запустить (Ставка)</button>
+                <button class="btn" style="background:#333; margin-top:10px; margin-bottom:0; width:100%;" onclick="exitCrash()">Выйти в меню</button>
             </div>
         </div>
     </div>
@@ -100,165 +120,227 @@
         tg.expand();
         const BOT_USERNAME = "MishkaRunGame_bot"; 
 
-        // --- БАЗА ДАННЫХ (LocalStorage) ---
-        let state = JSON.parse(localStorage.getItem('mishkaState')) || {
-            wallet: 0,
-            stars: 10, // Дадим 10 звезд для теста
-            ownedSkins: ['bear'],
-            currentSkin: 'bear',
-            lastCaseOpen: 0,
-            activeBoost: null // { id: 'boost5', expires: timestamp }
-        };
+        // --- АУДИО (Починено) ---
+        let audioCtx = null;
+        let soundEnabled = true;
+        let rainSource = null;
 
-        function saveState() { localStorage.setItem('mishkaState', JSON.stringify(state)); updateHUD(); }
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+        // Включаем аудио при первом тапе
+        document.body.addEventListener('touchstart', initAudio, { once: true });
+        document.body.addEventListener('mousedown', initAudio, { once: true });
+
+        function playSound(freq, type, duration, vol = 0.1) {
+            if (!soundEnabled || !audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + duration);
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.start(); osc.stop(audioCtx.currentTime + duration);
+        }
+
+        function startRain() {
+            if (!soundEnabled || !audioCtx || rainSource) return;
+            const bufferSize = audioCtx.sampleRate * 2;
+            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+            rainSource = audioCtx.createBufferSource();
+            rainSource.buffer = buffer;
+            rainSource.loop = true;
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = 'lowpass'; filter.frequency.value = 1000;
+            const gain = audioCtx.createGain(); gain.gain.value = 0.05;
+            rainSource.connect(filter); filter.connect(gain); gain.connect(audioCtx.destination);
+            rainSource.start();
+        }
+        function stopRain() { if (rainSource) { rainSource.stop(); rainSource.disconnect(); rainSource = null; } }
+
+        // --- СТЕЙТ ---
+        let state = JSON.parse(localStorage.getItem('mishkaStateV5')) || {
+            wallet: 0, stars: 10, ownedSkins: ['bear'], currentSkin: 'bear',
+            lastCaseOpen: 0, ownedGifts: []
+        };
+        function saveState() { localStorage.setItem('mishkaStateV5', JSON.stringify(state)); updateHUD(); }
+        
+        // --- ОНЛАЙН СЧЕТЧИК ---
+        function updateOnline() {
+            let fakeOnline = Math.floor(Math.random() * 150) + 50;
+            document.getElementById('online-hud').innerText = fakeOnline;
+            document.getElementById('online-menu').innerText = fakeOnline;
+        }
+        setInterval(updateOnline, 5000);
+        updateOnline();
+
         function updateHUD() {
             document.getElementById('wallet').innerText = state.wallet;
             document.getElementById('stars').innerText = state.stars;
-            document.getElementById('online').innerText = Math.floor(Math.random() * 100) + 50; // Фейковый онлайн
         }
-        setInterval(() => { document.getElementById('online').innerText = Math.floor(Math.random() * 100) + 50; }, 10000);
+
+        // --- МЕНЮ И МОДАЛКИ ---
+        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 
         // --- СКИНЫ ---
         const skinsData = [
-            { id: 'bear', emoji: '🐻', name: 'Мишка', mult: 1, priceCoins: 0, priceStars: 0 },
-            { id: 'panda', emoji: '🐼', name: 'Панда', mult: 2, priceCoins: 2000, priceStars: 0 },
-            { id: 'fox', emoji: '🦊', name: 'Лис', mult: 3, priceCoins: 5000, priceStars: 0 },
-            // Бусты на время
-            { id: 'boost5', emoji: '⚡', name: 'Буст x5 (1 день)', mult: 5, priceCoins: 0, priceStars: 30, duration: 86400000 },
-            { id: 'boost7', emoji: '🔥', name: 'Буст x7 (2 дня)', mult: 7, priceCoins: 0, priceStars: 50, duration: 172800000 },
-            { id: 'boost10', emoji: '💎', name: 'Буст x10 (3 дня)', mult: 10, priceCoins: 0, priceStars: 100, duration: 259200000 }
+            { id: 'bear', emoji: '🐻', name: 'Мишка', mult: 1, coins: 0, stars: 0 },
+            { id: 'panda', emoji: '🐼', name: 'Панда', mult: 2, coins: 2000, stars: 0 },
+            { id: 'fox', emoji: '🦊', name: 'Лис', mult: 3, coins: 5000, stars: 0 },
+            { id: 'boost5', emoji: '⚡', name: 'x5 (1 день)', mult: 5, coins: 0, stars: 30 },
+            { id: 'boost7', emoji: '🔥', name: 'x7 (2 дня)', mult: 7, coins: 0, stars: 50 },
+            { id: 'boost10', emoji: '💎', name: 'x10 (3 дня)', mult: 10, coins: 0, stars: 100 }
         ];
 
-        function getCurrentMult() {
-            if (state.activeBoost) {
-                let boost = skinsData.find(s => s.id === state.activeBoost.id);
-                if (Date.now() < state.activeBoost.expires) return boost.mult;
-                else { state.activeBoost = null; saveState(); } // Буст истек
-            }
-            let skin = skinsData.find(s => s.id === state.currentSkin);
-            return skin ? skin.mult : 1;
-        }
+        function getMult() { let s = skinsData.find(x => x.id === state.currentSkin); return s ? s.mult : 1; }
 
-        // --- МАГАЗИН ---
         function openShop() {
-            const container = document.getElementById('skins-container');
-            container.innerHTML = '';
-            skinsData.forEach(skin => {
-                let isOwned = state.ownedSkins.includes(skin.id);
-                let isEquipped = state.currentSkin === skin.id;
-                let btnText = isEquipped ? 'Надет' : (isOwned ? 'Надеть' : 'Купить');
-                let btnColor = isEquipped ? '#4cd137' : (isOwned ? '#555' : '#3498db');
-                
-                let priceText = '';
-                if (!isOwned) {
-                    if (skin.priceCoins > 0) priceText = `🪙 ${skin.priceCoins}`;
-                    if (skin.priceStars > 0) priceText = `⭐ ${skin.priceStars}`;
-                }
-                if (skin.duration && isOwned) {
-                     btnText = 'Купить еще';
-                }
-
-                container.innerHTML += `
-                    <div class="skin-card">
-                        <div style="font-size: 40px;">${skin.emoji}</div>
+            const c = document.getElementById('skins-container'); c.innerHTML = '';
+            skinsData.forEach(s => {
+                let owned = state.ownedSkins.includes(s.id);
+                let eq = state.currentSkin === s.id;
+                let btn = eq ? 'Надет' : (owned ? 'Надеть' : 'Купить');
+                let color = eq ? '#4cd137' : (owned ? '#555' : '#3498db');
+                let price = s.coins > 0 ? `🪙 ${s.coins}` : (s.stars > 0 ? `⭐ ${s.stars}` : '');
+                c.innerHTML += `
+                    <div class="card">
+                        <div style="font-size: 30px;">${s.emoji}</div>
                         <div style="flex:1; padding-left:15px; text-align:left;">
-                            <div style="font-weight:bold;">${skin.name}</div>
-                            <div style="color:#4cd137; font-size:12px;">Множитель: x${skin.mult}</div>
-                            <div style="color:#f1c40f; font-size:14px;">${priceText}</div>
+                            <div style="font-weight:bold;">${s.name} (x${s.mult})</div>
+                            <div style="color:#f1c40f; font-size:14px;">${owned && eq ? '' : price}</div>
                         </div>
-                        <button style="background:${btnColor}; color:white; border:none; padding:8px 15px; border-radius:10px; font-weight:bold;" onclick="buySkin('${skin.id}')">${btnText}</button>
+                        <button style="background:${color}; color:white; border:none; padding:8px 15px; border-radius:10px; font-weight:bold;" onclick="buySkin('${s.id}')">${btn}</button>
                     </div>`;
             });
             document.getElementById('shop').style.display = 'flex';
         }
 
-        function buySkin(skinId) {
-            let skin = skinsData.find(s => s.id === skinId);
-            let isOwned = state.ownedSkins.includes(skin.id);
-
-            if (isOwned && !skin.duration) { state.currentSkin = skinId; saveState(); openShop(); return; }
+        function buySkin(id) {
+            let s = skinsData.find(x => x.id === id);
+            let owned = state.ownedSkins.includes(id);
+            if (owned) { state.currentSkin = id; saveState(); openShop(); return; }
             
-            if (skin.priceCoins > 0) {
-                if (state.wallet >= skin.priceCoins) {
-                    state.wallet -= skin.priceCoins;
-                    if(!state.ownedSkins.includes(skinId)) state.ownedSkins.push(skinId);
-                    state.currentSkin = skinId;
-                    saveState(); openShop(); tg.HapticFeedback.notificationOccurred('success');
-                } else { tg.showAlert("Мало монет!"); }
-            } else if (skin.priceStars > 0) {
-                tg.showConfirm(`Купить "${skin.name}" за ${skin.priceStars}⭐?`, (ok) => {
-                    if(ok) {
-                        // Отправляем боту запрос на покупку. Бот пришлет счет.
-                        tg.openTelegramLink(`https://t.me/${BOT_USERNAME}?start=buy_${skin.id}`);
-                    }
+            if (s.coins > 0 && state.wallet >= s.coins) {
+                state.wallet -= s.coins; state.ownedSkins.push(id); state.currentSkin = id;
+                saveState(); openShop(); playSound(800, 'square', 0.2); tg.HapticFeedback.notificationOccurred('success');
+            } else if (s.stars > 0) {
+                tg.showConfirm(`Купить "${s.name}" за ${s.stars}⭐?`, (ok) => {
+                    if(ok) tg.openTelegramLink(`https://t.me/${BOT_USERNAME}?start=buy_${id}`);
                 });
+            } else { tg.showAlert("Мало монет!"); }
+        }
+
+        // --- ПОДАРКИ (С ПОДТВЕРЖДЕНИЕМ ВЫВОДА) ---
+        const giftsData = [
+            { id: 'heart', emoji: '❤️', name: 'Сердечко', coins: 50000, stars: 0 },
+            { id: 'gift', emoji: '🎁', name: 'Подарочек', coins: 75000, stars: 25 },
+            { id: 'champ', emoji: '🍾', name: 'Шампанское', coins: 100000, stars: 50 },
+            { id: 'ring', emoji: '💍', name: 'Колечко', coins: 150000, stars: 100 }
+        ];
+
+        function openGifts() {
+            const c = document.getElementById('gifts-container'); c.innerHTML = '';
+            giftsData.forEach(g => {
+                let owned = state.ownedGifts.includes(g.id);
+                let btn = owned ? 'Вывести' : 'Купить';
+                let color = owned ? '#f39c12' : '#8e44ad';
+                let price = `${g.coins > 0 ? '🪙 '+g.coins : ''} ${g.stars > 0 ? '⭐ '+g.stars : ''}`;
+                
+                c.innerHTML += `
+                    <div class="card">
+                        <div style="font-size: 30px;">${g.emoji}</div>
+                        <div style="flex:1; padding-left:15px; text-align:left;">
+                            <div style="font-weight:bold;">${g.name}</div>
+                            <div style="color:#f1c40f; font-size:14px;">${owned ? 'Куплено' : price}</div>
+                        </div>
+                        <button style="background:${color}; color:white; border:none; padding:8px 15px; border-radius:10px; font-weight:bold;" onclick="handleGift('${g.id}')">${btn}</button>
+                    </div>`;
+            });
+            document.getElementById('gifts-shop').style.display = 'flex';
+        }
+
+        function handleGift(id) {
+            let g = giftsData.find(x => x.id === id);
+            let owned = state.ownedGifts.includes(id);
+            
+            if (owned) {
+                // ВЫВОД ПОДАРКА
+                tg.showAlert("Скоро отправим! Ожидайте уведомления.");
+                tg.sendData(JSON.stringify({ action: 'withdraw_gift', gift: g.name }));
+                // Убираем из купленных, чтобы нельзя было спамить
+                state.ownedGifts = state.ownedGifts.filter(x => x !== id);
+                saveState(); openGifts();
+            } else {
+                // ПОКУПКА
+                if (g.coins > 0 && state.wallet >= g.coins) {
+                    state.wallet -= g.coins; state.ownedGifts.push(id); saveState(); openGifts();
+                    playSound(800, 'square', 0.2); tg.HapticFeedback.notificationOccurred('success');
+                } else if (g.stars > 0 && state.stars >= g.stars) {
+                    state.stars -= g.stars; state.ownedGifts.push(id); saveState(); openGifts();
+                    playSound(800, 'square', 0.2); tg.HapticFeedback.notificationOccurred('success');
+                } else { tg.showAlert("Недостаточно средств!"); }
             }
         }
 
-        // --- КЕЙС ---
+        // --- КЕЙС (Исправлен баг с закрытием) ---
         function openCaseModal() {
             document.getElementById('case-modal').style.display = 'flex';
-            checkCase();
-        }
-        function checkCase() {
             let diff = Date.now() - state.lastCaseOpen;
-            let cooldown = 24*60*60*1000;
-            if (diff >= cooldown) {
+            if (diff >= 86400000) {
                 document.getElementById('open-case-btn').style.display = 'block';
                 document.getElementById('case-timer').innerText = "Доступен!";
-                document.getElementById('case-timer').style.color = "#4cd137";
             } else {
                 document.getElementById('open-case-btn').style.display = 'none';
-                let h = Math.floor((cooldown-diff)/(1000*60*60));
-                let m = Math.floor(((cooldown-diff)%(1000*60*60))/(1000*60));
-                document.getElementById('case-timer').innerText = `Ждать: ${h}ч ${m}м`;
-                document.getElementById('case-timer').style.color = "#e74c3c";
+                let h = Math.floor((86400000-diff)/3600000);
+                document.getElementById('case-timer').innerText = `Ждать: ${h}ч`;
             }
         }
+        let caseTimer = null;
         function openCase() {
+            if(Date.now() - state.lastCaseOpen < 86400000) return;
             state.lastCaseOpen = Date.now(); saveState();
             document.getElementById('open-case-btn').style.display = 'none';
-            let box = document.getElementById('case-box');
             let ticks = 0;
-            let timer = setInterval(() => {
-                box.innerText = ['🐻','🐼','🦊','⚡','🔥','💎','🪙'][Math.floor(Math.random()*7)];
+            if(caseTimer) clearInterval(caseTimer);
+            caseTimer = setInterval(() => {
+                document.getElementById('case-box').innerText = ['🐻','🐼','🦊','⚡','🔥','💎','🪙'][Math.floor(Math.random()*7)];
                 ticks++;
-                if(ticks > 20) { clearInterval(timer); giveReward(); }
+                if(ticks > 15) { clearInterval(caseTimer); giveReward(); }
             }, 100);
         }
         function giveReward() {
             let rand = Math.random();
             let res = "";
-            // 4% на скин (из них 1% Дракон, 3% Лев). 96% на монеты (10-250)
-            if (rand < 0.01) { // 1%
-                if(!state.ownedSkins.includes('fox')) { state.ownedSkins.push('fox'); res = "🦊 Лис (x3)!"; }
-                else { state.wallet += 500; res = "🪙 500 монет!"; }
-            } else if (rand < 0.04) { // 3%
-                if(!state.ownedSkins.includes('panda')) { state.ownedSkins.push('panda'); res = "🐼 Панда (x2)!"; }
-                else { state.wallet += 300; res = "🪙 300 монет!"; }
-            } else {
-                let coins = Math.floor(Math.random() * 241) + 10; // 10-250
-                state.wallet += coins;
-                res = `🪙 +${coins} монет!`;
-            }
+            if (rand < 0.01) { state.ownedSkins.push('fox'); res = "🦊 Лис!"; }
+            else if (rand < 0.04) { state.ownedSkins.push('panda'); res = "🐼 Панда!"; }
+            else { let c = Math.floor(Math.random()*240)+10; state.wallet += c; res = `🪙 +${c}`; }
+            
             document.getElementById('case-result').innerText = `Выпало: ${res}`;
             document.getElementById('case-box').innerText = '📦';
+            document.getElementById('case-timer').innerText = "Ждать: 24ч";
             saveState();
         }
 
-        // --- РАННЕР (Упрощенная логика для экономии места) ---
-        const canvas = document.getElementById('game');
-        const ctx = canvas.getContext('2d');
+        // --- РАННЕР (Сбалансирован) ---
+        const canvas = document.getElementById('game'); const ctx = canvas.getContext('2d');
         let isPlaying = false, gameOver = false, score = 0;
         let player = { x: 50, y: 0, vy: 0, gravity: 0.8, jump: -14, isJumping: false };
-        let obstacles = [], coins = [];
+        let obstacles = [], coinsArr = [];
         
         function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; player.y = canvas.height - 120; }
         window.onresize = resize; resize();
 
-        function startGame() { document.getElementById('menu').style.display = 'none'; isPlaying = true; restartGame(); }
-        function showMenu() { document.getElementById('menu').style.display = 'flex'; document.getElementById('game-over').style.display = 'none'; isPlaying = false; }
-        function restartGame() { gameOver = false; score = 0; obstacles = []; coins = []; document.getElementById('game-over').style.display = 'none'; update(); }
+        function startGame() { document.getElementById('menu').style.display = 'none'; isPlaying = true; if(soundEnabled) startRain(); restartGame(); }
+        function showMenu() { document.getElementById('menu').style.display = 'flex'; document.getElementById('game-over').style.display = 'none'; isPlaying = false; stopRain(); }
+        function restartGame() { gameOver = false; score = 0; obstacles = []; coinsArr = []; document.getElementById('game-over').style.display = 'none'; update(); }
         
         function update() {
             if(gameOver || !isPlaying) return;
@@ -271,34 +353,33 @@
             let skin = skinsData.find(s => s.id === state.currentSkin);
             ctx.font = "40px Arial"; ctx.fillText(skin ? skin.emoji : '🐻', player.x, player.y + 40);
 
-            if(Math.random() < 0.02) obstacles.push({x: canvas.width, y: canvas.height-110, w: 30, h: 30});
-            if(Math.random() < 0.03) coins.push({x: canvas.width, y: canvas.height - 150 - Math.random()*50});
+            // Уменьшенный спавн (в 2 раза реже)
+            if(Math.random() < 0.01) obstacles.push({x: canvas.width, y: canvas.height-110, w: 30, h: 30});
+            if(Math.random() < 0.015) coinsArr.push({x: canvas.width, y: canvas.height - 150 - Math.random()*50});
 
             for(let i=obstacles.length-1; i>=0; i--) {
-                obstacles[i].x -= 7;
+                obstacles[i].x -= 6;
                 ctx.fillStyle = '#e74c3c'; ctx.fillRect(obstacles[i].x, obstacles[i].y, 30, 30);
                 if(player.x < obstacles[i].x+30 && player.x+30 > obstacles[i].x && player.y < obstacles[i].y+30 && player.y+40 > obstacles[i].y) {
                     gameOver = true; document.getElementById('game-over').style.display = 'block';
                 }
                 if(obstacles[i].x < -50) obstacles.splice(i,1);
             }
-            for(let i=coins.length-1; i>=0; i--) {
-                coins[i].x -= 7;
-                ctx.fillStyle = '#f1c40f'; ctx.beginPath(); ctx.arc(coins[i].x, coins[i].y, 10, 0, 7); ctx.fill();
-                if(Math.hypot(player.x+20 - coins[i].x, player.y+20 - coins[i].y) < 30) {
-                    state.wallet += 10 * getCurrentMult(); saveState(); coins.splice(i,1);
+            for(let i=coinsArr.length-1; i>=0; i--) {
+                coinsArr[i].x -= 6;
+                ctx.fillStyle = '#f1c40f'; ctx.beginPath(); ctx.arc(coinsArr[i].x, coinsArr[i].y, 10, 0, 7); ctx.fill();
+                if(Math.hypot(player.x+20 - coinsArr[i].x, player.y+20 - coinsArr[i].y) < 30) {
+                    state.wallet += 10 * getMult(); saveState(); coinsArr.splice(i,1); playSound(800, 'sine', 0.1);
                 }
-                if(coins[i].x < -50) coins.splice(i,1);
+                if(coinsArr[i].x < -50) coinsArr.splice(i,1);
             }
             requestAnimationFrame(update);
         }
         document.body.addEventListener('touchstart', () => { if(isPlaying && !player.isJumping) { player.vy = player.jump; player.isJumping = true; } });
 
-        // --- КРАШ ИГРА ---
-        const cCanvas = document.getElementById('crash-canvas');
-        const cCtx = cCanvas.getContext('2d');
-        let crashActive = false, crashMult = 1.0, crashRocket = {x: 0, y: 0};
-        let crashReqId = null;
+        // --- КРАШ (ИСПРАВЛЕНА МАТЕМАТИКА) ---
+        const cCanvas = document.getElementById('crash-canvas'); const cCtx = cCanvas.getContext('2d');
+        let crashActive = false, crashMult = 1.0, crashRocket = {x: 0, y: 0}, crashReqId = null;
 
         function openCrash() {
             document.getElementById('menu').style.display = 'none';
@@ -308,16 +389,13 @@
             drawStars();
         }
         function exitCrash() {
+            if(crashActive) return; // Нельзя выйти во время полета
             document.getElementById('crash-screen').style.display = 'none';
             showMenu();
         }
-        
         function drawStars() {
             cCtx.fillStyle = 'white';
-            for(let i=0; i<50; i++) {
-                cCtx.globalAlpha = Math.random();
-                cCtx.fillRect(Math.random()*cCanvas.width, Math.random()*cCanvas.height, 2, 2);
-            }
+            for(let i=0; i<50; i++) { cCtx.globalAlpha = Math.random(); cCtx.fillRect(Math.random()*cCanvas.width, Math.random()*cCanvas.height, 2, 2); }
             cCtx.globalAlpha = 1;
         }
 
@@ -326,65 +404,54 @@
             let bet = parseInt(document.getElementById('crash-bet').value);
 
             if (!crashActive) {
-                // СТАРТ ИГРЫ
-                if (bet < 1 || state.stars < bet) { tg.showAlert("Недостаточно звезд или ставка меньше 1!"); return; }
+                if (bet < 1 || state.stars < bet) { tg.showAlert("Недостаточно звезд (мин. 1)!"); return; }
                 state.stars -= bet; saveState(); // Списываем ставку
                 
-                crashActive = true;
-                crashMult = 1.0;
-                crashRocket = {x: 50, y: cCanvas.height - 100};
-                btn.innerText = `💰 Забрать (1.00x)`;
+                crashActive = true; crashMult = 1.0; crashRocket = {x: 50, y: cCanvas.height - 100};
+                btn.innerText = `💰 Забрать (${bet.toFixed(0)} ⭐)`;
                 btn.style.background = '#f1c40f'; btn.style.color = '#000';
 
-                // Точка краша генерируется на сервере (для теста рандом)
-                // В реальном проекте бот пришлет точку краша!
-                let crashPoint = (Math.random() * 10 + 1.1).toFixed(2); 
+                // НОВАЯ ГЕНЕРАЦИЯ КРАША (Максимум 10, чаще низкие)
+                let rand = Math.random();
+                let crashPoint;
+                if(rand < 0.5) crashPoint = 1.0 + Math.random() * 0.5; // 1.0 - 1.5 (50%)
+                else if(rand < 0.8) crashPoint = 1.5 + Math.random() * 1.5; // 1.5 - 3.0 (30%)
+                else if(rand < 0.95) crashPoint = 3.0 + Math.random() * 4.0; // 3.0 - 7.0 (15%)
+                else crashPoint = 7.0 + Math.random() * 3.0; // 7.0 - 10.0 (5%)
                 
                 let startTime = Date.now();
                 crashReqId = setInterval(() => {
                     let time = (Date.now() - startTime) / 1000;
-                    crashMult = Math.pow(1.1, time); // Экспоненциальный рост
+                    crashMult = Math.pow(1.15, time); // Чуть медленнее рост
 
                     if (crashMult >= crashPoint) {
-                        // ВЗРЫВ
                         clearInterval(crashReqId); crashActive = false;
-                        document.getElementById('crash-multiplier').innerText = "ВЗРЫВ! 💥";
+                        document.getElementById('crash-multiplier').innerText = "💥 ВЗРЫВ";
                         document.getElementById('crash-multiplier').style.color = "#e74c3c";
                         btn.innerText = "🚀 Запустить"; btn.style.background = '#e74c3c'; btn.style.color = '#fff';
                         
-                        // Уведомляем админа о проигрыше (через WebApp data)
                         tg.sendData(JSON.stringify({ action: 'crash_lose', bet: bet }));
                         return;
                     }
 
-                    // Отрисовка полета
-                    cCtx.fillStyle = '#000'; cCtx.fillRect(0,0,cCanvas.width,cCanvas.height);
-                    drawStars();
-                    
-                    crashRocket.x += 5; crashRocket.y -= 3;
-                    
+                    cCtx.fillStyle = '#000'; cCtx.fillRect(0,0,cCanvas.width,cCanvas.height); drawStars();
+                    crashRocket.x += 4; crashRocket.y -= 2;
                     cCtx.font = "40px Arial"; cCtx.fillText("🚀", crashRocket.x, crashRocket.y);
-                    cCtx.strokeStyle = '#f1c40f'; cCtx.beginPath(); cCtx.moveTo(50, cCanvas.height-100); 
-                    cCtx.lineTo(crashRocket.x, crashRocket.y); cCtx.stroke();
+                    cCtx.strokeStyle = '#f1c40f'; cCtx.beginPath(); cCtx.moveTo(50, cCanvas.height-100); cCtx.lineTo(crashRocket.x, crashRocket.y); cCtx.stroke();
 
                     document.getElementById('crash-multiplier').innerText = crashMult.toFixed(2) + "x";
                     btn.innerText = `💰 Забрать (${(bet * crashMult).toFixed(0)} ⭐)`;
-
                 }, 100);
             } else {
-                // ЗАБРАТЬ ВЫИГРЫШ
                 clearInterval(crashReqId); crashActive = false;
                 let win = Math.floor(bet * crashMult);
                 state.stars += win; saveState();
                 
-                document.getElementById('crash-multiplier').innerText = `Забрано: +${win} ⭐`;
+                document.getElementById('crash-multiplier').innerText = `+${win} ⭐`;
                 document.getElementById('crash-multiplier').style.color = "#4cd137";
                 btn.innerText = "🚀 Запустить"; btn.style.background = '#e74c3c'; btn.style.color = '#fff';
-                
-                // Уведомляем админа (опционально)
             }
         }
-
         updateHUD();
     </script>
 </body>
