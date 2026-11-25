@@ -11,7 +11,7 @@ APP_SHORT_NAME = "@MishkaRunGame_bot"
 BOT_USERNAME = "MishkaRunGame_bot"
 
 SKIN_PRICES = {
-    "boost5": {"name": "Буст x5 (1 день)", "price": 30},
+    "boost5": {"name": "Буст x5", "price": 30},
 }
 
 bot = telebot.TeleBot(BOT_TOKEN)
@@ -46,25 +46,32 @@ def process_topup(call):
     )
 
 
-# --- СТАРТ / DEEP-LINK ---
+# --- СТАРТ / ЗАЯВКИ ---
 @bot.message_handler(commands=['start'])
 def start(message):
     text = message.text or ""
     payload = text.replace("/start", "", 1).strip() if text.startswith("/start") else ""
+    name = f"@{message.from_user.username}" if message.from_user.username else f"id{message.from_user.id}"
 
+    # Заявка на вывод подарка: /start w_<user_id>_<stars>
     if payload.startswith("w_"):
         try:
             data = payload[2:].split("_")
-            user_id = int(data[0])
-            coins = int(data[1])
+            stars = int(data[1])
+            gift_names = {15: "🧸 Мишка", 25: "🎁 Подарочек", 50: "🍾 Шампанское", 100: "💍 Колечко"}
+            gift = gift_names.get(stars, f"подарок на {stars}⭐")
             markup = InlineKeyboardMarkup()
             markup.add(
-                InlineKeyboardButton("🎁 Выдать", callback_data=f"gift_ok_{user_id}"),
-                InlineKeyboardButton("❌ Отклонить", callback_data=f"gift_no_{user_id}"),
+                InlineKeyboardButton("✅ Отправил", callback_data=f"gift_ok_{message.from_user.id}"),
+                InlineKeyboardButton("❌ Отклонить", callback_data=f"gift_no_{message.from_user.id}"),
             )
-            bot.send_message(ADMIN_ID, f"🚨 ЗАЯВКА НА ВЫВОД\n\nИгрок: {user_id}\nМонет: {coins}",
-                             reply_markup=markup)
-            bot.send_message(user_id, "✅ Заявка принята! Админ свяжется с вами.")
+            bot.send_message(ADMIN_ID,
+                             f"🔔🔔🔔 ЗАЯВКА НА ВЫВОД ПОДАРКА!\n\n"
+                             f"Игрок: {name}\nID: `{message.from_user.id}`\n"
+                             f"Подарок: {gift} ({stars}⭐)\n\n"
+                             f"👉 Как отправить: открой чат с этим игроком → скрепка → Подарок → выбери на {stars} звёзд → Отправить.",
+                             parse_mode="Markdown", reply_markup=markup)
+            bot.send_message(message.chat.id, "✅ Заявка принята! Скоро отправим 🎁")
         except Exception as e:
             print("w_ error:", e)
     elif payload.startswith("buy_"):
@@ -125,7 +132,7 @@ def got_payment(message):
     if payload.startswith("topup"):
         markup = InlineKeyboardMarkup()
         markup.add(InlineKeyboardButton("🎮 Забрать звёзды в игре", url=game_url(f"topup_{amount}")))
-        bot.send_message(ADMIN_ID, f"💰 ПОПОЛНЕНИЕ!\n\nИгрок {name} купил {amount} звёзд.")
+        bot.send_message(ADMIN_ID, f"💰 ПОПОЛНЕНИЕ! Игрок {name} купил {amount} звёзд.")
         bot.send_message(message.chat.id, "✅ Оплата прошла! Нажми кнопку — звёзды сразу начислятся в игре:",
                          reply_markup=markup)
     elif payload.startswith("pay_"):
@@ -133,7 +140,7 @@ def got_payment(message):
         item = SKIN_PRICES.get(item_id, {})
         markup = InlineKeyboardMarkup()
         markup.add(InlineKeyboardButton("🎮 Забрать скин в игре", url=game_url(f"skin_{item_id}")))
-        bot.send_message(ADMIN_ID, f"💰 ПОКУПКА СКИНА!\n\nИгрок {name} купил `{item_id}` за {amount}⭐!")
+        bot.send_message(ADMIN_ID, f"💰 ПОКУПКА! Игрок {name} купил `{item_id}` за {amount}⭐!")
         bot.send_message(message.chat.id,
                          f"✅ Оплата прошла: {item.get('name', item_id)}!\nНажми кнопку — скин сразу наденется:",
                          reply_markup=markup)
@@ -148,9 +155,9 @@ def web_app_data(message):
         uid = message.from_user.id
 
         if data.get('action') == 'crash_lose':
-            bot.send_message(ADMIN_ID, f"🚀 КРАШ: ПРОИГРЫШ\n\nИгрок {name} проиграл {data.get('bet')} ⭐.")
+            bot.send_message(ADMIN_ID, f"🚀 КРАШ: ПРОИГРЫШ. Игрок {name} проиграл {data.get('bet')} ⭐.")
         elif data.get('action') == 'crash_win':
-            bot.send_message(ADMIN_ID, f"🚀 КРАШ: ВЫИГРЫШ\n\nИгрок {name} поставил {data.get('bet')} ⭐, забрал {data.get('win')} ⭐.")
+            bot.send_message(ADMIN_ID, f"🚀 КРАШ: ВЫИГРЫШ. Игрок {name} поставил {data.get('bet')} ⭐, забрал {data.get('win')} ⭐.")
         elif data.get('action') == 'withdraw_gift':
             gift = data.get('gift', '?')
             stars = data.get('stars', '?')
@@ -160,8 +167,9 @@ def web_app_data(message):
                 InlineKeyboardButton("❌ Отклонить", callback_data=f"gift_no_{uid}"),
             )
             bot.send_message(ADMIN_ID,
-                             f"🎁 ЗАЯВКА НА ПОДАРОК!\n\nИгрок: {name}\nID: `{uid}`\nПодарок: **{gift}** ({stars}⭐)\n\n"
-                             f"Как отправить: открой чат с игроком → скрепка → Подарок → выбери подарок на {stars} звёзд → Отправить.",
+                             f"🔔🔔🔔 ЗАЯВКА НА ВЫВОД ПОДАРКА!\n\n"
+                             f"Игрок: {name}\nID: `{uid}`\nПодарок: {gift} ({stars}⭐)\n\n"
+                             f"👉 Открой чат с игроком → скрепка → Подарок → выбери на {stars} звёзд → Отправить.",
                              parse_mode="Markdown", reply_markup=markup)
             bot.send_message(message.chat.id, f"✅ Заявка на «{gift}» принята! Скоро отправим 🎁")
     except Exception as e:
