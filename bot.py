@@ -24,7 +24,7 @@ SKIN_PRICES = {
 bot = telebot.TeleBot(BOT_TOKEN)
 
 # ================== СЕРВЕРНЫЙ БАЛАНС И ЛИДЕРБОРД ==================
-PLAYERS_FILE = "players.json"
+PLAYERS_FILE = "/data/players.json"
 PLAYERS = {}
 LOCK = threading.Lock()
 ONLINE_SEC = 180  # активность за 3 минуты = онлайн
@@ -41,6 +41,7 @@ def load_players():
 
 def save_players():
     try:
+        os.makedirs(os.path.dirname(PLAYERS_FILE), exist_ok=True)
         with open(PLAYERS_FILE, "w", encoding="utf-8") as f:
             json.dump(PLAYERS, f, ensure_ascii=False)
     except Exception as e:
@@ -173,16 +174,24 @@ class ApiHandler(BaseHTTPRequestHandler):
 
 
 def run_api():
-    port = int(os.environ.get("PORT", 8080))
+    ports = []
     try:
-        ThreadingHTTPServer(("0.0.0.0", port), ApiHandler).serve_forever()
-    except Exception as e:
-        print("API server error:", e)
+        env_port = int(os.environ.get("PORT", 0) or 0)
+        if env_port:
+            ports.append(env_port)
+    except Exception:
+        pass
+    ports += [8080, 5000, 80]
+    for port in ports:
+        try:
+            ThreadingHTTPServer(("0.0.0.0", port), ApiHandler).serve_forever()
+        except Exception as e:
+            print("API port", port, "failed:", e)
 
 
 load_players()
 threading.Thread(target=run_api, daemon=True).start()
-print(f"API-сервер запущен на порту {os.environ.get('PORT', 8080)}")
+print("API-сервер запущен (порты 8080/5000/80)")
 
 # ================== БОТ ==================
 @bot.message_handler(commands=['topup'])
