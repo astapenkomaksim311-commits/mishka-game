@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Mishka App 8.0</title>
+    <title>Mishka App 9.0</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -34,18 +34,26 @@
 
         #crash-screen { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: #050505; display: none; flex-direction: column; z-index: 15; }
         #crash-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
-        #crash-top { position: absolute; top: calc(10px + env(safe-area-inset-top)); left: 0; width: 100%; display: flex; justify-content: center; gap: 10px; z-index: 2; padding: 0 10px; }
+        #crash-top { position: absolute; top: calc(10px + env(safe-area-inset-top)); left: 0; width: 100%; display: flex; justify-content: center; gap: 10px; z-index: 2; padding: 0 10px; flex-wrap: wrap; }
         .hist-badge { background: #222; padding: 5px 12px; border-radius: 15px; font-weight: bold; font-size: 14px; border: 1px solid #444; }
-        #crash-multiplier { position: absolute; top: 15vh; width: 100%; text-align: center; font-size: 70px; font-weight: 900; color: #fff; text-shadow: 0 0 30px #f1c40f; z-index: 2; }
+        #crash-multiplier { position: absolute; top: 13vh; width: 100%; text-align: center; font-size: 64px; font-weight: 900; color: #fff; text-shadow: 0 0 30px #f1c40f; z-index: 2; }
+        #crash-autolabel { position: absolute; top: 13vh; margin-top: 80px; width: 100%; text-align: center; font-size: 16px; color: #f1c40f; font-weight: bold; z-index: 2; }
         #crash-controls { position: absolute; bottom: calc(20px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); width: 90%; max-width: 400px; display: flex; flex-direction: column; z-index: 2; }
         .crash-input-box { display: flex; background: #1a1a20; border-radius: 15px; padding: 5px; border: 1px solid #333; margin-bottom: 10px; }
-        .crash-input-box input { flex: 1; background: transparent; border: none; color: white; font-size: 24px; font-weight: bold; text-align: center; outline: none; }
+        .crash-input-box input { flex: 1; background: transparent; border: none; color: white; font-size: 22px; font-weight: bold; text-align: center; outline: none; min-width: 0; }
+        .crash-input-label { color: #888; font-size: 11px; text-align: center; margin-bottom: 2px; }
         .quick-bet { background: #333; color: white; border: none; border-radius: 10px; padding: 10px; font-weight: bold; margin-left: 5px; font-size: 12px; }
         .crash-action-btn { width: 100%; padding: 20px; border-radius: 15px; font-size: 20px; font-weight: 900; border: none; color: white; }
         .btn-start { background: #fff; color: #000; }
         .btn-cashout { background: #f1c40f; color: #000; }
+        .btn-cooldown { background: #333; color: #888; }
 
         #game-over { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(20, 20, 25, 0.95); padding: 20px; border-radius: 20px; text-align: center; display: none; border: 2px solid #e74c3c; width: 90%; max-width: 320px; z-index: 40; }
+
+        /* Кнопки прыжка в раннере */
+        #jump-btns { position: absolute; bottom: calc(24px + env(safe-area-inset-bottom)); left: 0; width: 100%; display: none; justify-content: space-between; padding: 0 20px; z-index: 12; box-sizing: border-box; }
+        .jump-btn { width: 140px; height: 64px; border-radius: 20px; border: 2px solid rgba(255,255,255,0.35); background: rgba(0,0,0,0.45); color: white; font-size: 16px; font-weight: 900; backdrop-filter: blur(4px); }
+        .jump-btn:active { background: rgba(255,255,255,0.25); }
     </style>
 </head>
 <body>
@@ -78,6 +86,7 @@
     <div id="gifts-shop" class="modal">
         <button class="close-modal" onclick="closeModal('gifts-shop')">✕</button>
         <div class="modal-header" style="color: #e74c3c;">Подарки</div>
+        <div style="color:#888; font-size:12px; margin-bottom:15px; text-align:center; max-width:350px;">Курс: 1 ⭐ = 100 🪙. Купи подарок монетами, затем нажми «Вывести» — отправим настоящий подарок в Telegram.</div>
         <div id="gifts-container" style="width: 100%; display: flex; flex-direction: column; align-items: center;"></div>
     </div>
 
@@ -98,16 +107,30 @@
         <button class="btn" style="background:#333;" onclick="exitRunner()">В меню</button>
     </div>
 
+    <div id="jump-btns">
+        <button class="jump-btn" style="background:rgba(52,152,219,0.5);" onmousedown="doJump('fast')" ontouchstart="doJump('fast'); event.preventDefault();">⚡ Быстрый</button>
+        <button class="jump-btn" style="background:rgba(241,196,15,0.5); color:#111;" onmousedown="doJump('normal')" ontouchstart="doJump('normal'); event.preventDefault();">⬆️ Прыжок</button>
+    </div>
+
     <div id="crash-screen">
         <canvas id="crash-canvas"></canvas>
         <div id="crash-top"></div>
         <div id="crash-multiplier">1.00x</div>
+        <div id="crash-autolabel"></div>
         <div id="crash-controls">
+            <div class="crash-input-label">Ставка ⭐</div>
             <div class="crash-input-box">
                 <button class="quick-bet" onclick="setBet(10)">10</button>
                 <button class="quick-bet" onclick="setBet(50)">50</button>
                 <input type="number" id="crash-bet" value="1" min="1">
                 <button class="quick-bet" onclick="setBet('max')">MAX</button>
+            </div>
+            <div class="crash-input-label">Авто-вывод по иксу (пусто = выключено)</div>
+            <div class="crash-input-box">
+                <input type="number" id="crash-auto" placeholder="напр. 2.00" step="0.1" min="1.01" inputmode="decimal">
+                <button class="quick-bet" onclick="document.getElementById('crash-auto').value='2.00'">x2</button>
+                <button class="quick-bet" onclick="document.getElementById('crash-auto').value='5.00'">x5</button>
+                <button class="quick-bet" onclick="document.getElementById('crash-auto').value=''">ВЫКЛ</button>
             </div>
             <button class="btn-start crash-action-btn" id="crash-action-btn" onclick="crashAction()">Отправить ставку</button>
             <button class="btn" style="background:transparent; color:#555; margin-top:10px; box-shadow:none;" onclick="exitCrash()">Выйти</button>
@@ -121,7 +144,7 @@
         tg.expand();
         const BOT_USERNAME = "MishkaRunGame_bot"; // <<< ИЗМЕНИ на юзернейм своего бота
 
-        // ================== АУДИО-ДВИЖОК ==================
+        // ================== АУДИО ==================
         let audioCtx = null;
         function getAudio() {
             if (!audioCtx) { try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {} }
@@ -141,10 +164,12 @@
             const ctx = getAudio(); if (!ctx || !sound.on) return;
             if (type === 'click') playNote(600, 'square', 0.12, 0.08);
             else if (type === 'jump') { playNote(320, 'sine', 0.18, 0.1); playNote(480, 'sine', 0.12, 0.1, 0.05); }
+            else if (type === 'fastjump') { playNote(420, 'sine', 0.18, 0.07); playNote(640, 'sine', 0.12, 0.08, 0.04); }
             else if (type === 'coin') { playNote(900, 'triangle', 0.18, 0.07); playNote(1300, 'triangle', 0.18, 0.1, 0.06); }
             else if (type === 'explosion') { playNote(120, 'sawtooth', 0.3, 0.4); playNote(80, 'square', 0.25, 0.5); }
             else if (type === 'cash') [523, 659, 784, 1046].forEach((f, i) => playNote(f, 'sine', 0.18, 0.15, i * 0.09));
             else if (type === 'tick') playNote(800, 'square', 0.06, 0.03);
+            else if (type === 'beep') playNote(1000, 'sine', 0.1, 0.08);
             else if (type === 'lose') [400, 300, 220, 150].forEach((f, i) => playNote(f, 'sawtooth', 0.15, 0.2, i * 0.12));
         }
         function haptic(type) {
@@ -155,13 +180,12 @@
             } catch(e) {}
         }
 
-        // ================== ФОНОВАЯ МУЗЫКА ==================
-        // Мелодия генерируется кодом — никаких аудиофайлов не нужно.
+        // ================== МУЗЫКА ==================
         const CHORDS = [
-            [220.00, 261.63, 329.63],  // Am
-            [174.61, 220.00, 261.63],  // F
-            [261.63, 329.63, 392.00],  // C
-            [196.00, 246.94, 293.66],  // G
+            [220.00, 261.63, 329.63],
+            [174.61, 220.00, 261.63],
+            [261.63, 329.63, 392.00],
+            [196.00, 246.94, 293.66],
         ];
         const sound = { on: true };
         const music = { mode: null, timer: null, step: 0 };
@@ -175,12 +199,11 @@
             const note = arp[music.step % 8];
             playNote(note, runner ? 'triangle' : 'sine', runner ? 0.09 : 0.06, runner ? 0.22 : 0.5);
             if (runner) {
-                if (music.step % 4 === 0) playNote(chord[0] / 2, 'square', 0.10, 0.18); // бас
-                if (music.step % 4 === 2) playNote(chord[0] / 2 * 1.5, 'square', 0.07, 0.12);
-                if (music.step % 8 === 0) playNote(90, 'sine', 0.18, 0.09); // "кик"
+                if (music.step % 4 === 0) playNote(chord[0] / 2, 'square', 0.10, 0.18);
+                if (music.step % 8 === 0) playNote(90, 'sine', 0.18, 0.09);
                 if (music.step % 8 === 4) playNote(150, 'sine', 0.10, 0.05);
             } else {
-                if (music.step % 8 === 0) playNote(chord[0] / 2, 'sine', 0.08, 1.6); // пэд
+                if (music.step % 8 === 0) playNote(chord[0] / 2, 'sine', 0.08, 1.6);
             }
             music.step++;
         }
@@ -190,8 +213,7 @@
             music.mode = mode; music.step = 0;
             if (mode) {
                 getAudio();
-                const step = mode === 'runner' ? 145 : 220;
-                music.timer = setInterval(musicTick, step);
+                music.timer = setInterval(musicTick, mode === 'runner' ? 145 : 220);
             }
         }
         function toggleSound() {
@@ -200,12 +222,10 @@
             state.musicOn = sound.on; saveState();
             if (!sound.on) clearInterval(music.timer); else if (music.mode) setMusic(music.mode);
         }
-        // Музыка ставится на паузу, когда мини-апп сворачивают
         document.addEventListener('visibilitychange', () => {
-            if (document.hidden) { clearInterval(music.timer); }
+            if (document.hidden) clearInterval(music.timer);
             else if (music.mode && sound.on) setMusic(music.mode);
         });
-        // Разблокировка звука первым касанием
         document.body.addEventListener('touchstart', () => getAudio(), { once: true });
         document.body.addEventListener('mousedown', () => getAudio(), { once: true });
 
@@ -218,9 +238,7 @@
             toastTimer = setTimeout(() => t.style.display = 'none', 2500);
         }
 
-        // ================== СОСТОЯНИЕ: ЧИСТЫЙ СТАРТ ДЛЯ ВСЕХ ==================
-        // Новая версия хранилища, старые сейвы затираются — у всех нули.
-        try { localStorage.removeItem('mishkaV7'); localStorage.removeItem('mishkaV8'); } catch(e) {}
+        // ================== СОСТОЯНИЕ (всё по нулям) ==================
         let state = null;
         try { state = JSON.parse(localStorage.getItem('mishkaV9')); } catch(e) {}
         if (!state) {
@@ -238,7 +256,6 @@
         }
         updateHUD();
 
-        // ================== ПОЛУЧЕНИЕ КУПЛЕННОГО ПОСЛЕ ОПЛАТЫ ==================
         function applyStartParam() {
             const sp = tg.initDataUnsafe && tg.initDataUnsafe.start_param;
             if (!sp) return;
@@ -259,7 +276,7 @@
         function closeModal(id) { document.getElementById(id).style.display = 'none'; sfx('click'); }
         function topUpStars() { sfx('click'); tg.openTelegramLink(`https://t.me/${BOT_USERNAME}?start=topup`); }
 
-        // ================== МАГАЗИН СКИНОВ ==================
+        // ================== СКИНЫ ==================
         const skinsData = [
             { id: 'bear', emoji: '🐻', name: 'Мишка', mult: 1, coins: 0, stars: 0 },
             { id: 'panda', emoji: '🐼', name: 'Панда', mult: 2, coins: 2000, stars: 0 },
@@ -278,7 +295,7 @@
                 c.innerHTML += `<div class="card">
                     <div style="font-size:30px;">${s.emoji}</div>
                     <div style="flex:1; text-align:left; padding-left:15px; font-weight:bold;">
-                        ${s.name} (x${s.mult})<br><span style="color:#f1c40f; font-size:12px;">${owned ? '' : price}</span>
+                        ${s.name} (x${s.mult} к очкам)<br><span style="color:#f1c40f; font-size:12px;">${owned ? '' : price}</span>
                     </div>
                     <button class="card-btn" style="background:${color};" onclick="buySkin('${s.id}')">${btn}</button>
                 </div>`;
@@ -298,10 +315,14 @@
             } else { tg.showAlert('Мало монет! Зарабатывай их в раннере 🏃'); haptic('heavy'); }
         }
 
-        // ================== ПОДАРКИ ==================
+        // ================== ПОДАРКИ: НАСТОЯЩИЕ TELEGRAM GIFT'Ы ==================
+        // Строгая математика: 1 звезда = 100 монет.
+        const STAR_TO_COIN = 100;
         const giftsData = [
-            { id: 'heart', emoji: '❤️', name: 'Сердечко', coins: 50000 },
-            { id: 'gift', emoji: '🎁', name: 'Подарочек', coins: 75000 }
+            { id: 'tg15',  emoji: '🎁', name: 'Подарок за 15 ⭐',  stars: 15,  coins: 15 * 100 },
+            { id: 'tg25',  emoji: '🎀', name: 'Подарок за 25 ⭐',  stars: 25,  coins: 25 * 100 },
+            { id: 'tg50',  emoji: '🧸', name: 'Подарок за 50 ⭐',  stars: 50,  coins: 50 * 100 },
+            { id: 'tg100', emoji: '💎', name: 'Подарок за 100 ⭐', stars: 100, coins: 100 * 100 },
         ];
 
         function renderGifts() {
@@ -309,8 +330,9 @@
             const c = document.getElementById('gifts-container'); c.innerHTML = '';
             giftsData.forEach(g => {
                 const owned = state.ownedGifts.includes(g.id);
-                const btn = owned ? 'Вывести' : 'Купить';
-                const color = owned ? '#f39c12' : '#8e44ad';
+                const canBuy = state.wallet >= g.coins;
+                const btn = owned ? 'Вывести' : (canBuy ? 'Купить' : 'Купить');
+                const color = owned ? '#f39c12' : (canBuy ? '#8e44ad' : '#444');
                 c.innerHTML += `<div class="card">
                     <div style="font-size:30px;">${g.emoji}</div>
                     <div style="flex:1; text-align:left; padding-left:15px; font-weight:bold;">
@@ -326,15 +348,21 @@
             sfx('click');
             const g = giftsData.find(x => x.id === id);
             if (state.ownedGifts.includes(id)) {
-                tg.sendData(JSON.stringify({ action: 'withdraw_gift', gift: g.name }));
-                toast('Заявка отправлена! Проверь чат с ботом.');
+                // Вывод: сообщаем боту, показываем «скоро отправим»
+                tg.sendData(JSON.stringify({ action: 'withdraw_gift', gift: g.name, stars: g.stars, gift_id: g.id }));
+                tg.showAlert('Скоро отправим! 🎁');
+                toast('Заявка на вывод принята. Скоро отправим!');
                 state.ownedGifts = state.ownedGifts.filter(x => x !== id);
                 saveState(); renderGifts();
             } else {
                 if (state.wallet >= g.coins) {
                     state.wallet -= g.coins; state.ownedGifts.push(id);
-                    saveState(); renderGifts(); toast('Куплено! 🎉'); sfx('cash');
-                } else { tg.showAlert('Мало монет! Зарабатывай их в раннере 🏃'); haptic('heavy'); }
+                    saveState(); renderGifts();
+                    toast(`Подарок куплен! Жми «Вывести» 🎁`); sfx('cash');
+                } else {
+                    tg.showAlert(`Не хватает монет: нужно 🪙 ${g.coins}, у тебя 🪙 ${state.wallet}.`);
+                    haptic('heavy');
+                }
             }
         }
 
@@ -383,57 +411,56 @@
             }, 100);
         }
 
-        // ================== РАННЕР ==================
+        // ================== РАННЕР (переработан) ==================
         const canvas = document.getElementById('game');
         const ctx = canvas.getContext('2d');
         let isRunner = false, rOver = false;
-        let p = { x: 50, y: 0, vy: 0, g: 0.6, j: -11, jumps: 0 };
-        let obs = [], coinsArr = [], particles = [], clouds = [];
+        let p = { x: 50, y: 0, vy: 0, g: 0.6 };
+        let obs = [], coinsArr = [], particles = [], floaters = [], clouds = [];
         let bgFar = 0, bgMid = 0, bgNear = 0;
-        let speed = 4.2, score = 0, lastObstacle = 0, lastCoin = 0;
+        let speed = 4.0, score = 0, lastObstacle = 0, lastCoin = 0;
 
         const GROUND_H = 60;
         const groundY = () => canvas.height - GROUND_H;
-        const playerBase = () => groundY() - 42; // где стоит медведь (низ эмодзи)
+        const playerBase = () => groundY() - 42;
+
+        // Строгая математика наград:
+        const COIN_COINS = 1;   // 1 монета за монету
+        const COIN_SCORE = 5;   // +5 очков за монету
+        const JUMP_NORMAL = -11;   // обычный прыжок
+        const JUMP_FAST = -8;      // быстрый: ниже и короче
+        const OBSTACLE_MIN_MS = 1500; // минимум между препятствиями
+        const COIN_MIN_MS = 900;
 
         function resize() {
             canvas.width = window.innerWidth; canvas.height = window.innerHeight;
-            if (p.y > playerBase() || !isRunner) p.y = playerBase();
+            if (!isRunner || p.y > playerBase()) p.y = playerBase();
             clouds = [];
             for (let i = 0; i < 5; i++) clouds.push({ x: Math.random() * canvas.width, y: 40 + Math.random() * (canvas.height * 0.3), s: 0.2 + Math.random() * 0.3, w: 60 + Math.random() * 80 });
         }
         window.onresize = () => { resize(); if (document.getElementById('crash-screen').style.display !== 'none') resizeCrash(); };
         resize();
 
-        // Звёзды на небе (генерируются один раз)
         let skyStars = [];
-        function makeSkyStars() {
-            skyStars = [];
-            for (let i = 0; i < 60; i++) skyStars.push({ x: Math.random(), y: Math.random() * 0.5, r: Math.random() * 1.5 + 0.5, tw: Math.random() * Math.PI * 2 });
-        }
-        makeSkyStars();
-
-        function spawnParticles(x, y, color, n) {
-            for (let i = 0; i < (n || 8); i++) {
-                particles.push({ x, y, vx: (Math.random() - 0.5) * 4, vy: -Math.random() * 4 - 1, life: 1, color: color || '#f1c40f' });
-            }
-        }
+        for (let i = 0; i < 60; i++) skyStars.push({ x: Math.random(), y: Math.random() * 0.5, r: Math.random() * 1.5 + 0.5, tw: Math.random() * Math.PI * 2 });
 
         function resetRunner() {
-            obs = []; coinsArr = []; particles = [];
-            p.y = playerBase(); p.vy = 0; p.jumps = 0;
-            speed = 4.2; score = 0; lastObstacle = 0; lastCoin = 0;
+            obs = []; coinsArr = []; particles = []; floaters = [];
+            p.y = playerBase(); p.vy = 0;
+            speed = 4.0; score = 0; lastObstacle = 0; lastCoin = 0;
             rOver = false;
         }
         function startRunner() {
             sfx('click');
             document.getElementById('menu').style.display = 'none';
             isRunner = true; resetRunner();
+            document.getElementById('jump-btns').style.display = 'flex';
             setMusic('runner');
             requestAnimationFrame(runnerLoop);
         }
         function exitRunner() {
             isRunner = false;
+            document.getElementById('jump-btns').style.display = 'none';
             document.getElementById('game-over').style.display = 'none';
             document.getElementById('menu').style.display = 'flex';
             setMusic('menu');
@@ -441,11 +468,19 @@
         function restartRunner() {
             resetRunner();
             document.getElementById('game-over').style.display = 'none';
+            document.getElementById('jump-btns').style.display = 'flex';
             setMusic('runner');
             requestAnimationFrame(runnerLoop);
         }
 
-        // Красивый фон: закат + параллакс
+        // Прыжок: обычный или быстрый. Двойного прыжка больше нет.
+        function doJump(kind) {
+            if (!isRunner || rOver) return;
+            if (p.y < playerBase() - 2) return; // в воздухе — второй прыжок запрещён
+            p.vy = kind === 'fast' ? JUMP_FAST : JUMP_NORMAL;
+            sfx(kind === 'fast' ? 'fastjump' : 'jump'); haptic('light');
+        }
+
         function drawSky(t) {
             const g = ctx.createLinearGradient(0, 0, 0, groundY());
             g.addColorStop(0, '#1a1a3e');
@@ -453,24 +488,18 @@
             g.addColorStop(0.85, '#8f4a5e');
             g.addColorStop(1, '#e0743c');
             ctx.fillStyle = g; ctx.fillRect(0, 0, canvas.width, groundY());
-
-            // Звёзды с мерцанием
             skyStars.forEach(s => {
                 ctx.globalAlpha = 0.4 + Math.abs(Math.sin(t / 800 + s.tw)) * 0.6;
                 ctx.fillStyle = '#fff';
                 ctx.beginPath(); ctx.arc(s.x * canvas.width, s.y * groundY(), s.r, 0, 7); ctx.fill();
             });
             ctx.globalAlpha = 1;
-
-            // Солнце у горизонта
             const sunX = canvas.width * 0.75, sunY = groundY() - 45;
             const glow = ctx.createRadialGradient(sunX, sunY, 5, sunX, sunY, 90);
             glow.addColorStop(0, 'rgba(255,180,80,0.9)');
             glow.addColorStop(1, 'rgba(255,120,50,0)');
             ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(sunX, sunY, 90, 0, 7); ctx.fill();
             ctx.fillStyle = '#ffd27d'; ctx.beginPath(); ctx.arc(sunX, sunY, 26, 0, 7); ctx.fill();
-
-            // Облака (медленный параллакс)
             ctx.fillStyle = 'rgba(255,255,255,0.10)';
             clouds.forEach(c => {
                 c.x -= c.s; if (c.x < -120) c.x = canvas.width + 100;
@@ -503,14 +532,8 @@
                 const x = i * period - offset + seed * 60;
                 const h = 50 + seed * 50;
                 ctx.beginPath();
-                ctx.moveTo(x, groundY() + 2);
-                ctx.lineTo(x - 16, groundY() + 2);
-                ctx.lineTo(x - 8, groundY() - h);
-                ctx.lineTo(x, groundY() + 2);
-                ctx.moveTo(x, groundY() + 2);
-                ctx.lineTo(x + 16, groundY() + 2);
-                ctx.lineTo(x + 8, groundY() - h);
-                ctx.lineTo(x, groundY() + 2);
+                ctx.moveTo(x, groundY() + 2); ctx.lineTo(x - 16, groundY() + 2); ctx.lineTo(x - 8, groundY() - h); ctx.lineTo(x, groundY() + 2);
+                ctx.moveTo(x, groundY() + 2); ctx.lineTo(x + 16, groundY() + 2); ctx.lineTo(x + 8, groundY() - h); ctx.lineTo(x, groundY() + 2);
                 ctx.fill();
             }
         }
@@ -520,7 +543,6 @@
             ctx.fillRect(0, groundY(), canvas.width, GROUND_H);
             ctx.fillStyle = '#2a3a1c';
             ctx.fillRect(0, groundY(), canvas.width, 6);
-            // Полосы травы, движущиеся с миром
             ctx.strokeStyle = 'rgba(255,255,255,0.05)'; ctx.lineWidth = 2;
             ctx.beginPath();
             for (let x = -(offset % 60); x < canvas.width; x += 60) {
@@ -554,30 +576,26 @@
 
             // Игрок
             p.vy += p.g; p.y += p.vy;
-            if (p.y > playerBase()) { p.y = playerBase(); p.vy = 0; p.jumps = 0; }
+            if (p.y > playerBase()) { p.y = playerBase(); p.vy = 0; }
             ctx.font = '42px Arial'; ctx.textAlign = 'left';
             const skinEmoji = state.currentSkin === 'panda' ? '🐼' : (state.currentSkin === 'boost5' ? '⚡🐻' : '🐻');
             ctx.fillText(skinEmoji, p.x, p.y + 42);
 
-            // Пыль под ногами при беге
-            if (p.jumps === 0 && Math.random() < 0.3) {
-                particles.push({ x: p.x + 5, y: p.y + 40, vx: -2, vy: -Math.random(), life: 0.5, color: 'rgba(120,120,120,0.5)' });
-            }
-
-            // Счёт и разгон
+            // Очки + живой рекорд
             score += speed * 0.05;
-            speed = Math.min(speed + 0.0015, 7);
+            speed = Math.min(speed + 0.0012, 6.5);
+            const liveBest = Math.max(Math.floor(state.best), Math.floor(score));
             ctx.font = 'bold 20px Arial'; ctx.fillStyle = '#fff';
-            ctx.fillText('Счёт: ' + Math.floor(score) + '   Рекорд: ' + Math.floor(state.best), 10, 34);
+            ctx.fillText('Счёт: ' + Math.floor(score) + '   Рекорд: ' + liveBest, 10, 34);
 
-            // Спавн препятствий с гарантированным зазором
-            const canSpawn = !lastObstacle || t - lastObstacle > (900 - Math.min(speed, 7) * 60);
-            if (canSpawn) {
+            // Препятствия: редкий спавн, минимум 1.5 сек между ними
+            const interval = OBSTACLE_MIN_MS + Math.max(0, (6.5 - speed)) * 150;
+            if ((!lastObstacle || t - lastObstacle > interval) && obs.length < 2) {
                 obs.push({ x: canvas.width, y: groundY() - 30, w: 30, h: 30, emoji: Math.random() > 0.5 ? '🌵' : '🪨' });
                 lastObstacle = t;
             }
-            const canCoin = !lastCoin || t - lastCoin > 1200;
-            if (canCoin) {
+            // Монеты
+            if (!lastCoin || t - lastCoin > COIN_MIN_MS) {
                 coinsArr.push({ x: canvas.width, y: groundY() - 90 - Math.random() * 70 });
                 lastCoin = t;
             }
@@ -587,21 +605,23 @@
                 obs[i].x -= speed;
                 ctx.font = '36px Arial';
                 ctx.fillText(obs[i].emoji, obs[i].x, obs[i].y + 34);
-                // Прощающие хитбоксы (запас 9px с каждой стороны)
                 if (p.x + 9 < obs[i].x + obs[i].w && p.x + 30 - 9 > obs[i].x &&
                     p.y + 9 < obs[i].y + obs[i].h && p.y + 42 - 9 > obs[i].y) {
                     rOver = true;
                     sfx('explosion'); haptic('heavy');
-                    if (score > state.best) { state.best = Math.floor(score); saveState(); }
-                    document.getElementById('final-score').innerText = 'Счёт: ' + Math.floor(score) + '   Рекорд: ' + Math.floor(state.best);
+                    const final = Math.floor(score);
+                    if (final > state.best) { state.best = final; }
+                    saveState();
+                    document.getElementById('final-score').innerText = 'Счёт: ' + final + '   Рекорд: ' + Math.floor(state.best);
                     document.getElementById('game-over').style.display = 'block';
+                    document.getElementById('jump-btns').style.display = 'none';
                     setMusic(null); sfx('lose');
                     return;
                 }
                 if (obs[i].x < -60) obs.splice(i, 1);
             }
 
-            // Монеты — БЕЗОПАСНОЕ удаление (здесь был баг зависания)
+            // Монеты: сбор = строго +1 монета, +5 очков, анимация "+1"
             for (let i = coinsArr.length - 1; i >= 0; i--) {
                 coinsArr[i].x -= speed;
                 ctx.font = '26px Arial';
@@ -609,41 +629,53 @@
                 const dx = p.x + 20 - coinsArr[i].x - 12;
                 const dy = p.y + 20 - coinsArr[i].y + 12;
                 if (Math.hypot(dx, dy) < 38) {
-                    const skin = skinsData.find(s => s.id === state.currentSkin);
-                    const gain = 10 * (skin ? skin.mult : 1);
-                    state.wallet += gain; saveState();
+                    state.wallet += COIN_COINS;          // +1 монета
+                    score += COIN_SCORE;                 // +5 очков
+                    saveState();
                     sfx('coin'); haptic('light');
-                    spawnParticles(coinsArr[i].x, coinsArr[i].y, '#f1c40f', 10);
+                    spawnParticles(coinsArr[i].x, coinsArr[i].y, '#f1c40f', 8);
+                    floaters.push({ x: coinsArr[i].x, y: coinsArr[i].y, text: '+1 🪙', life: 1 });
                     coinsArr.splice(i, 1);
-                    continue; // важно: после удаления сразу идём дальше
+                    continue;
                 }
                 if (coinsArr[i] && coinsArr[i].x < -40) coinsArr.splice(i, 1);
             }
 
+            // Всплывающие "+1"
+            for (let i = floaters.length - 1; i >= 0; i--) {
+                const f = floaters[i];
+                f.y -= 1.2; f.life -= 0.04;
+                if (f.life <= 0) { floaters.splice(i, 1); continue; }
+                ctx.globalAlpha = Math.max(f.life, 0);
+                ctx.font = 'bold 18px Arial'; ctx.fillStyle = '#f1c40f';
+                ctx.fillText(f.text, f.x, f.y);
+            }
+            ctx.globalAlpha = 1;
+
             requestAnimationFrame(runnerLoop);
         }
 
-        // Прыжок (двойной) — тап или клик, но не по кнопкам интерфейса
-        function tryJump(e) {
-            if (isRunner && !rOver && p.jumps < 2) {
-                p.vy = p.jumps === 0 ? p.j : p.j * 0.85;
-                p.jumps++;
-                sfx('jump'); haptic('light');
+        function spawnParticles(x, y, color, n) {
+            for (let i = 0; i < n; i++) {
+                particles.push({ x, y, vx: (Math.random() - 0.5) * 4, vy: -Math.random() * 4 - 1, life: 1, color });
             }
         }
+
+        // Тап по экрану = обычный прыжок (кнопки интерфейса не считаются)
         document.body.addEventListener('touchstart', (e) => {
             if (e.target.closest('button') || e.target.closest('.hud-box')) return;
-            tryJump(e);
+            doJump('normal');
         });
         document.body.addEventListener('mousedown', (e) => {
             if (e.target.closest('button') || e.target.closest('.hud-box')) return;
-            tryJump(e);
+            doJump('normal');
         });
 
-        // ================== КРАШ (чистый, без фейковых игроков) ==================
+        // ================== КРАШ ==================
         const cCanvas = document.getElementById('crash-canvas');
         const cCtx = cCanvas.getContext('2d');
         let cActive = false, cMult = 1.0, cRocket = { x: 50, y: 0 }, cTimer = null, cHistory = [];
+        let cooldown = 0, cdTimer = null;
 
         function drawCrashHistory() {
             document.getElementById('crash-top').innerHTML = cHistory.slice(-4).map(m =>
@@ -658,8 +690,8 @@
             document.getElementById('menu').style.display = 'none';
             document.getElementById('crash-screen').style.display = 'flex';
             resizeCrash();
-            document.getElementById('crash-multiplier').innerText = '1.00x';
-            document.getElementById('crash-multiplier').style.color = '#fff';
+            const mm = document.getElementById('crash-multiplier');
+            mm.innerText = '1.00x'; mm.style.color = '#fff';
         }
         function resizeCrash() {
             cCanvas.width = window.innerWidth; cCanvas.height = window.innerHeight;
@@ -667,30 +699,70 @@
             cRocket = { x: 50, y: cCanvas.height - 100 };
         }
 
+        // Отсчёт 5 секунд между запусками
+        function startCooldown() {
+            cooldown = 5;
+            const btn = document.getElementById('crash-action-btn');
+            btn.className = 'crash-action-btn btn-cooldown';
+            clearInterval(cdTimer);
+            cdTimer = setInterval(() => {
+                if (cooldown <= 0) {
+                    clearInterval(cdTimer);
+                    btn.innerText = 'Отправить ставку';
+                    btn.className = 'crash-action-btn btn-start';
+                    return;
+                }
+                btn.innerText = `Старт через ${cooldown}с`;
+                sfx('beep');
+                cooldown--;
+            }, 1000);
+        }
+
         function exitCrash() {
             if (cActive) { tg.showAlert('Сначала забери выигрыш или дождись краша!'); return; }
+            clearInterval(cdTimer);
             document.getElementById('crash-screen').style.display = 'none';
             document.getElementById('menu').style.display = 'flex';
             sfx('click');
         }
         function setBet(val) {
             sfx('click');
-            document.getElementById('crash-bet').value = (val === 'max') ? state.stars : val;
+            document.getElementById('crash-bet').value = (val === 'max') ? Math.max(state.stars, 1) : val;
         }
 
+        function cashout(auto) {
+            clearInterval(cTimer); cActive = false;
+            const win = Math.floor(cBet * cMult);
+            state.stars += win; saveState();
+            const mm = document.getElementById('crash-multiplier');
+            mm.innerText = `+${win} ⭐ (x${cMult.toFixed(2)})` + (auto ? ' 🤖' : '');
+            mm.style.color = '#2ecc71';
+            const btn = document.getElementById('crash-action-btn');
+            btn.innerText = 'Отправить ставку';
+            btn.className = 'crash-action-btn btn-start';
+            sfx('cash'); haptic('success');
+            cHistory.push(cMult); drawCrashHistory();
+            tg.sendData(JSON.stringify({ action: 'crash_win', bet: cBet, win: win }));
+            startCooldown();
+        }
+
+        let cBet = 0;
         function crashAction() {
             const btn = document.getElementById('crash-action-btn');
             const bet = parseInt(document.getElementById('crash-bet').value) || 0;
+            const autoVal = parseFloat(document.getElementById('crash-auto').value);
 
             if (!cActive) {
+                if (cooldown > 0) return;
                 if (bet < 1) { tg.showAlert('Минимальная ставка — 1 звезда!'); return; }
                 if (state.stars < bet) { tg.showAlert('Мало звёзд! Пополни баланс по кнопке ⭐.'); haptic('heavy'); return; }
                 state.stars -= bet; saveState();
-
-                cActive = true; cMult = 1.0;
+                cBet = bet; cActive = true; cMult = 1.0;
                 cRocket = { x: 50, y: cCanvas.height - 100 };
                 btn.innerText = `Забрать (${bet} ⭐)`;
                 btn.className = 'crash-action-btn btn-cashout';
+                document.getElementById('crash-autolabel').innerText =
+                    (autoVal >= 1.01) ? `🤖 Авто-вывод на x${autoVal.toFixed(2)}` : '';
 
                 const r = Math.random();
                 const crashPoint = r < 0.35 ? 1.0 + Math.random() * 0.3 : r < 0.8 ? 1.3 + Math.random() * 1.5 : 2.8 + Math.random() * 7;
@@ -700,14 +772,21 @@
                     const time = (Date.now() - startTime) / 1000;
                     cMult = Math.pow(1.15, time);
 
+                    // Авто-вывод сработал раньше краша
+                    if (autoVal >= 1.01 && cMult >= autoVal) {
+                        cMult = autoVal;
+                        cashout(true);
+                        return;
+                    }
+
                     if (cMult >= crashPoint) {
                         clearInterval(cTimer); cActive = false;
                         const mm = document.getElementById('crash-multiplier');
                         mm.innerText = 'ВЗРЫВ 💥 x' + crashPoint.toFixed(2); mm.style.color = '#e74c3c';
-                        btn.innerText = 'Отправить ставку'; btn.className = 'crash-action-btn btn-start';
                         sfx('explosion'); haptic('heavy');
                         cHistory.push(crashPoint); drawCrashHistory();
                         tg.sendData(JSON.stringify({ action: 'crash_lose', bet: bet }));
+                        startCooldown();
                         return;
                     }
 
@@ -718,7 +797,6 @@
                         cCtx.fillRect(Math.random() * cCanvas.width, Math.random() * cCanvas.height, 2, 2);
                     }
                     cCtx.globalAlpha = 1;
-
                     cRocket.x = Math.min(cRocket.x + 3, cCanvas.width - 60);
                     cRocket.y = Math.max(cRocket.y - 2, 80);
                     cCtx.font = '50px Arial'; cCtx.fillStyle = '#fff';
@@ -731,21 +809,12 @@
                     btn.innerText = `Забрать (${Math.floor(bet * cMult)} ⭐)`;
                 }, 100);
             } else {
-                clearInterval(cTimer); cActive = false;
-                const win = Math.floor(bet * cMult);
-                state.stars += win; saveState();
-                const mm = document.getElementById('crash-multiplier');
-                mm.innerText = `+${win} ⭐ (x${cMult.toFixed(2)})`; mm.style.color = '#2ecc71';
-                btn.innerText = 'Отправить ставку'; btn.className = 'crash-action-btn btn-start';
-                sfx('cash'); haptic('success');
-                cHistory.push(cMult); drawCrashHistory();
+                cashout(false);
             }
         }
 
         // ================== СТАРТ ==================
-        if (sound.on) document.getElementById('sound-btn').innerText = '🔊';
-        else document.getElementById('sound-btn').innerText = '🔇';
-        // Меню играет музыку сразу, как только звук разблокирован касанием
+        document.getElementById('sound-btn').innerText = sound.on ? '🔊' : '🔇';
         const musicKick = () => { if (!music.mode) setMusic('menu'); };
         document.body.addEventListener('touchstart', musicKick, { once: true });
         document.body.addEventListener('mousedown', musicKick, { once: true });
