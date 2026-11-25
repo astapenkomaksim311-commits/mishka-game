@@ -3,539 +3,389 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Мишка Раннер 3.0</title>
+    <title>Mishka Casino 4.0</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         * { box-sizing: border-box; }
-        body { margin: 0; padding: 0; background: #0a0a0f; overflow: hidden; font-family: 'Segoe UI', Tahoma, sans-serif; user-select: none; }
+        body { margin: 0; padding: 0; background: #0a0a0f; overflow: hidden; font-family: 'Segoe UI', Tahoma, sans-serif; user-select: none; color: white;}
         canvas { display: block; width: 100vw; height: 100vh; }
         
-        #hud { position: absolute; top: 15px; left: 15px; right: 15px; display: flex; justify-content: space-between; color: white; font-size: 22px; font-weight: 900; text-shadow: 2px 2px 0 #000; z-index: 10; }
+        /* HUD */
+        #hud { position: absolute; top: 10px; left: 10px; right: 10px; display: flex; justify-content: space-between; align-items: center; z-index: 10; }
+        .hud-box { background: rgba(0,0,0,0.6); padding: 5px 15px; border-radius: 20px; font-weight: bold; font-size: 16px; display: flex; align-items: center; gap: 5px;}
         
-        #menu { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(10, 10, 15, 0.9); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 20; }
-        #menu h1 { color: #3498db; font-size: 42px; margin: 0 0 10px 0; text-shadow: 0 0 20px rgba(52,152,219,0.6); }
-        #menu p { color: #aaa; margin-bottom: 30px; font-size: 16px; }
-        
-        .btn-main { background: linear-gradient(135deg, #3498db, #2980b9); color: white; border: none; padding: 15px 50px; border-radius: 30px; font-size: 22px; font-weight: 900; box-shadow: 0 6px 20px rgba(41, 128, 185, 0.5); margin-bottom: 15px; width: 220px; }
-        .btn-secondary { background: #2a2a35; color: white; border: 2px solid #444; padding: 12px 20px; border-radius: 25px; font-size: 16px; font-weight: bold; margin: 5px; flex: 1; }
+        /* Меню и Кнопки */
+        #menu { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(10, 10, 15, 0.95); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 20; }
+        h1 { color: #3498db; font-size: 36px; margin: 0 0 10px 0; text-shadow: 0 0 20px rgba(52,152,219,0.6); text-align: center;}
+        .btn { background: linear-gradient(135deg, #3498db, #2980b9); color: white; border: none; padding: 15px; border-radius: 15px; font-size: 18px; font-weight: 900; margin: 5px; width: 90%; max-width: 300px; box-shadow: 0 4px 15px rgba(41, 128, 185, 0.4); transition: transform 0.1s; }
+        .btn:active { transform: scale(0.95); }
+        .btn-red { background: linear-gradient(135deg, #e74c3c, #c0392b); box-shadow: 0 4px 15px rgba(231, 76, 60, 0.4); }
+        .btn-gold { background: linear-gradient(135deg, #f1c40f, #f39c12); box-shadow: 0 4px 15px rgba(241, 196, 15, 0.4); color: #111;}
         
         /* Модалки */
-        .modal { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(10, 10, 15, 0.95); display: none; flex-direction: column; align-items: center; z-index: 30; padding: 20px; overflow-y: auto; }
-        .modal-header { color: white; font-size: 28px; font-weight: bold; margin-bottom: 20px; text-shadow: 0 0 10px #3498db; }
+        .modal { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(10, 10, 15, 0.98); display: none; flex-direction: column; align-items: center; padding: 20px; overflow-y: auto; z-index: 30; }
+        .skin-card { background: #1e1e24; border: 1px solid #333; border-radius: 15px; padding: 15px; width: 100%; max-width: 350px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; }
         
-        .skin-card { background: #1e1e24; border: 2px solid #333; border-radius: 15px; padding: 15px; width: 100%; max-width: 350px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; }
-        .skin-info { display: flex; flex-direction: column; color: white; text-align: left; }
-        .skin-name { font-weight: bold; font-size: 18px; margin-bottom: 5px; }
-        .skin-mult { color: #4cd137; font-size: 14px; font-weight: bold; }
-        .skin-price { color: #f1c40f; font-size: 14px; margin-top: 5px; }
-        .skin-buy-btn { background: #3498db; border: none; border-radius: 10px; padding: 10px 15px; font-weight: bold; color: white; }
-        .skin-buy-btn.equipped { background: #4cd137; }
-        .skin-buy-btn.owned { background: #555; color: #aaa; }
+        /* Краш игра */
+        #crash-screen { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: #000; display: none; flex-direction: column; z-index: 15; overflow: hidden;}
+        #crash-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+        #crash-ui { position: relative; z-index: 2; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: space-between; padding: 20px; pointer-events: none;}
+        #crash-multiplier { font-size: 60px; font-weight: 900; color: #fff; text-shadow: 0 0 20px #f1c40f; text-align: center; margin-top: 20vh;}
+        #crash-controls { pointer-events: auto; display: flex; flex-direction: column; align-items: center; margin-bottom: 20px;}
+        .crash-input { background: #222; border: 2px solid #444; color: white; padding: 10px; border-radius: 10px; font-size: 20px; width: 150px; text-align: center; margin-bottom: 10px;}
         
-        /* Кейс */
-        #case-box { width: 150px; height: 150px; background: #222; border: 3px solid #3498db; border-radius: 20px; display: flex; align-items: center; justify-content: center; font-size: 80px; margin: 20px 0; box-shadow: 0 0 30px rgba(52,152,219,0.5); transition: transform 0.1s; }
-        #case-timer { color: #e74c3c; font-size: 20px; font-weight: bold; margin-bottom: 20px; }
-        .btn-open-case { background: #f1c40f; color: #111; border: none; padding: 15px 40px; border-radius: 30px; font-size: 20px; font-weight: 900; }
-        
-        .btn-close { background: #e74c3c; color: white; border: none; padding: 12px 40px; border-radius: 20px; font-size: 18px; font-weight: bold; margin-top: 20px; }
-        
-        #game-over { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(20, 20, 25, 0.95); padding: 30px; border-radius: 25px; text-align: center; color: white; display: none; border: 2px solid #e74c3c; width: 80%; max-width: 320px; z-index: 15; }
-        #game-over h2 { color: #e74c3c; margin-top: 0; font-size: 28px; }
-        .btn-restart { background: #3498db; color: white; border: none; padding: 15px; font-size: 18px; border-radius: 15px; margin-top: 15px; font-weight: bold; width: 100%; }
+        #game-over, #crash-over { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(20, 20, 25, 0.95); padding: 20px; border-radius: 20px; text-align: center; display: none; border: 2px solid #e74c3c; width: 90%; max-width: 320px; z-index: 40; }
     </style>
 </head>
 <body>
+    <!-- HUD -->
     <div id="hud">
-        <div>🪙 <span id="wallet">0</span> <span id="mult-text" style="color:#4cd137; font-size:14px; margin-left:5px;"></span></div>
-        <div>🏆 <span id="score">0</span></div>
+        <div class="hud-box">🪙 <span id="wallet">0</span></div>
+        <div class="hud-box">⭐ <span id="stars">0</span></div>
+        <div class="hud-box">🟢 <span id="online">0</span></div>
     </div>
 
-    <!-- Главное меню -->
+    <!-- Главное Меню -->
     <div id="menu">
-        <h1>🐻 Мишка 3.0</h1>
-        <p>Пасмурный раннер с сокровищами</p>
-        <button class="btn-main" onclick="startGame()">ИГРАТЬ</button>
-        <div style="display: flex; width: 80%; max-width: 350px;">
-            <button class="btn-secondary" onclick="toggleSound()" id="sound-btn">🔊 Звук</button>
-            <button class="btn-secondary" onclick="openShop()">🛒 Скины</button>
-        </div>
-        <div style="width: 80%; max-width: 350px;">
-            <button class="btn-secondary" style="width: 100%; border-color: #f1c40f; color: #f1c40f;" onclick="openCaseModal()">🎁 Ежедневный Кейс</button>
+        <h1>🐻 Mishka App</h1>
+        <p style="color:#aaa; margin-bottom:20px;">Выбери режим игры</p>
+        <button class="btn" onclick="startGame()">🏃‍♂️ Раннер (Монеты)</button>
+        <button class="btn btn-red" onclick="openCrash()">🚀 Краш (На Звезды)</button>
+        <div style="display:flex; width:90%; max-width:300px; gap: 5px;">
+            <button class="btn btn-gold" style="flex:1;" onclick="openShop()">🛒 Скины</button>
+            <button class="btn" style="flex:1; background:#2a2a35;" onclick="openCaseModal()">🎁 Кейс</button>
         </div>
     </div>
 
     <!-- Магазин -->
     <div id="shop" class="modal">
-        <div class="modal-header">Магазин Скинов</div>
+        <h2 style="color:#3498db;">Магазин</h2>
         <div id="skins-container" style="width: 100%; display: flex; flex-direction: column; align-items: center;"></div>
-        <button class="btn-close" onclick="closeModal('shop')">Закрыть</button>
+        <button class="btn" style="margin-top:20px; background:#e74c3c;" onclick="closeModal('shop')">Закрыть</button>
     </div>
 
     <!-- Кейс -->
     <div id="case-modal" class="modal">
-        <div class="modal-header">Ежедневный Кейс</div>
-        <div id="case-timer">Доступен!</div>
-        <div id="case-box" onclick="openCase()">📦</div>
-        <div id="case-result" style="color: white; font-size: 24px; font-weight: bold; text-align: center; height: 30px;"></div>
-        <button class="btn-open-case" id="open-case-btn" onclick="openCase()">Открыть</button>
-        <button class="btn-close" onclick="closeModal('case-modal')">Закрыть</button>
+        <h2 style="color:#f1c40f;">Ежедневный Кейс</h2>
+        <div id="case-timer" style="color:#e74c3c; font-size:20px; margin:10px 0;">Загрузка...</div>
+        <div id="case-box" style="width: 150px; height: 150px; background: #222; border: 3px solid #f1c40f; border-radius: 20px; display: flex; align-items: center; justify-content: center; font-size: 80px; margin: 20px 0;">📦</div>
+        <div id="case-result" style="font-size: 20px; font-weight: bold; color:#4cd137; height:30px;"></div>
+        <button class="btn btn-gold" id="open-case-btn" style="width:200px;" onclick="openCase()">Открыть</button>
+        <button class="btn" style="margin-top:10px; background:#333;" onclick="closeModal('case-modal')">Закрыть</button>
     </div>
 
+    <!-- Экран Раннера -->
     <canvas id="game"></canvas>
-    
     <div id="game-over">
         <h2>Ты врезался! 💥</h2>
-        <p>Собрано очков: <span id="final-score">0</span></p>
-        <button class="btn-restart" onclick="restartGame()">Играть снова</button>
-        <button class="btn-restart" style="background: #555; margin-top: 5px;" onclick="showMenu()">В меню</button>
+        <button class="btn btn-red" onclick="restartGame()">Играть снова</button>
+        <button class="btn" style="background:#333;" onclick="showMenu()">В меню</button>
+    </div>
+
+    <!-- Экран Краша -->
+    <div id="crash-screen">
+        <canvas id="crash-canvas"></canvas>
+        <div id="crash-ui">
+            <div id="crash-multiplier">1.00x</div>
+            <div id="crash-controls">
+                <input type="number" id="crash-bet" class="crash-input" value="1" min="1" placeholder="Ставка ⭐">
+                <button class="btn btn-red" id="crash-action-btn" onclick="crashAction()">🚀 Запустить (Ставка)</button>
+                <button class="btn" style="background:#333; margin-top:5px;" onclick="exitCrash()">Выйти</button>
+            </div>
+        </div>
     </div>
 
     <script>
-        // --- НАСТРОЙКИ ---
-        const BOT_USERNAME = "MishkaRunGame_bot"; 
-        const canvas = document.getElementById('game');
-        const ctx = canvas.getContext('2d');
         const tg = window.Telegram.WebApp;
-        tg.expand(); 
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-        let groundY = canvas.height - 80;
+        tg.expand();
+        const BOT_USERNAME = "MishkaRunGame_bot"; 
 
-        // --- ЗВУК (Web Audio API) ---
-        let soundEnabled = localStorage.getItem('sound') !== 'false';
-        let audioCtx;
-        let rainSource;
-        let musicInterval;
+        // --- БАЗА ДАННЫХ (LocalStorage) ---
+        let state = JSON.parse(localStorage.getItem('mishkaState')) || {
+            wallet: 0,
+            stars: 10, // Дадим 10 звезд для теста
+            ownedSkins: ['bear'],
+            currentSkin: 'bear',
+            lastCaseOpen: 0,
+            activeBoost: null // { id: 'boost5', expires: timestamp }
+        };
 
-        function initAudio() {
-            if (!audioCtx) {
-                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            }
-            if (audioCtx.state === 'suspended') audioCtx.resume();
+        function saveState() { localStorage.setItem('mishkaState', JSON.stringify(state)); updateHUD(); }
+        function updateHUD() {
+            document.getElementById('wallet').innerText = state.wallet;
+            document.getElementById('stars').innerText = state.stars;
+            document.getElementById('online').innerText = Math.floor(Math.random() * 100) + 50; // Фейковый онлайн
         }
-
-        function playSFX(freq, type, duration, vol = 0.1) {
-            if (!soundEnabled) return;
-            initAudio();
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.type = type;
-            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-            gain.gain.setValueAtTime(vol, audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + duration);
-            osc.connect(gain); gain.connect(audioCtx.destination);
-            osc.start(); osc.stop(audioCtx.currentTime + duration);
-        }
-
-        function startRainSound() {
-            if (!soundEnabled || rainSource) return;
-            initAudio();
-            // Генерация белого шума для дождя
-            const bufferSize = audioCtx.sampleRate * 2;
-            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-            const data = buffer.getChannelData(0);
-            for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
-            
-            rainSource = audioCtx.createBufferSource();
-            rainSource.buffer = buffer;
-            rainSource.loop = true;
-            
-            const filter = audioCtx.createBiquadFilter();
-            filter.type = 'lowpass';
-            filter.frequency.value = 1000;
-            
-            const gain = audioCtx.createGain();
-            gain.gain.value = 0.05;
-            
-            rainSource.connect(filter);
-            filter.connect(gain);
-            gain.connect(audioCtx.destination);
-            rainSource.start();
-        }
-
-        function stopRainSound() {
-            if (rainSource) { rainSource.stop(); rainSource.disconnect(); rainSource = null; }
-        }
-
-        function toggleSound() {
-            soundEnabled = !soundEnabled;
-            localStorage.setItem('sound', soundEnabled);
-            document.getElementById('sound-btn').innerText = soundEnabled ? '🔊 Звук' : '🔇 Без звука';
-            if (soundEnabled) {
-                initAudio();
-                if (isPlaying) startRainSound();
-            } else {
-                stopRainSound();
-            }
-        }
+        setInterval(() => { document.getElementById('online').innerText = Math.floor(Math.random() * 100) + 50; }, 10000);
 
         // --- СКИНЫ ---
         const skinsData = [
-            { id: 'bear', emoji: '🐻', name: 'Обычный Мишка', mult: 1, priceCoins: 0, priceStars: 0 },
+            { id: 'bear', emoji: '🐻', name: 'Мишка', mult: 1, priceCoins: 0, priceStars: 0 },
             { id: 'panda', emoji: '🐼', name: 'Панда', mult: 2, priceCoins: 2000, priceStars: 0 },
-            { id: 'fox', emoji: '🦊', name: 'Хитрый Лис', mult: 3, priceCoins: 5000, priceStars: 0 },
-            { id: 'wolf', emoji: '🐺', name: 'Серый Волк', mult: 5, priceCoins: 15000, priceStars: 0 },
-            { id: 'lion', emoji: '🦁', name: 'Король Лев', mult: 8, priceCoins: 0, priceStars: 25 },
-            { id: 'dragon', emoji: '🐲', name: 'Дракон', mult: 12, priceCoins: 0, priceStars: 75 }
+            { id: 'fox', emoji: '🦊', name: 'Лис', mult: 3, priceCoins: 5000, priceStars: 0 },
+            // Бусты на время
+            { id: 'boost5', emoji: '⚡', name: 'Буст x5 (1 день)', mult: 5, priceCoins: 0, priceStars: 30, duration: 86400000 },
+            { id: 'boost7', emoji: '🔥', name: 'Буст x7 (2 дня)', mult: 7, priceCoins: 0, priceStars: 50, duration: 172800000 },
+            { id: 'boost10', emoji: '💎', name: 'Буст x10 (3 дня)', mult: 10, priceCoins: 0, priceStars: 100, duration: 259200000 }
         ];
 
-        let wallet = parseInt(localStorage.getItem('bearWallet')) || 0;
-        let ownedSkins = JSON.parse(localStorage.getItem('ownedSkins')) || ['bear'];
-        let currentSkinId = localStorage.getItem('currentSkin') || 'bear';
-
-        function getCurrentSkin() { return skinsData.find(s => s.id === currentSkinId); }
-
-        function updateHUD() {
-            document.getElementById('wallet').innerText = wallet;
-            document.getElementById('mult-text').innerText = currentSkinId !== 'bear' ? `(x${getCurrentSkin().mult})` : '';
+        function getCurrentMult() {
+            if (state.activeBoost) {
+                let boost = skinsData.find(s => s.id === state.activeBoost.id);
+                if (Date.now() < state.activeBoost.expires) return boost.mult;
+                else { state.activeBoost = null; saveState(); } // Буст истек
+            }
+            let skin = skinsData.find(s => s.id === state.currentSkin);
+            return skin ? skin.mult : 1;
         }
 
-        // --- ИГРОВАЯ ЛОГИКА (Delta Time для идеальной скорости) ---
-        let isPlaying = false;
-        let gameOver = false;
-        let score = 0;
-        let baseSpeed = 6; // Скорость в пикселях за кадр (при 60 FPS)
-        let frameCount = 0;
-        let lastTime = 0;
-        let dt = 1; 
-        
-        let player = { x: 60, y: groundY - 40, w: 40, h: 40, vy: 0, gravity: 0.8, jumpForce: -14, isJumping: false };
-        let obstacles = [];
-        let coinObjects = [];
-        let rainDrops = [];
-        let particles = [];
-        let floatingTexts = [];
-
-        // Инициализация дождя
-        for (let i = 0; i < 100; i++) {
-            rainDrops.push({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, len: Math.random() * 20 + 10, speed: Math.random() * 10 + 15 });
-        }
-
-        function startGame() {
-            document.getElementById('menu').style.display = 'none';
-            isPlaying = true;
-            if (soundEnabled) { initAudio(); startRainSound(); }
-            restartGame();
-        }
-
-        function showMenu() {
-            document.getElementById('game-over').style.display = 'none';
-            document.getElementById('menu').style.display = 'flex';
-            isPlaying = false;
-            stopRainSound();
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-        }
-
-        function jump() {
-            if (!player.isJumping && !gameOver && isPlaying) {
-                player.vy = player.jumpForce;
-                player.isJumping = true;
-                playSFX(400, 'sine', 0.1, 0.1);
-                if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
-            }
-        }
-        document.body.addEventListener('touchstart', jump);
-        document.body.addEventListener('mousedown', jump);
-
-        function restartGame() {
-            score = 0; frameCount = 0; obstacles = []; coinObjects = []; particles = []; floatingTexts = []; gameOver = false;
-            player.y = groundY - 40; player.vy = 0; player.isJumping = false;
-            document.getElementById('game-over').style.display = 'none';
-            document.getElementById('score').innerText = score;
-            updateHUD();
-            lastTime = performance.now();
-            requestAnimationFrame(update);
-        }
-
-        function update(currentTime) {
-            if (gameOver || !isPlaying) return;
-            
-            // Delta Time расчет (плавность на всех устройствах)
-            if (!lastTime) lastTime = currentTime;
-            let elapsed = currentTime - lastTime;
-            lastTime = currentTime;
-            dt = elapsed / 16.667; // Нормализация под 60 fps
-            if (dt > 3) dt = 3; // Защита от лагов
-
-            let speed = baseSpeed * dt;
-            
-            // Отрисовка фона (Пасмурный)
-            let grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
-            grad.addColorStop(0, '#1a1a24');
-            grad.addColorStop(1, '#2d2d3b');
-            ctx.fillStyle = grad;
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            // Дождь
-            ctx.strokeStyle = 'rgba(150, 180, 255, 0.3)';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            for (let i = 0; i < rainDrops.length; i++) {
-                let drop = rainDrops[i];
-                drop.y += drop.speed * dt;
-                drop.x -= drop.speed * 0.2 * dt;
-                if (drop.y > canvas.height) { drop.y = -20; drop.x = Math.random() * canvas.width; }
-                if (drop.x < 0) drop.x = canvas.width;
-                ctx.moveTo(drop.x, drop.y);
-                ctx.lineTo(drop.x, drop.y + drop.len);
-            }
-            ctx.stroke();
-
-            // Земля
-            ctx.fillStyle = '#15151a'; 
-            ctx.fillRect(0, groundY, canvas.width, 80);
-            ctx.fillStyle = '#34495e'; 
-            ctx.fillRect(0, groundY, canvas.width, 4);
-
-            // Физика игрока
-            player.vy += player.gravity * dt; 
-            player.y += player.vy * dt;
-            if (player.y > groundY - player.h) { 
-                player.y = groundY - player.h; player.vy = 0; player.isJumping = false; 
-            }
-
-            // Отрисовка игрока
-            ctx.font = "45px Arial"; 
-            ctx.fillText(getCurrentSkin().emoji, player.x, player.y + 40);
-
-            // Частицы
-            for(let i = particles.length - 1; i >= 0; i--) {
-                let p = particles[i];
-                p.x += p.vx * dt; p.y += p.vy * dt; p.life -= 0.05 * dt;
-                if(p.life <= 0) { particles.splice(i,1); continue; }
-                ctx.fillStyle = `rgba(241, 196, 15, ${p.life})`;
-                ctx.beginPath(); ctx.arc(p.x, p.y, 4, 0, Math.PI*2); ctx.fill();
-            }
-
-            // Текст +1
-            for(let i = floatingTexts.length - 1; i >= 0; i--) {
-                let ft = floatingTexts[i];
-                ft.y -= 1.5 * dt; ft.life -= 0.02 * dt;
-                if(ft.life <= 0) { floatingTexts.splice(i,1); continue; }
-                ctx.fillStyle = `rgba(255, 255, 255, ${ft.life})`;
-                ctx.font = "bold 22px Arial";
-                ctx.fillText(ft.text, ft.x, ft.y);
-            }
-
-            frameCount += dt;
-            
-            // Спавн
-            if (frameCount % 100 < dt && Math.random() > 0.4) {
-                obstacles.push({ x: canvas.width, y: groundY - 35, w: 35, h: 40, type: '🌵' });
-            }
-            if (frameCount % 150 < dt && Math.random() > 0.4) {
-                let amount = Math.random() > 0.85 ? 5 : 1; 
-                coinObjects.push({ x: canvas.width, y: groundY - 100 - Math.random() * 60, r: 15, amount: amount });
-            }
-
-            // Препятствия
-            for (let i = obstacles.length - 1; i >= 0; i--) {
-                let obs = obstacles[i]; obs.x -= speed;
-                ctx.font = "40px Arial"; 
-                ctx.fillText(obs.type, obs.x, obs.y + 40);
-
-                if (player.x + 15 < obs.x + obs.w && player.x + player.w - 10 > obs.x &&
-                    player.y + 10 < obs.y + obs.h && player.y + player.h - 5 > obs.y) {
-                    playSFX(150, 'sawtooth', 0.3, 0.2);
-                    if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
-                    gameOver = true; 
-                    stopRainSound();
-                    document.getElementById('final-score').innerText = Math.floor(score);
-                    document.getElementById('game-over').style.display = 'block';
-                }
-                if (obs.x < -50) obstacles.splice(i, 1);
-            }
-
-            // Монеты
-            for (let i = coinObjects.length - 1; i >= 0; i--) {
-                let coin = coinObjects[i]; coin.x -= speed;
-                ctx.font = "30px Arial"; 
-                ctx.fillText("🪙", coin.x - 10, coin.y + 10);
-                
-                if (Math.hypot((player.x + 20) - coin.x, (player.y + 20) - coin.y) < 40) {
-                    let earned = coin.amount * getCurrentSkin().mult;
-                    wallet += earned;
-                    localStorage.setItem('bearWallet', wallet);
-                    updateHUD();
-                    playSFX(1200, 'square', 0.1, 0.1);
-                    
-                    for(let j=0; j<5; j++) particles.push({ x: coin.x, y: coin.y, vx: (Math.random() - 0.5) * 6, vy: (Math.random() - 0.5) * 6, life: 1 });
-                    floatingTexts.push({ x: coin.x, y: coin.y - 15, text: `+${earned}`, life: 1 });
-                    
-                    if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
-                    coinObjects.splice(i, 1); continue;
-                }
-                if (coin.x < -50) coinObjects.splice(i, 1);
-            }
-
-            score += 0.1 * dt; 
-            document.getElementById('score').innerText = Math.floor(score);
-
-            requestAnimationFrame(update);
-        }
-
-        // --- UI И МАГАЗИН ---
-        function openModal(id) { document.getElementById(id).style.display = 'flex'; }
-        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
-
+        // --- МАГАЗИН ---
         function openShop() {
-            renderShop();
-            openModal('shop');
-        }
-
-        function renderShop() {
             const container = document.getElementById('skins-container');
             container.innerHTML = '';
-            
             skinsData.forEach(skin => {
-                let isOwned = ownedSkins.includes(skin.id);
-                let isEquipped = currentSkinId === skin.id;
-                
+                let isOwned = state.ownedSkins.includes(skin.id);
+                let isEquipped = state.currentSkin === skin.id;
                 let btnText = isEquipped ? 'Надет' : (isOwned ? 'Надеть' : 'Купить');
-                let btnClass = isEquipped ? 'equipped' : (isOwned ? 'owned' : '');
+                let btnColor = isEquipped ? '#4cd137' : (isOwned ? '#555' : '#3498db');
                 
                 let priceText = '';
                 if (!isOwned) {
                     if (skin.priceCoins > 0) priceText = `🪙 ${skin.priceCoins}`;
                     if (skin.priceStars > 0) priceText = `⭐ ${skin.priceStars}`;
                 }
+                if (skin.duration && isOwned) {
+                     btnText = 'Купить еще';
+                }
 
-                let card = document.createElement('div');
-                card.className = 'skin-card';
-                card.innerHTML = `
-                    <div style="font-size: 40px; background: #111; padding: 10px; border-radius: 10px;">${skin.emoji}</div>
-                    <div class="skin-info">
-                        <div class="skin-name">${skin.name}</div>
-                        <div class="skin-mult">Бонус: x${skin.mult} монет</div>
-                        <div class="skin-price">${priceText}</div>
-                    </div>
-                    <button class="skin-buy-btn ${btnClass}" onclick="buyOrEquip('${skin.id}')">${btnText}</button>
-                `;
-                container.appendChild(card);
+                container.innerHTML += `
+                    <div class="skin-card">
+                        <div style="font-size: 40px;">${skin.emoji}</div>
+                        <div style="flex:1; padding-left:15px; text-align:left;">
+                            <div style="font-weight:bold;">${skin.name}</div>
+                            <div style="color:#4cd137; font-size:12px;">Множитель: x${skin.mult}</div>
+                            <div style="color:#f1c40f; font-size:14px;">${priceText}</div>
+                        </div>
+                        <button style="background:${btnColor}; color:white; border:none; padding:8px 15px; border-radius:10px; font-weight:bold;" onclick="buySkin('${skin.id}')">${btnText}</button>
+                    </div>`;
             });
+            document.getElementById('shop').style.display = 'flex';
         }
 
-        function buyOrEquip(skinId) {
-            const skin = skinsData.find(s => s.id === skinId);
-            let isOwned = ownedSkins.includes(skin.id);
-            if (currentSkinId === skinId) return;
+        function buySkin(skinId) {
+            let skin = skinsData.find(s => s.id === skinId);
+            let isOwned = state.ownedSkins.includes(skin.id);
 
-            if (isOwned) {
-                currentSkinId = skinId;
-                saveShopData();
-                playSFX(600, 'sine', 0.2);
-                renderShop(); updateHUD();
-            } else {
-                if (skin.priceCoins > 0 && wallet >= skin.priceCoins) {
-                    wallet -= skin.priceCoins;
-                    ownedSkins.push(skin.id); currentSkinId = skin.id;
-                    saveShopData();
-                    playSFX(800, 'square', 0.3, 0.1);
-                    if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
-                    renderShop(); updateHUD();
-                } else if (skin.priceStars > 0) {
-                    tg.showConfirm(`Купить ${skin.name} за ${skin.priceStars} Stars?`, (ok) => {
-                        if(ok) {
-                            tg.openTelegramLink(`https://t.me/${BOT_USERNAME}?start=buy_skin_${skin.id}`);
-                            closeModal('shop'); 
-                        }
-                    });
-                } else {
-                    tg.showAlert("Недостаточно монет! Беги и собирай ещё!");
-                    playSFX(200, 'sawtooth', 0.2);
-                }
+            if (isOwned && !skin.duration) { state.currentSkin = skinId; saveState(); openShop(); return; }
+            
+            if (skin.priceCoins > 0) {
+                if (state.wallet >= skin.priceCoins) {
+                    state.wallet -= skin.priceCoins;
+                    if(!state.ownedSkins.includes(skinId)) state.ownedSkins.push(skinId);
+                    state.currentSkin = skinId;
+                    saveState(); openShop(); tg.HapticFeedback.notificationOccurred('success');
+                } else { tg.showAlert("Мало монет!"); }
+            } else if (skin.priceStars > 0) {
+                tg.showConfirm(`Купить "${skin.name}" за ${skin.priceStars}⭐?`, (ok) => {
+                    if(ok) {
+                        // Отправляем боту запрос на покупку. Бот пришлет счет.
+                        tg.openTelegramLink(`https://t.me/${BOT_USERNAME}?start=buy_${skin.id}`);
+                    }
+                });
             }
         }
 
-        function saveShopData() {
-            localStorage.setItem('bearWallet', wallet);
-            localStorage.setItem('ownedSkins', JSON.stringify(ownedSkins));
-            localStorage.setItem('currentSkin', currentSkinId);
-        }
-
         // --- КЕЙС ---
-        let caseTimeout = null;
         function openCaseModal() {
-            openModal('case-modal');
-            checkCaseStatus();
+            document.getElementById('case-modal').style.display = 'flex';
+            checkCase();
         }
-
-        function checkCaseStatus() {
-            let lastOpen = parseInt(localStorage.getItem('lastCaseOpen')) || 0;
-            let now = Date.now();
-            let diff = now - lastOpen;
-            let cooldown = 24 * 60 * 60 * 1000; // 24 часа
-
+        function checkCase() {
+            let diff = Date.now() - state.lastCaseOpen;
+            let cooldown = 24*60*60*1000;
             if (diff >= cooldown) {
                 document.getElementById('open-case-btn').style.display = 'block';
                 document.getElementById('case-timer').innerText = "Доступен!";
                 document.getElementById('case-timer').style.color = "#4cd137";
-                document.getElementById('case-box').style.transform = "scale(1)";
             } else {
                 document.getElementById('open-case-btn').style.display = 'none';
-                document.getElementById('case-box').style.transform = "scale(0.9)";
-                let timeLeft = cooldown - diff;
-                let hours = Math.floor(timeLeft / (1000 * 60 * 60));
-                let mins = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
-                document.getElementById('case-timer').innerText = `Ждать: ${hours}ч ${mins}м`;
+                let h = Math.floor((cooldown-diff)/(1000*60*60));
+                let m = Math.floor(((cooldown-diff)%(1000*60*60))/(1000*60));
+                document.getElementById('case-timer').innerText = `Ждать: ${h}ч ${m}м`;
                 document.getElementById('case-timer').style.color = "#e74c3c";
             }
         }
-
         function openCase() {
-            let lastOpen = parseInt(localStorage.getItem('lastCaseOpen')) || 0;
-            if (Date.now() - lastOpen < 24 * 60 * 60 * 1000) return;
-
-            localStorage.setItem('lastCaseOpen', Date.now());
+            state.lastCaseOpen = Date.now(); saveState();
             document.getElementById('open-case-btn').style.display = 'none';
-            document.getElementById('case-result').innerText = "";
-            
             let box = document.getElementById('case-box');
             let ticks = 0;
-            
-            if (caseTimeout) clearInterval(caseTimeout);
-            caseTimeout = setInterval(() => {
-                let emojis = ['🐻', '🐼', '🦊', '🐺', '🦁', '🐲', '🪙', '🪙'];
-                box.innerText = emojis[Math.floor(Math.random() * emojis.length)];
+            let timer = setInterval(() => {
+                box.innerText = ['🐻','🐼','🦊','⚡','🔥','💎','🪙'][Math.floor(Math.random()*7)];
                 ticks++;
-                
-                if (ticks > 20) {
-                    clearInterval(caseTimeout);
-                    giveCaseReward();
-                }
+                if(ticks > 20) { clearInterval(timer); giveReward(); }
             }, 100);
         }
-
-        function giveCaseReward() {
+        function giveReward() {
             let rand = Math.random();
-            let rewardText = "";
-            
-            if (rand < 0.05 && !ownedSkins.includes('dragon')) {
-                ownedSkins.push('dragon'); saveShopData();
-                rewardText = "🐲 ДРАКОН (x12)!";
-                document.getElementById('case-box').innerText = '🐲';
-            } else if (rand < 0.15 && !ownedSkins.includes('lion')) {
-                ownedSkins.push('lion'); saveShopData();
-                rewardText = "🦁 ЛЕВ (x8)!";
-                document.getElementById('case-box').innerText = '🦁';
+            let res = "";
+            // 4% на скин (из них 1% Дракон, 3% Лев). 96% на монеты (10-250)
+            if (rand < 0.01) { // 1%
+                if(!state.ownedSkins.includes('fox')) { state.ownedSkins.push('fox'); res = "🦊 Лис (x3)!"; }
+                else { state.wallet += 500; res = "🪙 500 монет!"; }
+            } else if (rand < 0.04) { // 3%
+                if(!state.ownedSkins.includes('panda')) { state.ownedSkins.push('panda'); res = "🐼 Панда (x2)!"; }
+                else { state.wallet += 300; res = "🪙 300 монет!"; }
             } else {
-                let coins = Math.floor(Math.random() * 500) + 100; // 100-600 монет
-                wallet += coins; saveShopData();
-                rewardText = `🪙 +${coins} монет!`;
-                document.getElementById('case-box').innerText = '🪙';
+                let coins = Math.floor(Math.random() * 241) + 10; // 10-250
+                state.wallet += coins;
+                res = `🪙 +${coins} монет!`;
             }
-
-            document.getElementById('case-result').innerText = `Выпало: ${rewardText}`;
-            document.getElementById('case-timer').innerText = "Ждать: 24ч";
-            document.getElementById('case-timer').style.color = "#e74c3c";
-            updateHUD();
-            playSFX(1000, 'square', 0.4, 0.1);
+            document.getElementById('case-result').innerText = `Выпало: ${res}`;
+            document.getElementById('case-box').innerText = '📦';
+            saveState();
         }
 
-        // Инициализация
-        document.getElementById('sound-btn').innerText = soundEnabled ? '🔊 Звук' : '🔇 Без звука';
-        updateHUD();
+        // --- РАННЕР (Упрощенная логика для экономии места) ---
+        const canvas = document.getElementById('game');
+        const ctx = canvas.getContext('2d');
+        let isPlaying = false, gameOver = false, score = 0;
+        let player = { x: 50, y: 0, vy: 0, gravity: 0.8, jump: -14, isJumping: false };
+        let obstacles = [], coins = [];
         
+        function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; player.y = canvas.height - 120; }
+        window.onresize = resize; resize();
+
+        function startGame() { document.getElementById('menu').style.display = 'none'; isPlaying = true; restartGame(); }
+        function showMenu() { document.getElementById('menu').style.display = 'flex'; document.getElementById('game-over').style.display = 'none'; isPlaying = false; }
+        function restartGame() { gameOver = false; score = 0; obstacles = []; coins = []; document.getElementById('game-over').style.display = 'none'; update(); }
+        
+        function update() {
+            if(gameOver || !isPlaying) return;
+            ctx.fillStyle = '#111'; ctx.fillRect(0,0,canvas.width,canvas.height);
+            ctx.fillStyle = '#222'; ctx.fillRect(0, canvas.height-80, canvas.width, 80);
+            
+            player.vy += player.gravity; player.y += player.vy;
+            if(player.y > canvas.height - 120) { player.y = canvas.height - 120; player.vy = 0; player.isJumping = false; }
+            
+            let skin = skinsData.find(s => s.id === state.currentSkin);
+            ctx.font = "40px Arial"; ctx.fillText(skin ? skin.emoji : '🐻', player.x, player.y + 40);
+
+            if(Math.random() < 0.02) obstacles.push({x: canvas.width, y: canvas.height-110, w: 30, h: 30});
+            if(Math.random() < 0.03) coins.push({x: canvas.width, y: canvas.height - 150 - Math.random()*50});
+
+            for(let i=obstacles.length-1; i>=0; i--) {
+                obstacles[i].x -= 7;
+                ctx.fillStyle = '#e74c3c'; ctx.fillRect(obstacles[i].x, obstacles[i].y, 30, 30);
+                if(player.x < obstacles[i].x+30 && player.x+30 > obstacles[i].x && player.y < obstacles[i].y+30 && player.y+40 > obstacles[i].y) {
+                    gameOver = true; document.getElementById('game-over').style.display = 'block';
+                }
+                if(obstacles[i].x < -50) obstacles.splice(i,1);
+            }
+            for(let i=coins.length-1; i>=0; i--) {
+                coins[i].x -= 7;
+                ctx.fillStyle = '#f1c40f'; ctx.beginPath(); ctx.arc(coins[i].x, coins[i].y, 10, 0, 7); ctx.fill();
+                if(Math.hypot(player.x+20 - coins[i].x, player.y+20 - coins[i].y) < 30) {
+                    state.wallet += 10 * getCurrentMult(); saveState(); coins.splice(i,1);
+                }
+                if(coins[i].x < -50) coins.splice(i,1);
+            }
+            requestAnimationFrame(update);
+        }
+        document.body.addEventListener('touchstart', () => { if(isPlaying && !player.isJumping) { player.vy = player.jump; player.isJumping = true; } });
+
+        // --- КРАШ ИГРА ---
+        const cCanvas = document.getElementById('crash-canvas');
+        const cCtx = cCanvas.getContext('2d');
+        let crashActive = false, crashMult = 1.0, crashRocket = {x: 0, y: 0};
+        let crashReqId = null;
+
+        function openCrash() {
+            document.getElementById('menu').style.display = 'none';
+            document.getElementById('crash-screen').style.display = 'flex';
+            cCanvas.width = window.innerWidth; cCanvas.height = window.innerHeight;
+            cCtx.fillStyle = '#000'; cCtx.fillRect(0,0,cCanvas.width,cCanvas.height);
+            drawStars();
+        }
+        function exitCrash() {
+            document.getElementById('crash-screen').style.display = 'none';
+            showMenu();
+        }
+        
+        function drawStars() {
+            cCtx.fillStyle = 'white';
+            for(let i=0; i<50; i++) {
+                cCtx.globalAlpha = Math.random();
+                cCtx.fillRect(Math.random()*cCanvas.width, Math.random()*cCanvas.height, 2, 2);
+            }
+            cCtx.globalAlpha = 1;
+        }
+
+        function crashAction() {
+            let btn = document.getElementById('crash-action-btn');
+            let bet = parseInt(document.getElementById('crash-bet').value);
+
+            if (!crashActive) {
+                // СТАРТ ИГРЫ
+                if (bet < 1 || state.stars < bet) { tg.showAlert("Недостаточно звезд или ставка меньше 1!"); return; }
+                state.stars -= bet; saveState(); // Списываем ставку
+                
+                crashActive = true;
+                crashMult = 1.0;
+                crashRocket = {x: 50, y: cCanvas.height - 100};
+                btn.innerText = `💰 Забрать (1.00x)`;
+                btn.style.background = '#f1c40f'; btn.style.color = '#000';
+
+                // Точка краша генерируется на сервере (для теста рандом)
+                // В реальном проекте бот пришлет точку краша!
+                let crashPoint = (Math.random() * 10 + 1.1).toFixed(2); 
+                
+                let startTime = Date.now();
+                crashReqId = setInterval(() => {
+                    let time = (Date.now() - startTime) / 1000;
+                    crashMult = Math.pow(1.1, time); // Экспоненциальный рост
+
+                    if (crashMult >= crashPoint) {
+                        // ВЗРЫВ
+                        clearInterval(crashReqId); crashActive = false;
+                        document.getElementById('crash-multiplier').innerText = "ВЗРЫВ! 💥";
+                        document.getElementById('crash-multiplier').style.color = "#e74c3c";
+                        btn.innerText = "🚀 Запустить"; btn.style.background = '#e74c3c'; btn.style.color = '#fff';
+                        
+                        // Уведомляем админа о проигрыше (через WebApp data)
+                        tg.sendData(JSON.stringify({ action: 'crash_lose', bet: bet }));
+                        return;
+                    }
+
+                    // Отрисовка полета
+                    cCtx.fillStyle = '#000'; cCtx.fillRect(0,0,cCanvas.width,cCanvas.height);
+                    drawStars();
+                    
+                    crashRocket.x += 5; crashRocket.y -= 3;
+                    
+                    cCtx.font = "40px Arial"; cCtx.fillText("🚀", crashRocket.x, crashRocket.y);
+                    cCtx.strokeStyle = '#f1c40f'; cCtx.beginPath(); cCtx.moveTo(50, cCanvas.height-100); 
+                    cCtx.lineTo(crashRocket.x, crashRocket.y); cCtx.stroke();
+
+                    document.getElementById('crash-multiplier').innerText = crashMult.toFixed(2) + "x";
+                    btn.innerText = `💰 Забрать (${(bet * crashMult).toFixed(0)} ⭐)`;
+
+                }, 100);
+            } else {
+                // ЗАБРАТЬ ВЫИГРЫШ
+                clearInterval(crashReqId); crashActive = false;
+                let win = Math.floor(bet * crashMult);
+                state.stars += win; saveState();
+                
+                document.getElementById('crash-multiplier').innerText = `Забрано: +${win} ⭐`;
+                document.getElementById('crash-multiplier').style.color = "#4cd137";
+                btn.innerText = "🚀 Запустить"; btn.style.background = '#e74c3c'; btn.style.color = '#fff';
+                
+                // Уведомляем админа (опционально)
+            }
+        }
+
+        updateHUD();
     </script>
 </body>
 </html>
