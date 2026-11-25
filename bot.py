@@ -4,9 +4,9 @@ import os
 from telebot.types import LabeledPrice, InlineKeyboardMarkup, InlineKeyboardButton
 
 # <<< ИЗМЕНИ ЭТИ ТРИ СТРОЧКИ ПОД СЕБЯ >>>
-BOT_TOKEN = os.getenv("BOT_TOKEN") or "9174710090:AAELUzQyyWbPxlZEMPtIIH0haf7ijYYNmMA"
+BOT_TOKEN = os.getenv("BOT_TOKEN") or "СЮДА_НОВЫЙ_ТОКЕН_ОТ_BOTFATHER"
 ADMIN_ID = 8834515141
-APP_SHORT_NAME = "@MishkaRunGame_bot"
+APP_SHORT_NAME = "app"
 
 BOT_USERNAME = "MishkaRunGame_bot"
 
