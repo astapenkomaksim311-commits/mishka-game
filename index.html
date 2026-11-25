@@ -3,39 +3,45 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Мишка Раннер 2.0</title>
+    <title>Мишка Раннер 3.0</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { margin: 0; padding: 0; background: #111; overflow: hidden; font-family: 'Segoe UI', Tahoma, sans-serif; user-select: none; }
+        * { box-sizing: border-box; }
+        body { margin: 0; padding: 0; background: #0a0a0f; overflow: hidden; font-family: 'Segoe UI', Tahoma, sans-serif; user-select: none; }
         canvas { display: block; width: 100vw; height: 100vh; }
         
         #hud { position: absolute; top: 15px; left: 15px; right: 15px; display: flex; justify-content: space-between; color: white; font-size: 22px; font-weight: 900; text-shadow: 2px 2px 0 #000; z-index: 10; }
         
-        #menu { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 15, 20, 0.95); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 20; }
-        #menu h1 { color: #ff9900; font-size: 42px; margin: 0 0 10px 0; text-shadow: 0 0 20px rgba(255,153,0,0.6); }
+        #menu { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(10, 10, 15, 0.9); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 20; }
+        #menu h1 { color: #3498db; font-size: 42px; margin: 0 0 10px 0; text-shadow: 0 0 20px rgba(52,152,219,0.6); }
         #menu p { color: #aaa; margin-bottom: 30px; font-size: 16px; }
-        .btn-main { background: linear-gradient(135deg, #ff9900, #ff5500); color: white; border: none; padding: 18px 60px; border-radius: 40px; font-size: 24px; font-weight: 900; box-shadow: 0 6px 20px rgba(255, 85, 0, 0.5); margin-bottom: 20px; width: 250px; transition: transform 0.1s; }
-        .btn-main:active { transform: scale(0.95); }
-        .btn-secondary { background: #2a2a35; color: white; border: 2px solid #444; padding: 12px 25px; border-radius: 25px; font-size: 16px; font-weight: bold; margin: 5px; width: 120px; }
-        .btn-secondary:active { background: #444; }
-
-        #game-over { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(20, 20, 25, 0.95); padding: 30px; border-radius: 25px; text-align: center; color: white; display: none; border: 2px solid #ff5500; width: 80%; max-width: 320px; z-index: 15; box-shadow: 0 10px 30px rgba(0,0,0,0.8); }
-        #game-over h2 { color: #ff5500; margin-top: 0; font-size: 28px; }
-        .btn-restart { background: #ff9900; color: white; border: none; padding: 15px; font-size: 18px; border-radius: 15px; margin-top: 15px; font-weight: bold; width: 100%; }
-        .btn-menu { background: #333; color: white; border: none; padding: 12px; font-size: 16px; border-radius: 15px; margin-top: 10px; font-weight: bold; width: 100%; }
-
-        #shop { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 15, 20, 0.98); display: none; flex-direction: column; align-items: center; z-index: 30; padding-top: 20px; overflow-y: auto; }
-        .shop-header { color: white; font-size: 28px; font-weight: bold; margin-bottom: 20px; text-shadow: 0 0 10px #ff9900; }
-        .skin-card { background: #222; border: 2px solid #333; border-radius: 15px; padding: 15px; width: 85%; max-width: 350px; margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between; }
+        
+        .btn-main { background: linear-gradient(135deg, #3498db, #2980b9); color: white; border: none; padding: 15px 50px; border-radius: 30px; font-size: 22px; font-weight: 900; box-shadow: 0 6px 20px rgba(41, 128, 185, 0.5); margin-bottom: 15px; width: 220px; }
+        .btn-secondary { background: #2a2a35; color: white; border: 2px solid #444; padding: 12px 20px; border-radius: 25px; font-size: 16px; font-weight: bold; margin: 5px; flex: 1; }
+        
+        /* Модалки */
+        .modal { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(10, 10, 15, 0.95); display: none; flex-direction: column; align-items: center; z-index: 30; padding: 20px; overflow-y: auto; }
+        .modal-header { color: white; font-size: 28px; font-weight: bold; margin-bottom: 20px; text-shadow: 0 0 10px #3498db; }
+        
+        .skin-card { background: #1e1e24; border: 2px solid #333; border-radius: 15px; padding: 15px; width: 100%; max-width: 350px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; }
         .skin-info { display: flex; flex-direction: column; color: white; text-align: left; }
         .skin-name { font-weight: bold; font-size: 18px; margin-bottom: 5px; }
         .skin-mult { color: #4cd137; font-size: 14px; font-weight: bold; }
         .skin-price { color: #f1c40f; font-size: 14px; margin-top: 5px; }
-        .skin-buy-btn { background: #ff9900; border: none; border-radius: 10px; padding: 10px 15px; font-weight: bold; color: white; }
-        .skin-buy-btn:active { background: #cc7a00; }
+        .skin-buy-btn { background: #3498db; border: none; border-radius: 10px; padding: 10px 15px; font-weight: bold; color: white; }
         .skin-buy-btn.equipped { background: #4cd137; }
         .skin-buy-btn.owned { background: #555; color: #aaa; }
-        .btn-close-shop { background: #e74c3c; color: white; border: none; padding: 12px 40px; border-radius: 20px; font-size: 18px; font-weight: bold; margin: 20px 0; }
+        
+        /* Кейс */
+        #case-box { width: 150px; height: 150px; background: #222; border: 3px solid #3498db; border-radius: 20px; display: flex; align-items: center; justify-content: center; font-size: 80px; margin: 20px 0; box-shadow: 0 0 30px rgba(52,152,219,0.5); transition: transform 0.1s; }
+        #case-timer { color: #e74c3c; font-size: 20px; font-weight: bold; margin-bottom: 20px; }
+        .btn-open-case { background: #f1c40f; color: #111; border: none; padding: 15px 40px; border-radius: 30px; font-size: 20px; font-weight: 900; }
+        
+        .btn-close { background: #e74c3c; color: white; border: none; padding: 12px 40px; border-radius: 20px; font-size: 18px; font-weight: bold; margin-top: 20px; }
+        
+        #game-over { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(20, 20, 25, 0.95); padding: 30px; border-radius: 25px; text-align: center; color: white; display: none; border: 2px solid #e74c3c; width: 80%; max-width: 320px; z-index: 15; }
+        #game-over h2 { color: #e74c3c; margin-top: 0; font-size: 28px; }
+        .btn-restart { background: #3498db; color: white; border: none; padding: 15px; font-size: 18px; border-radius: 15px; margin-top: 15px; font-weight: bold; width: 100%; }
     </style>
 </head>
 <body>
@@ -44,51 +50,73 @@
         <div>🏆 <span id="score">0</span></div>
     </div>
 
+    <!-- Главное меню -->
     <div id="menu">
-        <h1>🐻 Мишка 2.0</h1>
-        <p>Беги, собирай монеты, покупай скины!</p>
+        <h1>🐻 Мишка 3.0</h1>
+        <p>Пасмурный раннер с сокровищами</p>
         <button class="btn-main" onclick="startGame()">ИГРАТЬ</button>
-        <div style="display: flex;">
+        <div style="display: flex; width: 80%; max-width: 350px;">
             <button class="btn-secondary" onclick="toggleSound()" id="sound-btn">🔊 Звук</button>
-            <button class="btn-secondary" onclick="openShop()">🛒 Магазин</button>
+            <button class="btn-secondary" onclick="openShop()">🛒 Скины</button>
+        </div>
+        <div style="width: 80%; max-width: 350px;">
+            <button class="btn-secondary" style="width: 100%; border-color: #f1c40f; color: #f1c40f;" onclick="openCaseModal()">🎁 Ежедневный Кейс</button>
         </div>
     </div>
 
-    <div id="shop">
-        <div class="shop-header">Магазин Скинов</div>
+    <!-- Магазин -->
+    <div id="shop" class="modal">
+        <div class="modal-header">Магазин Скинов</div>
         <div id="skins-container" style="width: 100%; display: flex; flex-direction: column; align-items: center;"></div>
-        <button class="btn-close-shop" onclick="closeShop()">Закрыть</button>
+        <button class="btn-close" onclick="closeModal('shop')">Закрыть</button>
+    </div>
+
+    <!-- Кейс -->
+    <div id="case-modal" class="modal">
+        <div class="modal-header">Ежедневный Кейс</div>
+        <div id="case-timer">Доступен!</div>
+        <div id="case-box" onclick="openCase()">📦</div>
+        <div id="case-result" style="color: white; font-size: 24px; font-weight: bold; text-align: center; height: 30px;"></div>
+        <button class="btn-open-case" id="open-case-btn" onclick="openCase()">Открыть</button>
+        <button class="btn-close" onclick="closeModal('case-modal')">Закрыть</button>
     </div>
 
     <canvas id="game"></canvas>
     
     <div id="game-over">
-        <h2>БУМ! 💥</h2>
-        <p>Собрано: <span id="final-score">0</span></p>
+        <h2>Ты врезался! 💥</h2>
+        <p>Собрано очков: <span id="final-score">0</span></p>
         <button class="btn-restart" onclick="restartGame()">Играть снова</button>
-        <button class="btn-menu" onclick="showMenu()">В меню</button>
+        <button class="btn-restart" style="background: #555; margin-top: 5px;" onclick="showMenu()">В меню</button>
     </div>
 
     <script>
+        // --- НАСТРОЙКИ ---
         const BOT_USERNAME = "MishkaRunGame_bot"; 
         const canvas = document.getElementById('game');
         const ctx = canvas.getContext('2d');
         const tg = window.Telegram.WebApp;
         tg.expand(); 
-
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
+        let groundY = canvas.height - 80;
 
-        let soundEnabled = true;
+        // --- ЗВУК (Web Audio API) ---
+        let soundEnabled = localStorage.getItem('sound') !== 'false';
         let audioCtx;
+        let rainSource;
         let musicInterval;
-        const bgMusicNotes = [261.63, 329.63, 392.00, 523.25, 392.00, 329.63]; 
-        let noteIdx = 0;
 
-        function playSound(freq, type, duration, vol = 0.1) {
-            if (!soundEnabled) return;
-            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
             if (audioCtx.state === 'suspended') audioCtx.resume();
+        }
+
+        function playSFX(freq, type, duration, vol = 0.1) {
+            if (!soundEnabled) return;
+            initAudio();
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
             osc.type = type;
@@ -99,25 +127,56 @@
             osc.start(); osc.stop(audioCtx.currentTime + duration);
         }
 
-        function toggleMusic(start) {
-            if (start && soundEnabled) {
-                if (musicInterval) clearInterval(musicInterval);
-                musicInterval = setInterval(() => {
-                    if (!gameOver && isPlaying) {
-                        playSound(bgMusicNotes[noteIdx], 'triangle', 0.3, 0.05);
-                        noteIdx = (noteIdx + 1) % bgMusicNotes.length;
-                    }
-                }, 250);
+        function startRainSound() {
+            if (!soundEnabled || rainSource) return;
+            initAudio();
+            // Генерация белого шума для дождя
+            const bufferSize = audioCtx.sampleRate * 2;
+            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+            
+            rainSource = audioCtx.createBufferSource();
+            rainSource.buffer = buffer;
+            rainSource.loop = true;
+            
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.value = 1000;
+            
+            const gain = audioCtx.createGain();
+            gain.gain.value = 0.05;
+            
+            rainSource.connect(filter);
+            filter.connect(gain);
+            gain.connect(audioCtx.destination);
+            rainSource.start();
+        }
+
+        function stopRainSound() {
+            if (rainSource) { rainSource.stop(); rainSource.disconnect(); rainSource = null; }
+        }
+
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            localStorage.setItem('sound', soundEnabled);
+            document.getElementById('sound-btn').innerText = soundEnabled ? '🔊 Звук' : '🔇 Без звука';
+            if (soundEnabled) {
+                initAudio();
+                if (isPlaying) startRainSound();
             } else {
-                clearInterval(musicInterval);
+                stopRainSound();
             }
         }
 
+        // --- СКИНЫ ---
         const skinsData = [
-            { id: 'bear', emoji: '🐻', name: 'Обычный', multiplier: 1, priceCoins: 0, priceStars: 0 },
-            { id: 'ninja', emoji: '🥷', name: 'Ниндзя', multiplier: 2, priceCoins: 3000, priceStars: 0 },
-            { id: 'robot', emoji: '🤖', name: 'Робот', multiplier: 3, priceCoins: 10000, priceStars: 0 },
-            { id: 'king', emoji: '👑', name: 'Золотой', multiplier: 5, priceCoins: 0, priceStars: 50 }
+            { id: 'bear', emoji: '🐻', name: 'Обычный Мишка', mult: 1, priceCoins: 0, priceStars: 0 },
+            { id: 'panda', emoji: '🐼', name: 'Панда', mult: 2, priceCoins: 2000, priceStars: 0 },
+            { id: 'fox', emoji: '🦊', name: 'Хитрый Лис', mult: 3, priceCoins: 5000, priceStars: 0 },
+            { id: 'wolf', emoji: '🐺', name: 'Серый Волк', mult: 5, priceCoins: 15000, priceStars: 0 },
+            { id: 'lion', emoji: '🦁', name: 'Король Лев', mult: 8, priceCoins: 0, priceStars: 25 },
+            { id: 'dragon', emoji: '🐲', name: 'Дракон', mult: 12, priceCoins: 0, priceStars: 75 }
         ];
 
         let wallet = parseInt(localStorage.getItem('bearWallet')) || 0;
@@ -128,29 +187,34 @@
 
         function updateHUD() {
             document.getElementById('wallet').innerText = wallet;
-            document.getElementById('mult-text').innerText = currentSkinId !== 'bear' ? `(x${getCurrentSkin().multiplier})` : '';
+            document.getElementById('mult-text').innerText = currentSkinId !== 'bear' ? `(x${getCurrentSkin().mult})` : '';
         }
 
+        // --- ИГРОВАЯ ЛОГИКА (Delta Time для идеальной скорости) ---
         let isPlaying = false;
         let gameOver = false;
         let score = 0;
-        let gameSpeed = 7;
+        let baseSpeed = 6; // Скорость в пикселях за кадр (при 60 FPS)
         let frameCount = 0;
-        let particles = [];
-        let floatingTexts = [];
+        let lastTime = 0;
+        let dt = 1; 
         
-        let groundY = canvas.height - 80;
-        let player = { x: 60, y: groundY - 40, w: 40, h: 40, vy: 0, gravity: 0.9, jumpForce: -16, isJumping: false };
+        let player = { x: 60, y: groundY - 40, w: 40, h: 40, vy: 0, gravity: 0.8, jumpForce: -14, isJumping: false };
         let obstacles = [];
         let coinObjects = [];
-        let bgOffset = 0;
-        let hueOffset = 0;
+        let rainDrops = [];
+        let particles = [];
+        let floatingTexts = [];
+
+        // Инициализация дождя
+        for (let i = 0; i < 100; i++) {
+            rainDrops.push({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, len: Math.random() * 20 + 10, speed: Math.random() * 10 + 15 });
+        }
 
         function startGame() {
             document.getElementById('menu').style.display = 'none';
             isPlaying = true;
-            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            toggleMusic(true);
+            if (soundEnabled) { initAudio(); startRainSound(); }
             restartGame();
         }
 
@@ -158,7 +222,7 @@
             document.getElementById('game-over').style.display = 'none';
             document.getElementById('menu').style.display = 'flex';
             isPlaying = false;
-            toggleMusic(false);
+            stopRainSound();
             ctx.clearRect(0, 0, canvas.width, canvas.height);
         }
 
@@ -166,124 +230,137 @@
             if (!player.isJumping && !gameOver && isPlaying) {
                 player.vy = player.jumpForce;
                 player.isJumping = true;
-                playSound(500, 'sine', 0.1, 0.15);
+                playSFX(400, 'sine', 0.1, 0.1);
                 if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
             }
         }
         document.body.addEventListener('touchstart', jump);
+        document.body.addEventListener('mousedown', jump);
 
         function restartGame() {
-            score = 0; gameSpeed = 7; frameCount = 0; obstacles = []; coinObjects = []; particles = []; floatingTexts = []; gameOver = false;
+            score = 0; frameCount = 0; obstacles = []; coinObjects = []; particles = []; floatingTexts = []; gameOver = false;
             player.y = groundY - 40; player.vy = 0; player.isJumping = false;
             document.getElementById('game-over').style.display = 'none';
             document.getElementById('score').innerText = score;
             updateHUD();
-            update();
+            lastTime = performance.now();
+            requestAnimationFrame(update);
         }
 
-        function createParticles(x, y) {
-            for(let i=0; i<6; i++) {
-                particles.push({ x: x, y: y, vx: (Math.random() - 0.5) * 6, vy: (Math.random() - 0.5) * 6, life: 1 });
-            }
-        }
-
-        function update() {
+        function update(currentTime) {
             if (gameOver || !isPlaying) return;
             
-            // --- СВЕТЛЫЙ ДИНАМИЧЕСКИЙ ФОН ---
-            hueOffset += 0.2;
-            let bgColorTop = `hsl(${200 + Math.sin(hueOffset/100)*20}, 70%, 60%)`; // Голубой/закатный
-            let bgColorBottom = `hsl(${300 + Math.cos(hueOffset/100)*20}, 60%, 40%)`; // Розоватый/фиолетовый
+            // Delta Time расчет (плавность на всех устройствах)
+            if (!lastTime) lastTime = currentTime;
+            let elapsed = currentTime - lastTime;
+            lastTime = currentTime;
+            dt = elapsed / 16.667; // Нормализация под 60 fps
+            if (dt > 3) dt = 3; // Защита от лагов
+
+            let speed = baseSpeed * dt;
             
+            // Отрисовка фона (Пасмурный)
             let grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
-            grad.addColorStop(0, bgColorTop);
-            grad.addColorStop(1, bgColorBottom);
+            grad.addColorStop(0, '#1a1a24');
+            grad.addColorStop(1, '#2d2d3b');
             ctx.fillStyle = grad;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Облака (параллакс)
-            bgOffset -= 1;
-            if(bgOffset < -300) bgOffset = 0;
-            ctx.fillStyle = 'rgba(255,255,255,0.4)';
-            ctx.beginPath(); ctx.arc(bgOffset, 80, 30, 0, Math.PI*2); ctx.fill();
-            ctx.beginPath(); ctx.arc(bgOffset+40, 90, 25, 0, Math.PI*2); ctx.fill();
-            ctx.beginPath(); ctx.arc(bgOffset+250, 120, 40, 0, Math.PI*2); ctx.fill();
+            // Дождь
+            ctx.strokeStyle = 'rgba(150, 180, 255, 0.3)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            for (let i = 0; i < rainDrops.length; i++) {
+                let drop = rainDrops[i];
+                drop.y += drop.speed * dt;
+                drop.x -= drop.speed * 0.2 * dt;
+                if (drop.y > canvas.height) { drop.y = -20; drop.x = Math.random() * canvas.width; }
+                if (drop.x < 0) drop.x = canvas.width;
+                ctx.moveTo(drop.x, drop.y);
+                ctx.lineTo(drop.x, drop.y + drop.len);
+            }
+            ctx.stroke();
 
             // Земля
-            ctx.fillStyle = '#2d2d35'; 
+            ctx.fillStyle = '#15151a'; 
             ctx.fillRect(0, groundY, canvas.width, 80);
-            ctx.fillStyle = '#ffaa00'; 
-            ctx.fillRect(0, groundY, canvas.width, 5);
+            ctx.fillStyle = '#34495e'; 
+            ctx.fillRect(0, groundY, canvas.width, 4);
 
-            player.vy += player.gravity; 
-            player.y += player.vy;
+            // Физика игрока
+            player.vy += player.gravity * dt; 
+            player.y += player.vy * dt;
             if (player.y > groundY - player.h) { 
                 player.y = groundY - player.h; player.vy = 0; player.isJumping = false; 
             }
 
-            // Мишка
+            // Отрисовка игрока
             ctx.font = "45px Arial"; 
             ctx.fillText(getCurrentSkin().emoji, player.x, player.y + 40);
 
             // Частицы
             for(let i = particles.length - 1; i >= 0; i--) {
                 let p = particles[i];
-                p.x += p.vx; p.y += p.vy; p.life -= 0.05;
+                p.x += p.vx * dt; p.y += p.vy * dt; p.life -= 0.05 * dt;
                 if(p.life <= 0) { particles.splice(i,1); continue; }
-                ctx.fillStyle = `rgba(255, 215, 0, ${p.life})`;
+                ctx.fillStyle = `rgba(241, 196, 15, ${p.life})`;
                 ctx.beginPath(); ctx.arc(p.x, p.y, 4, 0, Math.PI*2); ctx.fill();
             }
 
-            // Всплывающий текст (+1)
+            // Текст +1
             for(let i = floatingTexts.length - 1; i >= 0; i--) {
                 let ft = floatingTexts[i];
-                ft.y -= 1.5; ft.life -= 0.02;
+                ft.y -= 1.5 * dt; ft.life -= 0.02 * dt;
                 if(ft.life <= 0) { floatingTexts.splice(i,1); continue; }
                 ctx.fillStyle = `rgba(255, 255, 255, ${ft.life})`;
-                ctx.font = "bold 20px Arial";
+                ctx.font = "bold 22px Arial";
                 ctx.fillText(ft.text, ft.x, ft.y);
             }
 
-            frameCount++;
-            if (frameCount % 80 === 0 && Math.random() > 0.4) {
-                obstacles.push({ x: canvas.width, y: groundY - 35, w: 30, h: 40, type: Math.random() > 0.5 ? '🌵' : '🪨' });
+            frameCount += dt;
+            
+            // Спавн
+            if (frameCount % 100 < dt && Math.random() > 0.4) {
+                obstacles.push({ x: canvas.width, y: groundY - 35, w: 35, h: 40, type: '🌵' });
             }
-            if (frameCount % 120 === 0 && Math.random() > 0.3) {
+            if (frameCount % 150 < dt && Math.random() > 0.4) {
                 let amount = Math.random() > 0.85 ? 5 : 1; 
-                coinObjects.push({ x: canvas.width, y: groundY - 100 - Math.random() * 60, r: 12, amount: amount });
+                coinObjects.push({ x: canvas.width, y: groundY - 100 - Math.random() * 60, r: 15, amount: amount });
             }
 
+            // Препятствия
             for (let i = obstacles.length - 1; i >= 0; i--) {
-                let obs = obstacles[i]; obs.x -= gameSpeed;
+                let obs = obstacles[i]; obs.x -= speed;
                 ctx.font = "40px Arial"; 
                 ctx.fillText(obs.type, obs.x, obs.y + 40);
 
-                if (player.x + 10 < obs.x + obs.w && player.x + player.w - 10 > obs.x &&
+                if (player.x + 15 < obs.x + obs.w && player.x + player.w - 10 > obs.x &&
                     player.y + 10 < obs.y + obs.h && player.y + player.h - 5 > obs.y) {
-                    playSound(150, 'sawtooth', 0.5, 0.2);
+                    playSFX(150, 'sawtooth', 0.3, 0.2);
                     if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
-                    gameOver = true; toggleMusic(false);
+                    gameOver = true; 
+                    stopRainSound();
                     document.getElementById('final-score').innerText = Math.floor(score);
                     document.getElementById('game-over').style.display = 'block';
                 }
                 if (obs.x < -50) obstacles.splice(i, 1);
             }
 
+            // Монеты
             for (let i = coinObjects.length - 1; i >= 0; i--) {
-                let coin = coinObjects[i]; coin.x -= gameSpeed;
-                ctx.font = "25px Arial"; 
+                let coin = coinObjects[i]; coin.x -= speed;
+                ctx.font = "30px Arial"; 
                 ctx.fillText("🪙", coin.x - 10, coin.y + 10);
                 
-                if (Math.hypot((player.x + 20) - coin.x, (player.y + 20) - coin.y) < 35) {
-                    let earned = coin.amount * getCurrentSkin().multiplier;
+                if (Math.hypot((player.x + 20) - coin.x, (player.y + 20) - coin.y) < 40) {
+                    let earned = coin.amount * getCurrentSkin().mult;
                     wallet += earned;
                     localStorage.setItem('bearWallet', wallet);
                     updateHUD();
-                    playSound(1200, 'square', 0.1, 0.1);
-                    createParticles(coin.x, coin.y);
+                    playSFX(1200, 'square', 0.1, 0.1);
                     
-                    // Добавляем текст +1 или +5
-                    floatingTexts.push({ x: coin.x, y: coin.y - 10, text: `+${earned}`, life: 1 });
+                    for(let j=0; j<5; j++) particles.push({ x: coin.x, y: coin.y, vx: (Math.random() - 0.5) * 6, vy: (Math.random() - 0.5) * 6, life: 1 });
+                    floatingTexts.push({ x: coin.x, y: coin.y - 15, text: `+${earned}`, life: 1 });
                     
                     if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
                     coinObjects.splice(i, 1); continue;
@@ -291,21 +368,19 @@
                 if (coin.x < -50) coinObjects.splice(i, 1);
             }
 
-            score += 0.1; 
+            score += 0.1 * dt; 
             document.getElementById('score').innerText = Math.floor(score);
-            if (frameCount % 600 === 0) gameSpeed += 0.5;
 
             requestAnimationFrame(update);
         }
 
-        // --- МАГАЗИН ---
+        // --- UI И МАГАЗИН ---
+        function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
         function openShop() {
             renderShop();
-            document.getElementById('shop').style.display = 'flex';
-        }
-
-        function closeShop() {
-            document.getElementById('shop').style.display = 'none';
+            openModal('shop');
         }
 
         function renderShop() {
@@ -331,7 +406,7 @@
                     <div style="font-size: 40px; background: #111; padding: 10px; border-radius: 10px;">${skin.emoji}</div>
                     <div class="skin-info">
                         <div class="skin-name">${skin.name}</div>
-                        <div class="skin-mult">Бонус: x${skin.multiplier} монет</div>
+                        <div class="skin-mult">Бонус: x${skin.mult} монет</div>
                         <div class="skin-price">${priceText}</div>
                     </div>
                     <button class="skin-buy-btn ${btnClass}" onclick="buyOrEquip('${skin.id}')">${btnText}</button>
@@ -343,38 +418,31 @@
         function buyOrEquip(skinId) {
             const skin = skinsData.find(s => s.id === skinId);
             let isOwned = ownedSkins.includes(skin.id);
-
             if (currentSkinId === skinId) return;
 
             if (isOwned) {
                 currentSkinId = skinId;
-                localStorage.setItem('currentSkin', currentSkinId);
-                playSound(600, 'sine', 0.2);
-                renderShop();
-                updateHUD();
+                saveShopData();
+                playSFX(600, 'sine', 0.2);
+                renderShop(); updateHUD();
             } else {
                 if (skin.priceCoins > 0 && wallet >= skin.priceCoins) {
-                    // Покупка за монеты
                     wallet -= skin.priceCoins;
-                    ownedSkins.push(skin.id);
-                    currentSkinId = skin.id;
+                    ownedSkins.push(skin.id); currentSkinId = skin.id;
                     saveShopData();
-                    playSound(800, 'square', 0.3, 0.1);
+                    playSFX(800, 'square', 0.3, 0.1);
                     if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
-                    renderShop();
-                    updateHUD();
+                    renderShop(); updateHUD();
                 } else if (skin.priceStars > 0) {
-                    // Покупка за звезды
                     tg.showConfirm(`Купить ${skin.name} за ${skin.priceStars} Stars?`, (ok) => {
                         if(ok) {
-                            // Отправляем боту команду на выставление счета
                             tg.openTelegramLink(`https://t.me/${BOT_USERNAME}?start=buy_skin_${skin.id}`);
-                            closeShop(); 
+                            closeModal('shop'); 
                         }
                     });
                 } else {
                     tg.showAlert("Недостаточно монет! Беги и собирай ещё!");
-                    playSound(200, 'sawtooth', 0.2);
+                    playSFX(200, 'sawtooth', 0.2);
                 }
             }
         }
@@ -385,7 +453,89 @@
             localStorage.setItem('currentSkin', currentSkinId);
         }
 
+        // --- КЕЙС ---
+        let caseTimeout = null;
+        function openCaseModal() {
+            openModal('case-modal');
+            checkCaseStatus();
+        }
+
+        function checkCaseStatus() {
+            let lastOpen = parseInt(localStorage.getItem('lastCaseOpen')) || 0;
+            let now = Date.now();
+            let diff = now - lastOpen;
+            let cooldown = 24 * 60 * 60 * 1000; // 24 часа
+
+            if (diff >= cooldown) {
+                document.getElementById('open-case-btn').style.display = 'block';
+                document.getElementById('case-timer').innerText = "Доступен!";
+                document.getElementById('case-timer').style.color = "#4cd137";
+                document.getElementById('case-box').style.transform = "scale(1)";
+            } else {
+                document.getElementById('open-case-btn').style.display = 'none';
+                document.getElementById('case-box').style.transform = "scale(0.9)";
+                let timeLeft = cooldown - diff;
+                let hours = Math.floor(timeLeft / (1000 * 60 * 60));
+                let mins = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+                document.getElementById('case-timer').innerText = `Ждать: ${hours}ч ${mins}м`;
+                document.getElementById('case-timer').style.color = "#e74c3c";
+            }
+        }
+
+        function openCase() {
+            let lastOpen = parseInt(localStorage.getItem('lastCaseOpen')) || 0;
+            if (Date.now() - lastOpen < 24 * 60 * 60 * 1000) return;
+
+            localStorage.setItem('lastCaseOpen', Date.now());
+            document.getElementById('open-case-btn').style.display = 'none';
+            document.getElementById('case-result').innerText = "";
+            
+            let box = document.getElementById('case-box');
+            let ticks = 0;
+            
+            if (caseTimeout) clearInterval(caseTimeout);
+            caseTimeout = setInterval(() => {
+                let emojis = ['🐻', '🐼', '🦊', '🐺', '🦁', '🐲', '🪙', '🪙'];
+                box.innerText = emojis[Math.floor(Math.random() * emojis.length)];
+                ticks++;
+                
+                if (ticks > 20) {
+                    clearInterval(caseTimeout);
+                    giveCaseReward();
+                }
+            }, 100);
+        }
+
+        function giveCaseReward() {
+            let rand = Math.random();
+            let rewardText = "";
+            
+            if (rand < 0.05 && !ownedSkins.includes('dragon')) {
+                ownedSkins.push('dragon'); saveShopData();
+                rewardText = "🐲 ДРАКОН (x12)!";
+                document.getElementById('case-box').innerText = '🐲';
+            } else if (rand < 0.15 && !ownedSkins.includes('lion')) {
+                ownedSkins.push('lion'); saveShopData();
+                rewardText = "🦁 ЛЕВ (x8)!";
+                document.getElementById('case-box').innerText = '🦁';
+            } else {
+                let coins = Math.floor(Math.random() * 500) + 100; // 100-600 монет
+                wallet += coins; saveShopData();
+                rewardText = `🪙 +${coins} монет!`;
+                document.getElementById('case-box').innerText = '🪙';
+            }
+
+            document.getElementById('case-result').innerText = `Выпало: ${rewardText}`;
+            document.getElementById('case-timer').innerText = "Ждать: 24ч";
+            document.getElementById('case-timer').style.color = "#e74c3c";
+            updateHUD();
+            playSFX(1000, 'square', 0.4, 0.1);
+        }
+
+        // Инициализация
+        document.getElementById('sound-btn').innerText = soundEnabled ? '🔊 Звук' : '🔇 Без звука';
         updateHUD();
+        
     </script>
 </body>
 </html>
