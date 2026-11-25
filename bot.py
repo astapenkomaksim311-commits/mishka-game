@@ -3,7 +3,7 @@ import json
 from telebot.types import LabeledPrice, InlineKeyboardMarkup, InlineKeyboardButton
 
 # <<< ВСТАВЬ СЮДА НОВЫЙ ТОКЕН ОТ BOTFATHER МЕЖДУ КАВЫЧЕК >>>
-BOT_TOKEN = "123456789:ABCdefGHIjklMNOpqrsTUVwxyz"
+BOT_TOKEN = "9174710090:AAELUzQyyWbPxlZEMPtIIH0haf7ijYYNmMA"
 ADMIN_ID = 8834515141
 APP_SHORT_NAME = "app"
 BOT_USERNAME = "MishkaRunGame_bot"
