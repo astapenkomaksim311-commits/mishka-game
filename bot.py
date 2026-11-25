@@ -2,7 +2,7 @@ import telebot
 import json
 from telebot.types import LabeledPrice, InlineKeyboardMarkup, InlineKeyboardButton
 
-# <<< ВСТАВЬ СЮДА НОВЫЙ ТОКЕН ОТ BOTFATHER МЕЖДУ КАВЫЧЕК >>>
+# <<< ВСТАВЬ СЮДА НОВЫЙ ТОКЕН ОТ BOTFATHER МЕЖДУ КАВЫЧЕК (формат: 123456789:ABC...) >>>
 BOT_TOKEN = "9174710090:AAELUzQyyWbPxlZEMPtIIH0haf7ijYYNmMA"
 ADMIN_ID = 8834515141
 APP_SHORT_NAME = "app"
