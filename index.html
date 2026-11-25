@@ -155,7 +155,7 @@
         };
         try { tg.expand(); tg.ready(); } catch(e) {}
         const BOT_USERNAME = "MishkaRunGame_bot"; // <<< ИЗМЕНИ на юзернейм своего бота
-        const API = window.location.origin;      // СЕРВЕР: API живёт на том же адресе, что и игра
+        const API = "https://mishka-final-mishka-bot.mia0.amvera.tech";
 
         // ================== ПЕРЕХВАТ ОШИБОК ==================
         let toastTimer = null, lastErrToast = 0;
@@ -285,7 +285,7 @@
             { id: 'dragon', emoji: '🐉', name: 'Дракон x2', coins: 15000, mult: 2, fx: 'fire' },
             { id: 'boost1', emoji: '⚡', name: 'Буст x3 — 1 день',  stars: 30 },
             { id: 'boost2', emoji: '⚡', name: 'Буст x3 — 2 дня',   stars: 50 },
-            { id: 'boost3', emoji: '⚡', name: 'Буст x3 — 5 дней',  stars: 100 },
+            { id: 'boost3', emoji: '⚡', name: 'Буст x3 — 5 дней',   stars: 100 },
         ];
 
         if (!Array.isArray(state.ownedSkins)) state.ownedSkins = ['bear'];
