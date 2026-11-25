@@ -1,11 +1,14 @@
 import telebot
 import json
+import os
 from telebot.types import LabeledPrice, InlineKeyboardMarkup, InlineKeyboardButton
 
 # <<< ИЗМЕНИ ЭТИ ТРИ СТРОЧКИ ПОД СЕБЯ >>>
-BOT_TOKEN = "9174710090:AAELUzQyyWbPxlZEMPtIIH0haf7ijYYNmMA"   # сначала /revoke в @BotFather, потом новый токен!
-ADMIN_ID = 8834515141                          # твой Telegram ID
-APP_SHORT_NAME = "@MishkaRunGame_bot"                         # короткое имя мини-аппа из /newapp
+BOT_TOKEN = os.getenv("BOT_TOKEN") or "9174710090:AAELUzQyyWbPxlZEMPtIIH0haf7ijYYNmMA"
+ADMIN_ID = 8834515141
+APP_SHORT_NAME = "@MishkaRunGame_bot"
+
+BOT_USERNAME = "MishkaRunGame_bot"
 
 SKIN_PRICES = {
     "boost5": {"name": "Буст x5 (1 день)", "price": 30},
@@ -15,7 +18,6 @@ bot = telebot.TeleBot(BOT_TOKEN)
 
 
 def game_url(startapp: str) -> str:
-    """Ссылка, которая открывает мини-апп и передаёт ему, что куплено."""
     return f"https://t.me/{BOT_USERNAME}/{APP_SHORT_NAME}?startapp={startapp}"
 
 
@@ -37,7 +39,7 @@ def process_topup(call):
         title="Пополнение баланса",
         description=f"Покупка {amount} звёзд для игры",
         invoice_payload=f"topup_{amount}",
-        provider_token="",      # для звёзд оставляем пустым
+        provider_token="",
         currency="XTR",
         prices=prices,
         start_parameter="topup"
@@ -50,7 +52,6 @@ def start(message):
     text = message.text or ""
     payload = text.replace("/start", "", 1).strip() if text.startswith("/start") else ""
 
-    # Заявка на вывод подарка: /start w_<user_id>_<coins>
     if payload.startswith("w_"):
         try:
             data = payload[2:].split("_")
@@ -61,13 +62,11 @@ def start(message):
                 InlineKeyboardButton("🎁 Выдать", callback_data=f"gift_ok_{user_id}"),
                 InlineKeyboardButton("❌ Отклонить", callback_data=f"gift_no_{user_id}"),
             )
-            bot.send_message(ADMIN_ID, f"🚨 ЗАЯВКА НА ВЫВОД\n\nИгрок: {user_id}\nМонет: {coins}\n\nВыдать подарок?",
-                             parse_mode="Markdown", reply_markup=markup)
+            bot.send_message(ADMIN_ID, f"🚨 ЗАЯВКА НА ВЫВОД\n\nИгрок: {user_id}\nМонет: {coins}",
+                             reply_markup=markup)
             bot.send_message(user_id, "✅ Заявка принята! Админ свяжется с вами.")
         except Exception as e:
             print("w_ error:", e)
-
-    # Покупка скина за звёзды: /start buy_<skin_id>
     elif payload.startswith("buy_"):
         try:
             skin_id = payload[4:]
@@ -95,7 +94,7 @@ def start(message):
                      reply_markup=markup)
 
 
-# --- КНОПКИ ВЫДАЧИ ПОДАРКА (только админ) ---
+# --- РЕШЕНИЯ ПО ПОДАРКАМ (только админ) ---
 @bot.callback_query_handler(func=lambda call: call.data.startswith("gift_ok_") or call.data.startswith("gift_no_"))
 def gift_decision(call):
     if call.from_user.id != ADMIN_ID:
@@ -103,15 +102,15 @@ def gift_decision(call):
         return
     action, user_id = call.data.split("_")[1], int(call.data.split("_")[2])
     if action == "ok":
-        bot.send_message(user_id, "🎁 Твой подарок отправлен! Проверь подарки в Telegram.")
-        bot.edit_message_text("✅ Подарок выдан.", call.message.chat.id, call.message.message_id)
+        bot.send_message(user_id, "🎁 Подарок отправлен! Проверь его в Telegram.")
+        bot.edit_message_text("✅ Отмечено: подарок выдан.", call.message.chat.id, call.message.message_id)
     else:
         bot.send_message(user_id, "❌ К сожалению, заявку на подарок отклонили.")
         bot.edit_message_text("❌ Заявка отклонена.", call.message.chat.id, call.message.message_id)
     bot.answer_callback_query(call.id)
 
 
-# --- ОПЛАТА ПРОШЛА ---
+# --- ОПЛАТА ---
 @bot.pre_checkout_query_handler(func=lambda query: True)
 def checkout(pre_checkout_query):
     bot.answer_pre_checkout_query(pre_checkout_query.id, ok=True)
@@ -121,24 +120,20 @@ def checkout(pre_checkout_query):
 def got_payment(message):
     payload = message.successful_payment.invoice_payload
     amount = message.successful_payment.total_amount
-    name = f"@{message.from_user.username}" if message.from_user.username else str(message.from_user.id)
+    name = f"@{message.from_user.username}" if message.from_user.username else f"id{message.from_user.id}"
 
     if payload.startswith("topup"):
-        # Кнопка открывает игру с параметром topup_N — игра сама начислит звёзды
         markup = InlineKeyboardMarkup()
         markup.add(InlineKeyboardButton("🎮 Забрать звёзды в игре", url=game_url(f"topup_{amount}")))
-        bot.send_message(ADMIN_ID, f"💰 ПОПОЛНЕНИЕ!\n\nИгрок {name} купил {amount} звёзд.", parse_mode="Markdown")
-        bot.send_message(message.chat.id,
-                         f"✅ Оплата прошла! Нажми кнопку — звёзды сразу начислятся в игре:",
+        bot.send_message(ADMIN_ID, f"💰 ПОПОЛНЕНИЕ!\n\nИгрок {name} купил {amount} звёзд.")
+        bot.send_message(message.chat.id, "✅ Оплата прошла! Нажми кнопку — звёзды сразу начислятся в игре:",
                          reply_markup=markup)
     elif payload.startswith("pay_"):
-        # Кнопка открывает игру с параметром skin_<id> — игра сама выдаст скин
         item_id = payload.split('_')[1]
         item = SKIN_PRICES.get(item_id, {})
         markup = InlineKeyboardMarkup()
         markup.add(InlineKeyboardButton("🎮 Забрать скин в игре", url=game_url(f"skin_{item_id}")))
-        bot.send_message(ADMIN_ID, f"💰 ПОКУПКА СКИНА!\n\nИгрок {name} купил `{item_id}` за {amount}⭐!",
-                         parse_mode="Markdown")
+        bot.send_message(ADMIN_ID, f"💰 ПОКУПКА СКИНА!\n\nИгрок {name} купил `{item_id}` за {amount}⭐!")
         bot.send_message(message.chat.id,
                          f"✅ Оплата прошла: {item.get('name', item_id)}!\nНажми кнопку — скин сразу наденется:",
                          reply_markup=markup)
@@ -149,20 +144,26 @@ def got_payment(message):
 def web_app_data(message):
     try:
         data = json.loads(message.web_app_data.data)
-        name = f"@{message.from_user.username}" if message.from_user.username else str(message.from_user.id)
+        name = f"@{message.from_user.username}" if message.from_user.username else f"id{message.from_user.id}"
+        uid = message.from_user.id
+
         if data.get('action') == 'crash_lose':
-            bot.send_message(ADMIN_ID, f"🚀 КРАШ: ПРОИГРЫШ\n\nИгрок {name} проиграл {data.get('bet')} ⭐.",
-                             parse_mode="Markdown")
+            bot.send_message(ADMIN_ID, f"🚀 КРАШ: ПРОИГРЫШ\n\nИгрок {name} проиграл {data.get('bet')} ⭐.")
+        elif data.get('action') == 'crash_win':
+            bot.send_message(ADMIN_ID, f"🚀 КРАШ: ВЫИГРЫШ\n\nИгрок {name} поставил {data.get('bet')} ⭐, забрал {data.get('win')} ⭐.")
         elif data.get('action') == 'withdraw_gift':
+            gift = data.get('gift', '?')
+            stars = data.get('stars', '?')
             markup = InlineKeyboardMarkup()
             markup.add(
-                InlineKeyboardButton("🎁 Выдать", callback_data=f"gift_ok_{message.from_user.id}"),
-                InlineKeyboardButton("❌ Отклонить", callback_data=f"gift_no_{message.from_user.id}"),
+                InlineKeyboardButton("✅ Отправил", callback_data=f"gift_ok_{uid}"),
+                InlineKeyboardButton("❌ Отклонить", callback_data=f"gift_no_{uid}"),
             )
             bot.send_message(ADMIN_ID,
-                             f"🎁 ЗАЯВКА НА ПОДАРОК!\n\nИгрок: {name}\nID: `{message.from_user.id}`\nПодарок: **{data.get('gift')}**",
+                             f"🎁 ЗАЯВКА НА ПОДАРОК!\n\nИгрок: {name}\nID: `{uid}`\nПодарок: **{gift}** ({stars}⭐)\n\n"
+                             f"Как отправить: открой чат с игроком → скрепка → Подарок → выбери подарок на {stars} звёзд → Отправить.",
                              parse_mode="Markdown", reply_markup=markup)
-            bot.send_message(message.chat.id, f"✅ Заявка на «{data.get('gift')}» создана! Админ свяжется с вами.")
+            bot.send_message(message.chat.id, f"✅ Заявка на «{gift}» принята! Скоро отправим 🎁")
     except Exception as e:
         print("WebApp Error:", e)
 
