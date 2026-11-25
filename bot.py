@@ -10,7 +10,7 @@ from urllib.parse import parse_qsl
 from telebot.types import LabeledPrice, InlineKeyboardMarkup, InlineKeyboardButton
 
 # <<< ВСТАВЬ СЮДА НОВЫЙ ТОКЕН ОТ BOTFATHER (формат: 123456789:ABC...) >>>
-BOT_TOKEN = "СЮДА_ТОКЕН_ОТ_BOTFATHER"
+BOT_TOKEN = "9174710090:AAELUzQyyWbPxlZEMPtIIH0haf7ijYYNmMA"
 ADMIN_ID = 8834515141
 APP_SHORT_NAME = "app"
 BOT_USERNAME = "MishkaRunGame_bot"
