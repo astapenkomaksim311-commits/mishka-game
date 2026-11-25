@@ -6,7 +6,7 @@ from telebot.types import LabeledPrice, InlineKeyboardMarkup, InlineKeyboardButt
 # <<< ИЗМЕНИ ЭТИ ТРИ СТРОЧКИ ПОД СЕБЯ >>>
 BOT_TOKEN = os.getenv("BOT_TOKEN") or "9174710090:AAELUzQyyWbPxlZEMPtIIH0haf7ijYYNmMA"
 ADMIN_ID = 8834515141
-APP_SHORT_NAME = "app"
+APP_SHORT_NAME = "@MishkaRunGame_bot"
 
 BOT_USERNAME = "MishkaRunGame_bot"
 
