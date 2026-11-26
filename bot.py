@@ -6,6 +6,7 @@ import hmac
 import hashlib
 import threading
 import html
+import traceback
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qsl
 from telebot.types import LabeledPrice, InlineKeyboardMarkup, InlineKeyboardButton
@@ -106,14 +107,14 @@ def validate_init_data(init_data):
 
 
 def display_name(p):
-    """Точный юзернейм с @ и подчёркиваниями, либо имя."""
+    """Точный юзернейм с @ и всеми подчёркиваниями, либо имя."""
     if p.get("username"):
         return "@" + p["username"]
     return p.get("first_name") or "Игрок"
 
 
 def merge_user(user, data):
-    """Баланс игрока — ИСТИНА от клиента (последняя запись), иначе покупка/трата откатываются. Рекорд — только максимум."""
+    """Баланс — истина от клиента (последняя запись), рекорд — только максимум."""
     uid = str(user.get("id", ""))
     if not uid:
         return None
@@ -178,6 +179,7 @@ def notify_admin_request(req):
             )
     except Exception as e:
         print("notify_admin_request error:", e)
+        traceback.print_exc()
 
 
 class ApiHandler(BaseHTTPRequestHandler):
@@ -280,7 +282,10 @@ class ApiHandler(BaseHTTPRequestHandler):
                 if not user:
                     self._reply(401, b'{"ok": false, "error": "auth"}')
                     return
-                n = int(data.get("stars") or 0)
+                try:
+                    n = int(data.get("stars") or 0)
+                except Exception:
+                    n = 0
                 if n < TOPUP_MIN or n > TOPUP_MAX:
                     self._reply(200, b'{"ok": false, "error": "range"}')
                     return
@@ -292,14 +297,17 @@ class ApiHandler(BaseHTTPRequestHandler):
                         currency="XTR",
                         prices=[LabeledPrice(label=f"{n} ⭐", amount=n)],
                     )
+                    print("topup OK:", n)
                     self._reply(200, json.dumps({"ok": True, "invoice": link}).encode("utf-8"))
                 except Exception as e:
-                    print("topup error:", e)
+                    print("TOPUP FAILED:", repr(e))
+                    traceback.print_exc()
                     self._reply(200, b'{"ok": false}')
             else:
                 self._reply(404, b'{"ok": false}')
         except Exception as e:
             print("POST error:", e)
+            traceback.print_exc()
 
     def log_message(self, *args):
         pass
@@ -367,6 +375,7 @@ def start(message):
             bot.send_message(message.chat.id, "✅ Заявка принята! Ожидай подарок 🎁")
         except Exception as e:
             print("gift_ error:", e)
+            traceback.print_exc()
     elif payload.startswith("wd_") and uid != ADMIN_ID:
         try:
             parts = payload.split("_")
@@ -377,6 +386,7 @@ def start(message):
             bot.send_message(message.chat.id, "✅ Заявка на вывод принята! 💸")
         except Exception as e:
             print("wd_ error:", e)
+            traceback.print_exc()
     elif payload.startswith("w_"):
         try:
             data = payload[2:].split("_")
@@ -389,6 +399,7 @@ def start(message):
             bot.send_message(message.chat.id, "✅ Заявка принята! Ожидай подарок 🎁")
         except Exception as e:
             print("w_ error:", e)
+            traceback.print_exc()
     elif payload.startswith("buy_"):
         try:
             item_id = payload[4:]
@@ -408,10 +419,11 @@ def start(message):
                 bot.reply_to(message, "Такого товара нет 🤷")
         except Exception as e:
             print("buy_ error:", e)
+            traceback.print_exc()
     else:
         markup = InlineKeyboardMarkup()
         markup.add(InlineKeyboardButton("🎮 Открыть игру", url=f"https://t.me/{BOT_USERNAME}/{APP_SHORT_NAME}?startapp=menu"))
-        bot.reply_to(message, "Привет! Играй в игру по кнопке ниже 👇\nДля пополнения напиши /topup",
+        bot.reply_to(message, "Привет! Играй в игру по кнопке ниже 👇\nДля пополнения нажми ⭐ в самой игре",
                      reply_markup=markup)
 
 
@@ -422,19 +434,23 @@ def decision(call):
     if call.from_user.id != ADMIN_ID:
         bot.answer_callback_query(call.id, "Только для админа!")
         return
-    parts = call.data.split("_")
-    action, kind = parts[0], parts[1]
-    user_id = int(parts[2])
-    if kind == "ok":
-        if action == "wd":
-            bot.send_message(user_id, f"💸 Вывод {parts[3]} ⭐ отправлен! Проверь Telegram.")
-            bot.edit_message_text(f"✅ Вывод {parts[3]} ⭐ выдан.", call.message.chat.id, call.message.message_id)
+    try:
+        parts = call.data.split("_")
+        action, kind = parts[0], parts[1]
+        user_id = int(parts[2])
+        if kind == "ok":
+            if action == "wd":
+                bot.send_message(user_id, f"💸 Вывод {parts[3]} ⭐ отправлен! Проверь Telegram.")
+                bot.edit_message_text(f"✅ Вывод {parts[3]} ⭐ выдан.", call.message.chat.id, call.message.message_id)
+            else:
+                bot.send_message(user_id, "🎁 Подарок отправлен! Проверь его в Telegram.")
+                bot.edit_message_text("✅ Отмечено: подарок выдан.", call.message.chat.id, call.message.message_id)
         else:
-            bot.send_message(user_id, "🎁 Подарок отправлен! Проверь его в Telegram.")
-            bot.edit_message_text("✅ Отмечено: подарок выдан.", call.message.chat.id, call.message.message_id)
-    else:
-        bot.send_message(user_id, "❌ К сожалению, твою заявку отклонили.")
-        bot.edit_message_text("❌ Заявка отклонена.", call.message.chat.id, call.message.message_id)
+            bot.send_message(user_id, "❌ К сожалению, твою заявку отклонили.")
+            bot.edit_message_text("❌ Заявка отклонена.", call.message.chat.id, call.message.message_id)
+    except Exception as e:
+        print("decision error:", e)
+        traceback.print_exc()
     bot.answer_callback_query(call.id)
 
 
@@ -453,7 +469,7 @@ def got_payment(message):
         markup = InlineKeyboardMarkup()
         markup.add(InlineKeyboardButton("🎮 Забрать звёзды в игре",
                                         url=f"https://t.me/{BOT_USERNAME}/{APP_SHORT_NAME}?startapp=topup_{amount}"))
-        bot.send_message(ADMIN_ID, f"💰 ПОПОЛНЕНИЕ! Игрок {html.escape(name)} купил {amount} звёзд.")
+        bot.send_message(ADMIN_ID, f"💰 ПОПОЛНЕНИЕ! Игрок {esc(name)} купил {amount} звёзд.")
         bot.send_message(message.chat.id, "✅ Оплата прошла! Нажми кнопку — звёзды начислятся в игре:",
                          reply_markup=markup)
     elif payload.startswith("pay_"):
@@ -462,7 +478,7 @@ def got_payment(message):
         markup = InlineKeyboardMarkup()
         markup.add(InlineKeyboardButton("🎮 Активировать в игре",
                                         url=f"https://t.me/{BOT_USERNAME}/{APP_SHORT_NAME}?startapp=boost_{item_id}"))
-        bot.send_message(ADMIN_ID, f"💰 ПОКУПКА! Игрок {html.escape(name)} купил {item_id} за {amount}⭐!")
+        bot.send_message(ADMIN_ID, f"💰 ПОКУПКА! Игрок {esc(name)} купил {esc(item_id)} за {amount}⭐!")
         bot.send_message(message.chat.id,
                          f"✅ Оплата прошла: {item.get('name', item_id)}!\nНажми кнопку — буст активируется:",
                          reply_markup=markup)
@@ -485,7 +501,8 @@ def web_app_data(message):
             notify_admin_request(req)
     except Exception as e:
         print("WebApp Error:", e)
+        traceback.print_exc()
 
 
-print("Бот запущен...")
-bot.polling(none_stop=True)
+print("Бот запущен, жду сообщения...")
+bot.infinity_polling(timeout=10, long_polling_timeout=5, skip_pending=True)
