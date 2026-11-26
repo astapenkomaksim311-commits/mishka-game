@@ -5,6 +5,7 @@ import time
 import hmac
 import hashlib
 import threading
+import html
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qsl
 from telebot.types import LabeledPrice, InlineKeyboardMarkup, InlineKeyboardButton
@@ -19,13 +20,12 @@ SKIN_PRICES = {
     "boost2": {"name": "Буст x3 на 2 дня",  "price": 50},
     "boost3": {"name": "Буст x3 на 5 дней", "price": 100},
 }
-
 TOPUP_MIN = 10
 TOPUP_MAX = 200
 
 bot = telebot.TeleBot(BOT_TOKEN)
 
-# ================== БАЛАНС И ЛИДЕРБОРД ==================
+# ================== ДАННЫЕ ==================
 PLAYERS_FILE = "/data/players.json"
 REQUESTS_FILE = "/data/requests.json"
 PLAYERS = {}
@@ -83,6 +83,12 @@ def add_request(req):
     return req["id"]
 
 
+def remove_request(rid):
+    with LOCK:
+        REQUESTS[:] = [r for r in REQUESTS if r.get("id") != rid]
+        save_requests()
+
+
 def validate_init_data(init_data):
     try:
         pairs = dict(parse_qsl(init_data, keep_blank_values=True))
@@ -100,12 +106,14 @@ def validate_init_data(init_data):
 
 
 def display_name(p):
+    """Точный юзернейм с @ и подчёркиваниями, либо имя."""
     if p.get("username"):
         return "@" + p["username"]
-    return p.get("name") or "Игрок"
+    return p.get("first_name") or "Игрок"
 
 
 def merge_user(user, data):
+    """Баланс игрока — ИСТИНА от клиента (последняя запись), иначе покупка/трата откатываются. Рекорд — только максимум."""
     uid = str(user.get("id", ""))
     if not uid:
         return None
@@ -115,8 +123,8 @@ def merge_user(user, data):
             "id": uid,
             "username": (user.get("username") or "").lstrip("@"),
             "name": user.get("first_name") or "Игрок",
-            "wallet": max(int(old.get("wallet", 0) or 0), int(data.get("wallet", 0) or 0)),
-            "stars": max(int(old.get("stars", 0) or 0), int(data.get("stars", 0) or 0)),
+            "wallet": int(data.get("wallet", old.get("wallet", 0)) or 0),
+            "stars": int(data.get("stars", old.get("stars", 0)) or 0),
             "best": max(int(old.get("best", 0) or 0), int(data.get("best", 0) or 0)),
             "gifts": list(data.get("gifts", old.get("gifts", []))),
             "skins": sorted(set(old.get("skins", [])) | set(data.get("skins", []))),
@@ -128,11 +136,15 @@ def merge_user(user, data):
         return rec
 
 
+def esc(s):
+    return html.escape(str(s or ""), quote=False)
+
+
 def notify_admin_request(req):
-    """Единая точка: бот присылает заявку админу с кнопками."""
+    """Заявка админу. HTML вместо Markdown — юзернеймы с _ не ломаются."""
     try:
-        name = req.get("name") or "игрок"
-        uid = req.get("uid") or "?"
+        name = esc(req.get("name") or "игрок")
+        uid = esc(req.get("uid") or "?")
         if req.get("type") == "stars":
             n = req.get("n", 0)
             markup = InlineKeyboardMarkup()
@@ -143,13 +155,13 @@ def notify_admin_request(req):
             bot.send_message(
                 ADMIN_ID,
                 f"💸💸💸 ВЫВОД ЗВЁЗД!\n\n"
-                f"Игрок: {name}\nID: `{uid}`\n"
+                f"Игрок: {name}\nID: <code>{uid}</code>\n"
                 f"Сумма: {n} ⭐\n\n"
-                f"👉 Переведи игроку {n} звёзд через Telegram (Профиль → Звёзды → Перевести).",
-                parse_mode="Markdown", reply_markup=markup,
+                f"👉 Переведи игроку {n} звёзд (Telegram → Профиль → Звёзды → Перевести).",
+                parse_mode="HTML", reply_markup=markup,
             )
         else:
-            gift = req.get("gift", "?")
+            gift = esc(req.get("gift", "?"))
             stars = req.get("stars", 0)
             markup = InlineKeyboardMarkup()
             markup.add(
@@ -159,10 +171,10 @@ def notify_admin_request(req):
             bot.send_message(
                 ADMIN_ID,
                 f"🔔🔔🔔 ЗАЯВКА НА ВЫВОД ПОДАРКА!\n\n"
-                f"Игрок: {name}\nID: `{uid}`\n"
+                f"Игрок: {name}\nID: <code>{uid}</code>\n"
                 f"Подарок: {gift} ({stars}⭐)\n\n"
-                f"👉 Открой чат с игроком → скрепка → Подарок → выбери на {stars} звёзд → Отправить.",
-                parse_mode="Markdown", reply_markup=markup,
+                f"👉 Открой чат с игроком → скрепка → Подарок → на {stars} звёзд → Отправить.",
+                parse_mode="HTML", reply_markup=markup,
             )
     except Exception as e:
         print("notify_admin_request error:", e)
@@ -208,7 +220,6 @@ class ApiHandler(BaseHTTPRequestHandler):
                 }
                 self._reply(200, json.dumps(payload, ensure_ascii=False).encode("utf-8"))
             elif self.path.startswith("/api/requests"):
-                # Список заявок для админ-панели в игре
                 with LOCK:
                     lst = list(REQUESTS)
                 self._reply(200, json.dumps({"ok": True, "list": lst}, ensure_ascii=False).encode("utf-8"))
@@ -245,30 +256,26 @@ class ApiHandler(BaseHTTPRequestHandler):
                     return
                 self._reply(200, json.dumps({"ok": True, "you": rec}, ensure_ascii=False).encode("utf-8"))
 
+            elif self.path.startswith("/api/requests/done"):
+                rid = data.get("id")
+                remove_request(rid)
+                self._reply(200, b'{"ok": true}')
+
             elif self.path.startswith("/api/request"):
-                # Заявка на вывод подарка или звёзд от игрока
                 user = validate_init_data(data.get("initData", ""))
                 if not user:
                     self._reply(401, b'{"ok": false, "error": "auth"}')
                     return
                 req = data.get("req") or {}
                 req["uid"] = str(user.get("id", "")) or str(req.get("uid", ""))
+                req["username"] = user.get("username") or ""
                 req["name"] = display_name(user)
                 rid = add_request(req)
                 if rid:
                     notify_admin_request(req)
                 self._reply(200, json.dumps({"ok": True, "id": rid}, ensure_ascii=False).encode("utf-8"))
 
-            elif self.path.startswith("/api/requests/done"):
-                # Админ нажал «Отправлено» — заявка удаляется
-                rid = data.get("id")
-                with LOCK:
-                    REQUESTS[:] = [r for r in REQUESTS if r.get("id") != rid]
-                    save_requests()
-                self._reply(200, b'{"ok": true}')
-
             elif self.path.startswith("/api/topup"):
-                # Пополнение 10–200 звёзд прямо в игре: счёт Telegram Stars
                 user = validate_init_data(data.get("initData", ""))
                 if not user:
                     self._reply(401, b'{"ok": false, "error": "auth"}')
@@ -317,7 +324,7 @@ def run_api():
 load_players()
 load_requests()
 threading.Thread(target=run_api, daemon=True).start()
-print("API-сервер запущен (порты 8080/5000/80)")
+print("API-сервер запущен")
 
 # ================== БОТ ==================
 @bot.message_handler(commands=['topup'])
@@ -347,26 +354,26 @@ def process_topup(call):
 def start(message):
     text = message.text or ""
     payload = text.replace("/start", "", 1).strip() if text.startswith("/start") else ""
-    name = f"@{message.from_user.username}" if message.from_user.username else f"id{message.from_user.id}"
+    name = display_name(message.from_user)
     uid = message.from_user.id
 
     if payload.startswith("gift_") and uid != ADMIN_ID:
-        # Заявка на подарок из игры (запасной канал доставки)
         try:
             parts = payload.split("_")
             stars = int(parts[2]) if len(parts) > 2 else 0
-            add_request({"type": "gift", "gift": "Подарок", "stars": stars, "uid": str(uid), "name": name})
-            notify_admin_request({"type": "gift", "gift": "Подарок", "stars": stars, "uid": str(uid), "name": name})
-            bot.send_message(message.chat.id, "✅ Заявка принята! Скоро отправим 🎁")
+            req = {"type": "gift", "gift": "Подарок", "stars": stars, "uid": str(uid), "name": name}
+            add_request(req)
+            notify_admin_request(req)
+            bot.send_message(message.chat.id, "✅ Заявка принята! Ожидай подарок 🎁")
         except Exception as e:
             print("gift_ error:", e)
     elif payload.startswith("wd_") and uid != ADMIN_ID:
-        # Заявка на вывод звёзд из игры
         try:
             parts = payload.split("_")
             stars = int(parts[2]) if len(parts) > 2 else 0
-            add_request({"type": "stars", "n": stars, "uid": str(uid), "name": name})
-            notify_admin_request({"type": "stars", "n": stars, "uid": str(uid), "name": name})
+            req = {"type": "stars", "n": stars, "uid": str(uid), "name": name}
+            add_request(req)
+            notify_admin_request(req)
             bot.send_message(message.chat.id, "✅ Заявка на вывод принята! 💸")
         except Exception as e:
             print("wd_ error:", e)
@@ -376,9 +383,10 @@ def start(message):
             stars = int(data[1])
             gift_names = {15: "🧸 Мишка", 25: "🎁 Подарочек", 50: "🍾 Шампанское", 100: "💍 Колечко"}
             gift = gift_names.get(stars, f"подарок на {stars}⭐")
-            add_request({"type": "gift", "gift": gift, "stars": stars, "uid": str(uid), "name": name})
-            notify_admin_request({"type": "gift", "gift": gift, "stars": stars, "uid": str(uid), "name": name})
-            bot.send_message(message.chat.id, "✅ Заявка принята! Скоро отправим 🎁")
+            req = {"type": "gift", "gift": gift, "stars": stars, "uid": str(uid), "name": name}
+            add_request(req)
+            notify_admin_request(req)
+            bot.send_message(message.chat.id, "✅ Заявка принята! Ожидай подарок 🎁")
         except Exception as e:
             print("w_ error:", e)
     elif payload.startswith("buy_"):
@@ -409,7 +417,8 @@ def start(message):
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("gift_ok_") or call.data.startswith("gift_no_")
                             or call.data.startswith("wd_ok_") or call.data.startswith("wd_no_"))
-def gift_decision(call):
+def decision(call):
+    """Уведомление получает ТОЛЬКО тот игрок, который подавал заявку."""
     if call.from_user.id != ADMIN_ID:
         bot.answer_callback_query(call.id, "Только для админа!")
         return
@@ -424,7 +433,7 @@ def gift_decision(call):
             bot.send_message(user_id, "🎁 Подарок отправлен! Проверь его в Telegram.")
             bot.edit_message_text("✅ Отмечено: подарок выдан.", call.message.chat.id, call.message.message_id)
     else:
-        bot.send_message(user_id, "❌ К сожалению, заявку отклонили.")
+        bot.send_message(user_id, "❌ К сожалению, твою заявку отклонили.")
         bot.edit_message_text("❌ Заявка отклонена.", call.message.chat.id, call.message.message_id)
     bot.answer_callback_query(call.id)
 
@@ -438,14 +447,14 @@ def checkout(pre_checkout_query):
 def got_payment(message):
     payload = message.successful_payment.invoice_payload
     amount = message.successful_payment.total_amount
-    name = f"@{message.from_user.username}" if message.from_user.username else f"id{message.from_user.id}"
+    name = display_name(message.from_user)
 
     if payload.startswith("topup"):
         markup = InlineKeyboardMarkup()
         markup.add(InlineKeyboardButton("🎮 Забрать звёзды в игре",
                                         url=f"https://t.me/{BOT_USERNAME}/{APP_SHORT_NAME}?startapp=topup_{amount}"))
-        bot.send_message(ADMIN_ID, f"💰 ПОПОЛНЕНИЕ! Игрок {name} купил {amount} звёзд.")
-        bot.send_message(message.chat.id, "✅ Оплата прошла! Нажми кнопку — звёзды сразу начислятся в игре:",
+        bot.send_message(ADMIN_ID, f"💰 ПОПОЛНЕНИЕ! Игрок {html.escape(name)} купил {amount} звёзд.")
+        bot.send_message(message.chat.id, "✅ Оплата прошла! Нажми кнопку — звёзды начислятся в игре:",
                          reply_markup=markup)
     elif payload.startswith("pay_"):
         item_id = payload.split('_')[1]
@@ -453,7 +462,7 @@ def got_payment(message):
         markup = InlineKeyboardMarkup()
         markup.add(InlineKeyboardButton("🎮 Активировать в игре",
                                         url=f"https://t.me/{BOT_USERNAME}/{APP_SHORT_NAME}?startapp=boost_{item_id}"))
-        bot.send_message(ADMIN_ID, f"💰 ПОКУПКА! Игрок {name} купил `{item_id}` за {amount}⭐!")
+        bot.send_message(ADMIN_ID, f"💰 ПОКУПКА! Игрок {html.escape(name)} купил {item_id} за {amount}⭐!")
         bot.send_message(message.chat.id,
                          f"✅ Оплата прошла: {item.get('name', item_id)}!\nНажми кнопку — буст активируется:",
                          reply_markup=markup)
@@ -463,20 +472,17 @@ def got_payment(message):
 def web_app_data(message):
     try:
         data = json.loads(message.web_app_data.data)
-        name = f"@{message.from_user.username}" if message.from_user.username else f"id{message.from_user.id}"
+        name = display_name(message.from_user)
         uid = message.from_user.id
-
         if data.get('action') == 'withdraw_gift':
-            gift = data.get('gift', '?')
-            stars = data.get('stars', '?')
-            add_request({"type": "gift", "gift": gift, "stars": stars, "uid": str(uid), "name": name})
-            notify_admin_request({"type": "gift", "gift": gift, "stars": stars, "uid": str(uid), "name": name})
-            bot.send_message(message.chat.id, f"✅ Заявка на «{gift}» принята! Скоро отправим 🎁")
+            req = {"type": "gift", "gift": data.get('gift', '?'), "stars": data.get('stars', 0),
+                   "uid": str(uid), "name": name}
+            add_request(req)
+            notify_admin_request(req)
         elif data.get('action') == 'withdraw_stars':
-            stars = data.get('stars', 0)
-            add_request({"type": "stars", "n": stars, "uid": str(uid), "name": name})
-            notify_admin_request({"type": "stars", "n": stars, "uid": str(uid), "name": name})
-            bot.send_message(message.chat.id, f"✅ Заявка на вывод {stars} ⭐ принята! 💸")
+            req = {"type": "stars", "n": data.get('stars', 0), "uid": str(uid), "name": name}
+            add_request(req)
+            notify_admin_request(req)
     except Exception as e:
         print("WebApp Error:", e)
 
