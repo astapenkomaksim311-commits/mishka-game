@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>Mishka App 4.0</title>
+<title>Mishka App 4.1</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -13,8 +13,8 @@ canvas{display:block;position:absolute;top:0;left:0;width:100vw;height:100vh;poi
 #hud{position:absolute;top:calc(8px + env(safe-area-inset-top));left:8px;right:8px;display:flex;justify-content:space-between;align-items:center;z-index:10;pointer-events:none}
 .hud-box{background:rgba(0,0,0,.65);padding:5px 10px;border-radius:14px;font-weight:bold;font-size:12px;display:flex;align-items:center;gap:4px;border:1px solid #333;backdrop-filter:blur(4px);pointer-events:auto;transition:transform .15s}
 .hud-box:active{transform:scale(.92)}
-#menu{position:absolute;inset:0;background:rgba(7,9,18,.5);backdrop-filter:blur(2px);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:20;overflow-y:auto;padding:40px 0 20px}
-h1{color:#7fd4ff;font-size:30px;margin:0 0 4px;text-shadow:0 0 25px rgba(90,180,255,.8);animation:glowPulse 2.6s ease-in-out infinite}
+#menu{position:absolute;inset:0;background:rgba(7,9,18,.35);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:20;overflow-y:auto;padding:40px 0 20px}
+h1{color:#7fd4ff;font-size:30px;margin:0 0 4px;animation:glowPulse 2.6s ease-in-out infinite}
 @keyframes glowPulse{0%,100%{text-shadow:0 0 15px rgba(90,180,255,.5)}50%{text-shadow:0 0 32px rgba(140,220,255,.95)}}
 .tagline{color:#9fc;font-size:13px;margin-bottom:4px}
 .lvl-line{color:#f1c40f;font-size:12px;font-weight:bold;margin-bottom:10px}
@@ -97,8 +97,8 @@ h1{color:#7fd4ff;font-size:30px;margin:0 0 4px;text-shadow:0 0 25px rgba(90,180,
 </div>
 
 <div id="menu">
-  <h1>🐻 Mishka 4.0 🎄</h1>
-  <div class="tagline">Ultimate · живой мир и честная математика</div>
+  <h1>🐻 Mishka 4.1</h1>
+  <div class="tagline">Живой мир · честная экономика</div>
   <div class="lvl-line" id="lvl-line">🏅 Уровень 1</div>
   <button class="btn" onclick="startRunner()">🏃‍♂️ Раннер</button>
   <button class="btn btn-red" onclick="openCrash()">🚀 Краш · играют все</button>
@@ -131,7 +131,6 @@ h1{color:#7fd4ff;font-size:30px;margin:0 0 4px;text-shadow:0 0 25px rgba(90,180,
 <div id="admin" class="modal">
   <button class="close-modal" onclick="closeModal('admin')">✕</button>
   <div class="modal-header" style="color:#e74c3c">🔔 Заявки (видишь только ты)</div>
-  <div style="color:#888;font-size:12px;margin-bottom:12px;text-align:center;max-width:350px">Заявки на подарки и вывод звёзд от всех игроков. Красная карточка — не обработана. Кнопка «Обновить» подтягивает заявки с сервера.</div>
   <button class="btn btn-teal" style="max-width:200px;padding:8px;font-size:13px" onclick="fetchRequests(true)">🔄 Обновить</button>
   <div id="admin-container" style="width:100%;display:flex;flex-direction:column;align-items:center;margin-top:10px"></div>
 </div>
@@ -153,7 +152,7 @@ h1{color:#7fd4ff;font-size:30px;margin:0 0 4px;text-shadow:0 0 25px rgba(90,180,
   <div id="wheel-timer" style="font-size:14px;font-weight:bold;margin-bottom:8px"></div>
   <div class="roul-wrap"><div class="roul-arrow top"></div><div class="roul-strip" id="wheel-strip"></div><div class="roul-arrow bottom"></div></div>
   <div class="big-result" id="wheel-result"></div>
-  <button class="btn btn-purple" id="wheel-btn" onclick="doSpin()">Крутить бесплатно</button>
+  <button class="btn btn-purple" id="wheel-btn" onclick="doSpin()">Крутить за 🪙 500</button>
 </div>
 
 <div id="upgrades" class="modal">
@@ -189,11 +188,11 @@ h1{color:#7fd4ff;font-size:30px;margin:0 0 4px;text-shadow:0 0 25px rgba(90,180,
 <div id="gifts-shop" class="modal">
   <button class="close-modal" onclick="closeModal('gifts-shop')">✕</button>
   <div class="modal-header" style="color:#e74c3c">🎁 Подарки и вывод</div>
-  <div style="color:#888;font-size:12px;margin-bottom:12px;text-align:center;max-width:350px">Купи подарок монетами → «Вывести». Заявка уйдёт админу напрямую, без сообщений в чат. Вывод звёзд: от 10 ⭐.</div>
+  <div style="color:#888;font-size:12px;margin-bottom:12px;text-align:center;max-width:350px">Купи подарок монетами → «Вывести» → заявка уйдёт админу. Вывод звёзд: от 50 ⭐.</div>
   <div id="gifts-container" style="width:100%;display:flex;flex-direction:column;align-items:center"></div>
   <button class="btn btn-stars" style="margin-top:10px" onclick="toggleWithdraw()">💸 Вывести звёзды</button>
   <div class="crash-input-box" id="wd-box" style="display:none;margin-top:8px;width:100%;max-width:300px">
-    <input type="number" id="wd-amount" placeholder="сколько ⭐ (от 10)" min="10" inputmode="numeric">
+    <input type="number" id="wd-amount" placeholder="сколько ⭐ (от 50)" min="50" inputmode="numeric">
     <button class="quick-bet" onclick="confirmWithdraw()">ОК</button>
   </div>
 </div>
@@ -201,7 +200,7 @@ h1{color:#7fd4ff;font-size:30px;margin:0 0 4px;text-shadow:0 0 25px rgba(90,180,
 <div id="topup" class="modal">
   <button class="close-modal" onclick="closeModal('topup')">✕</button>
   <div class="modal-header" style="color:#f1c40f">⭐ Пополнить звёзды</div>
-  <div style="color:#888;font-size:12px;margin-bottom:12px;text-align:center;max-width:350px">Минимум 10 ⭐, максимум 200 ⭐ за раз. Оплата — Telegram Stars, счёт откроется сразу в игре.</div>
+  <div style="color:#888;font-size:12px;margin-bottom:12px;text-align:center;max-width:350px">От 10 до 200 ⭐ за раз. Оплата — Telegram Stars, счёт откроется в игре.</div>
   <div id="topup-container" style="width:100%;display:flex;flex-direction:column;align-items:center"></div>
 </div>
 
@@ -223,7 +222,7 @@ h1{color:#7fd4ff;font-size:30px;margin:0 0 4px;text-shadow:0 0 25px rgba(90,180,
   <div id="crash-multiplier">1.00x</div>
   <div id="crash-autolabel"></div>
   <div id="crash-controls">
-    <div class="crash-input-label">Ставка ⭐ · баланс видно сверху (ставки между полётами)</div>
+    <div class="crash-input-label">Ставка ⭐ · баланс сверху (ставки между полётами)</div>
     <div class="crash-input-box">
       <button class="quick-bet" onclick="setBet(10)">10</button>
       <button class="quick-bet" onclick="setBet(50)">50</button>
@@ -314,7 +313,7 @@ if(!Array.isArray(state.pendingMine))state.pendingMine=[];
 sound.on=state.musicOn;
 
 const myUid=()=>{const u=tg.initDataUnsafe&&tg.initDataUnsafe.user;return u?String(u.id):'0'};
-const myName=()=>{const u=tg.initDataUnsafe&&tg.initDataUnsafe.user;return u?(u.username?'@'+u.username:(u.first_name||'игрок')):'игрок'};
+const myName=()=>{const u=tg.initDataUnsafe&&tg.initDataUnsafe.user;if(!u)return'игрок';return u.username?'@'+u.username:(u.first_name||'игрок')};
 function isAdmin(){return myUid()===ADMIN_ID}
 
 const skinsData=[
@@ -371,8 +370,9 @@ async function apiPost(ep,body){try{const r=await fetch(API+ep,{method:'POST',he
 async function apiGet(ep){try{const r=await fetch(API+ep);return await r.json()}catch(e){return null}}
 
 async function syncToServer(){try{if(!tg.initData)return;const res=await fetch(API+'/api/sync',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({initData:tg.initData,wallet:state.wallet,stars:state.stars,best:state.best,gifts:state.ownedGifts,skins:state.ownedSkins,currentSkin:state.currentSkin,boostUntil:state.boostUntil,requests:state.pendingMine||[]})});const d=await res.json();
-if(d.ok&&d.you){let ch=false;['wallet','stars','best'].forEach(k=>{if((d.you[k]||0)>(state[k]||0)){state[k]=d.you[k];ch=true}});
-if((d.you.boostUntil||0)>(state.boostUntil||0)){state.boostUntil=d.you.boostUntil;ch=true}
+if(d.ok&&d.you){let ch=false;
+// Истина — последний баланс с сервера после нашей же отправки: теперь сервер хранит то, что прислал клиент
+['wallet','stars','best'].forEach(k=>{const sv=(d.you[k]||0);if(sv!==(state[k]||0)){state[k]=sv;ch=true}});
 if(ch)saveState();syncDirty=false}}catch(e){}}
 setInterval(()=>{if(syncDirty)syncToServer()},15000);
 
@@ -381,14 +381,11 @@ if(sp.startsWith('topup_')){const n=parseInt(sp.split('_')[1])||0;if(n>0){state.
 else if(sp.startsWith('skin_')){const id=sp.split('_')[1];if(skinsData.some(s=>s.id===id)&&!state.ownedSkins.includes(id)){state.ownedSkins.push(id);state.currentSkin=id;saveState();toast('Скин куплен и надет! 🎉');sfx('cash')}}
 else if(sp.startsWith('boost_')){const id=sp.split('_')[1];const days={boost1:1,boost2:2,boost3:5}[id]||1;const base=boostActive()?state.boostUntil:Date.now();state.boostUntil=base+days*86400000;saveState();toast(`⚡ Буст x3 на ${days} дн.!`);sfx('cash')}
 else if(sp.startsWith('ref_')){if(!state.refBy){state.refBy=sp.slice(4);state.wallet+=500;saveState();toast('🤝 По приглашению друга: +500 🪙!');sfx('cash')}}
-else if(isAdmin()&&sp.startsWith('gift_')){const p=sp.slice(5).split('_');if(p.length>=2)state.pendingGifts.push({type:'gift',gift:'Подарок',emoji:'🎁',stars:parseInt(p[1])||0,uid:p[0],name:'игрок '+p[0],time:Date.now(),src:'start'}),saveState()}
-else if(isAdmin()&&sp.startsWith('wd_')){const p=sp.slice(3).split('_');if(p.length>=2)state.pendingGifts.push({type:'stars',n:parseInt(p[1])||0,uid:p[0],name:'игрок '+p[0],time:Date.now(),src:'start'}),saveState()}
 }catch(e){}}
 applyStartParam();syncToServer();
 
 function closeModal(id){document.getElementById(id).style.display='none';sfx('click')}
 
-// ============ ПОПОЛНЕНИЕ: 10–200 ⭐, счёт через Telegram Stars ============
 const TOPUP_MIN=10,TOPUP_MAX=200;
 function topUpStars(){
 sfx('click');
@@ -405,13 +402,11 @@ const r=await apiPost('/api/topup',{initData:tg.initData||'',stars:n});
 if(r&&r.ok&&r.invoice){try{tg.openInvoice(r.invoice);return}catch(e){}}
 tg.openTelegramLink(`https://t.me/${BOT_USERNAME}?start=topup_${n}`)}
 
-// ============ ЕЖЕДНЕВНЫЙ БОНУС (заработок тяжёлый) ============
 function dailyBonus(){sfx('click');const READY=20*3600000;const left=READY-(Date.now()-(state.lastDaily||0));
 if(left>0){const h=Math.floor(left/3600000),m=Math.floor(left%3600000/60000);tg.showAlert(`Бонус уже забран! Следующий через ${h}ч ${m}м ⏳`);return}
 const reward=60+level()*15;state.wallet+=reward;state.lastDaily=Date.now();saveState();syncToServer();
-toast(`🎁 Бонус дня: +${reward} 🪙${vipActive()?' (VIP x2)':''}!`);sfx('cash');haptic('success')}
+toast(`🎁 Бонус дня: +${reward} 🪙!`);sfx('cash');haptic('success')}
 
-// ============ КВЕСТЫ (тяжёлые, награды скромные) ============
 const questsData=[
 {id:'coins',emoji:'🪙',name:'Собери 150 монет в раннере',goal:150,rCoins:120},
 {id:'runs',emoji:'🏃',name:'Сделай 5 забегов',goal:5,rCoins:150},
@@ -435,7 +430,6 @@ let p=state.quests.prog[id]||0;if(q.id==='score')p=Math.max(p,state.best||0);if(
 state.quests.claimed[id]=true;if(q.rCoins)state.wallet+=q.rCoins;if(q.rStars)state.stars+=q.rStars;
 saveState();syncToServer();toast('📜 Квест выполнен!');sfx('cash');haptic('success');renderQuests()}
 
-// ============ КЕЙСЫ ============
 const casesData=[
 {id:'frog',emoji:'🐸',name:'Лягушачий кейс',price:1500,color:'#27ae60',pool:[
 {type:'coins',n:200,w:30},{type:'coins',n:400,w:22},{type:'coins',n:800,w:14},{type:'stars',n:5,w:10},
@@ -479,12 +473,12 @@ c.innerHTML+=`<div class="card"><div class="case-emoji" style="filter:drop-shado
 <div style="flex:1;text-align:left;padding-left:10px;font-weight:bold;font-size:13px">${cs.name}<br><span style="color:#f1c40f;font-size:12px">🪙 ${cs.price}</span>
 <div class="drop-pool"><span>${pv}</span><span>🪙</span><span>⭐</span></div></div>
 <button class="card-btn" style="background:${cs.color}" onclick="openCase('${cs.id}')">Открыть</button></div>`});
-c.innerHTML+='<div style="color:#666;font-size:11px;text-align:center">🎄 Из кейсов выпадают редкие скины: Горилла, Санта, Олень, Акула и другие!</div>'}
+c.innerHTML+='<div style="color:#666;font-size:11px;text-align:center">В кейсах выпадают редкие скины: Горилла, Санта, Олень, Акула и другие!</div>'}
 let caseBusy=false;
 function openCase(id){if(caseBusy){toast('⏳ Рулетка крутится, подожди…',true);return}
 const cs=casesData.find(x=>x.id===id);if(!cs)return;
 if(state.wallet<cs.price){tg.showAlert(`Не хватает монет! Нужно 🪙 ${cs.price}, у тебя 🪙 ${state.wallet}.`);haptic('heavy');return}
-caseBusy=true;state.wallet-=cs.price;state.stats.caseOpens++;qAdd('cases',1);saveState();
+caseBusy=true;state.wallet-=cs.price;state.stats.caseOpens++;qAdd('cases',1);saveState();syncToServer();
 const winner=pickDrop(cs.pool);const el=document.getElementById('roul-strip');const wi=buildStrip(el,cs.pool,winner);
 document.getElementById('cases-container').style.display='none';
 document.getElementById('case-open-area').style.display='flex';
@@ -496,30 +490,29 @@ document.getElementById('case-open-area').style.display='none';
 document.getElementById('cases-container').style.display='flex';
 document.getElementById('case-result').innerText='';sfx('click')}
 
-// ============ КОЛЕСО (награды урезаны) ============
-const WHEEL_COOLDOWN=8*3600000,WHEEL_COST=300;
+// ===== КОЛЕСО: вход 500 монет, максимум 700 монет / 10 звёзд с малым шансом =====
+const WHEEL_COOLDOWN=8*3600000,WHEEL_COST=500;
 const wheelPool=[
-{type:'coins',n:30,w:26},{type:'coins',n:80,w:22},{type:'coins',n:150,w:16},{type:'coins',n:250,w:12},
-{type:'coins',n:500,w:7},{type:'coins',n:1200,w:3},{type:'stars',n:3,w:8},{type:'stars',n:8,w:4},
-{type:'stars',n:25,w:1.5},{type:'boost',days:1,w:4},{type:'skin',id:'bunny',w:1.5},{type:'skin',id:'cat',w:1}];
+{type:'coins',n:30,w:30},{type:'coins',n:60,w:24},{type:'coins',n:100,w:18},
+{type:'coins',n:150,w:12},{type:'coins',n:250,w:8},{type:'coins',n:400,w:5},{type:'coins',n:700,w:2},
+{type:'stars',n:3,w:6},{type:'stars',n:5,w:3},{type:'stars',n:10,w:1},
+{type:'boost',days:1,w:2}];
 function renderWheel(){sfx('click');document.getElementById('wheel').style.display='flex';document.getElementById('wheel-result').innerText='';
 updateWheelUI();clearInterval(window.wheelTimer);window.wheelTimer=setInterval(updateWheelUI,1000);
 buildStrip(document.getElementById('wheel-strip'),wheelPool,wheelPool[0])}
 function updateWheelUI(){if(wheelBusy)return;const left=WHEEL_COOLDOWN-(Date.now()-(state.lastWheel||0));
 const btn=document.getElementById('wheel-btn'),timer=document.getElementById('wheel-timer');
-if(left<=0){timer.innerText='🎁 Бесплатное вращение доступно!';btn.innerText='Крутить бесплатно'}
+if(left<=0){timer.innerText='🎁 Первое вращение за 🪙 '+WHEEL_COST;btn.innerText='Крутить за 🪙 '+WHEEL_COST}
 else{const h=Math.floor(left/3600000),m=Math.floor(left%3600000/60000),s=Math.floor(left%60000/1000);
-timer.innerText=`⏳ Бесплатно через ${h}ч ${m}м ${s}с · или за 🪙 ${WHEEL_COST}`;btn.innerText=`Крутить за 🪙 ${WHEEL_COST}`}}
+timer.innerText=`⏳ Ближайшее бесплатное через ${h}ч ${m}м ${s}с · или за 🪙 ${WHEEL_COST}`;btn.innerText='Крутить за 🪙 '+WHEEL_COST}}
 let wheelBusy=false;
 function doSpin(){if(wheelBusy){toast('⏳ Колесо уже крутится!',true);return}
-const left=WHEEL_COOLDOWN-(Date.now()-(state.lastWheel||0));
-if(left>0){if(state.wallet<WHEEL_COST){tg.showAlert(`Нужно 🪙 ${WHEEL_COST}, у тебя 🪙 ${state.wallet}.`);haptic('heavy');return}state.wallet-=WHEEL_COST}
-wheelBusy=true;state.lastWheel=Date.now();state.stats.spins++;saveState();
+if(state.wallet<WHEEL_COST){tg.showAlert(`Нужно 🪙 ${WHEEL_COST}, у тебя 🪙 ${state.wallet}.`);haptic('heavy');return}
+wheelBusy=true;state.wallet-=WHEEL_COST;state.lastWheel=Date.now();state.stats.spins++;saveState();syncToServer();
 const winner=pickDrop(wheelPool);const el=document.getElementById('wheel-strip');const wi=buildStrip(el,wheelPool,winner);sfx('click');
 spinRoulette(el,wi,()=>{document.getElementById('wheel-result').innerText='🎉 '+applyDrop(winner);
 saveState();syncToServer();sfx('win');haptic('success');wheelBusy=false;updateWheelUI()})}
 
-// ============ ПРОКАЧКА ============
 const upgData=[
 {id:'magnet',emoji:'🧲',name:'Магнит монет',desc:'+15 к радиусу притяжения',base:500},
 {id:'coin',emoji:'🪙',name:'Ценность монет',desc:'+10% монет за сбор',base:800},
@@ -538,7 +531,6 @@ if(state.wallet<cost){tg.showAlert(`Нужно 🪙 ${cost}, у тебя 🪙 ${
 state.wallet-=cost;state.upgrades[id]=l+1;saveState();syncToServer();
 toast(`${u.emoji} ${u.name} улучшено!`);sfx('cash');haptic('success');renderUpgrades()}
 
-// ============ СТАТИСТИКА ============
 function renderStats(){sfx('click');const c=document.getElementById('stats-container'),s=state.stats;
 c.innerHTML=`
 <div class="stat-row"><span>🏅 Уровень</span><b>${level()}</b></div>
@@ -552,7 +544,7 @@ c.innerHTML=`
 <div class="stat-row"><span>👑 VIP</span><b>${vipActive()?'активен':'нет'}</b></div>`;
 document.getElementById('stats').style.display='flex'}
 
-// ============ ЗАЯВКИ: только админ видит, без сообщений юзеру ============
+// ===== ЗАЯВКИ: только админ видит, без сообщений юзеру от бота =====
 async function submitRequest(req){
 req.id=req.uid+'_'+req.time;
 state.pendingMine.push(req);saveState();
@@ -577,11 +569,10 @@ c.innerHTML+=`<div class="card alert"><div class="skin-emoji">${g.type==='stars'
 <button class="card-btn" style="background:#27ae60" onclick="markSent(${i})">Отправлено ✓</button></div>`})}
 document.getElementById('admin').style.display='flex'}
 function markSent(i){const g=state.pendingGifts[i];
-if(g&&g.id)apiPost('/api/requests/done',{initData:tg.initData||'',id:g.id});
+if(g&&g.id)apiPost('/api/requests/done',{id:g.id});
 state.pendingGifts.splice(i,1);saveState();sfx('beep');renderAdmin()}
 function checkAdminPanel(){if(isAdmin()&&state.pendingGifts.length&&document.getElementById('menu').style.display!=='none')renderAdmin()}
 
-// ============ МАГАЗИН ============
 function renderShop(){sfx('click');const c=document.getElementById('skins-container');c.innerHTML='';
 if(!boostActive()&&state.boostUntil)state.boostUntil=0;
 skinsData.forEach(s=>{
@@ -606,11 +597,13 @@ c.innerHTML+=`<div class="card"><div class="skin-emoji fx-${s.fx}">${s.emoji}</d
 document.getElementById('shop').style.display='flex'}
 function buySkin(id){sfx('click');const s=skinsData.find(x=>x.id===id);if(!s)return;
 if(state.ownedSkins.includes(id)){state.currentSkin=id;saveState();renderShop();syncToServer();return}
-if(state.wallet>=s.coins){state.wallet-=s.coins;state.ownedSkins.push(id);state.currentSkin=id;saveState();renderShop();toast('Куплено и надето! 🎉');sfx('cash');syncToServer()}
+if(state.wallet>=s.coins){
+state.wallet-=s.coins;state.ownedSkins.push(id);state.currentSkin=id;
+saveState();renderShop();syncToServer();toast('Куплено и надето! 🎉');sfx('cash')}
 else{tg.showAlert(`Мало монет! Нужно 🪙 ${s.coins}, у тебя 🪙 ${state.wallet}.`);haptic('heavy')}}
 function buyBoost(id){sfx('click');tg.openTelegramLink(`https://t.me/${BOT_USERNAME}?start=buy_${id}`);toast('Оплати звёздами — буст придёт в игру')}
 
-// ============ ПОДАРКИ + ВЫВОД ЗВЁЗД (без сообщений юзеру от бота) ============
+// ===== ПОДАРКИ: покупка списывает монеты, вывод НЕ возвращает монеты =====
 const giftsData=[
 {id:'tg15',emoji:'🧸',name:'Мишка',stars:15,coins:1500},
 {id:'tg25',emoji:'🎁',name:'Подарочек',stars:25,coins:2500},
@@ -625,26 +618,31 @@ c.innerHTML+=`<div class="card"><div class="skin-emoji">${g.emoji}</div>
 document.getElementById('gifts-shop').style.display='flex'}
 async function handleGift(id){sfx('click');const g=giftsData.find(x=>x.id===id);if(!g)return;
 if(state.ownedGifts.includes(id)){
+// ВЫВОД: монеты уже списаны при покупке, ничего не возвращаем
 const req={type:'gift',gift:g.name,emoji:g.emoji,stars:g.stars,gid:g.id,name:myName(),uid:myUid(),time:Date.now()};
-state.ownedGifts=state.ownedGifts.filter(x=>x!==id);saveState();renderGifts();
+state.ownedGifts=state.ownedGifts.filter(x=>x!==id);
+saveState();renderGifts();syncToServer();
 const ok=await submitRequest(req);
 sfx('win');haptic('success');
 tg.showAlert(ok?'🎉 Заявка отправлена админу! Подарок придёт в Telegram.':'🎉 Заявка сохранена и уйдёт админу при следующем входе в игру.')}
-else{if(state.wallet>=g.coins){state.wallet-=g.coins;state.ownedGifts.push(id);saveState();renderGifts();toast('Подарок куплен! Жми «Вывести» 🎁');sfx('cash')}
+else{
+if(state.wallet>=g.coins){
+state.wallet-=g.coins;state.ownedGifts.push(id);
+saveState();renderGifts();syncToServer();
+toast('Подарок куплен! Жми «Вывести» 🎁');sfx('cash')}
 else{tg.showAlert(`Не хватает монет: нужно 🪙 ${g.coins}, у тебя 🪙 ${state.wallet}.`);haptic('heavy')}}}
-function toggleWithdraw(){sfx('click');const b=document.getElementById('wd-box');b.style.display=b.style.display==='none'?'flex':'none'}
-const WD_MIN=10;
+function toggleWithdraw(){sfx('click');const b=document.getElementById('wd-box');b.style.display=(b.style.display==='none'||!b.style.display)?'flex':'none'}
+const WD_MIN=50;
 async function confirmWithdraw(){const n=parseInt(document.getElementById('wd-amount').value)||0;
 if(n<WD_MIN){tg.showAlert(`Минимум для вывода — ${WD_MIN} ⭐`);haptic('heavy');return}
 if(state.stars<n){tg.showAlert(`Мало звёзд: у тебя ⭐ ${state.stars}.`);haptic('heavy');return}
-state.stars-=n;saveState();
+state.stars-=n;saveState();syncToServer();
 const req={type:'stars',n:n,name:myName(),uid:myUid(),time:Date.now()};
 const ok=await submitRequest(req);
 document.getElementById('wd-amount').value='';document.getElementById('wd-box').style.display='none';
 sfx('cash');haptic('success');
-tg.showAlert(ok?'💸 Заявка на вывод отправлена админу! Он переведёт звёзды на твой Telegram.':'💸 Заявка сохранена и уйдёт админу при следующем входе в игру.')}
+tg.showAlert(ok?`💸 Заявка на вывод ${n} ⭐ отправлена админу! Заявка видна только ему. After обработке звёзды придут в Telegram.`:`💸 Заявка сохранена и уйдёт админу при следующем входе в игру.`)}
 
-// ============ ЛИДЕРБОРД ============
 function openLeaderboard(){sfx('click');const c=document.getElementById('lb-container');
 c.innerHTML='<div style="color:#888;margin-top:20px">Загрузка…</div>';
 document.getElementById('leaderboard').style.display='flex';
@@ -660,7 +658,7 @@ ${p.online?'🟢':'⚪'} ${p.name}${p.id===me?' <span style="color:#f1c40f">(т�
 <br><span style="color:#f1c40f;font-size:12px">Рекорд: ${p.best} · 🪙 ${p.wallet}</span></div></div>`});
 c.innerHTML=html}).catch(()=>{c.innerHTML='<div style="color:#e74c3c;margin-top:20px">Сервер недоступен. Попробуй позже.</div>'})}
 
-// ============ ДВИЖОК ============
+// ===== ДВИЖОК =====
 const canvas=document.getElementById('game'),ctx=canvas.getContext('2d');
 const cCanvas=document.getElementById('crash-canvas'),cCtx=cCanvas.getContext('2d');
 const canEllipse=typeof ctx.ellipse==='function';
@@ -682,24 +680,23 @@ snow.forEach(f=>{f.y+=f.s;f.x+=Math.sin(t/1200+f.ph)*.3+(wind||0);
 if(f.y>H+5){f.y=-5;f.x=Math.random()*W}if(f.x>W+5)f.x=-5;if(f.x<-5)f.x=W+5;
 cx.beginPath();cx.arc(f.x,f.y,f.r,0,7);cx.fill()});cx.globalAlpha=1}
 
-// ============ ЖИВОЙ ФОН МЕНЮ: слои, звёзды, сияние, метеоры, снег ============
+// ===== ЖИВОЙ ФОН МЕНЮ (постоянный, бесконечный) =====
 let menuEmojis=[];for(let i=0;i<12;i++)menuEmojis.push({e:['🐻','⭐','🚀','📦','🎄','❄️','🎁','🦌','⛄','🔔','🎅','💎'][i%12],x:Math.random(),y:Math.random(),s:14+Math.random()*22,vx:(Math.random()-.5)*.3,vy:-.1-Math.random()*.2,ph:Math.random()*6.28});
-let bgFarM=0,shootT=0,shoot=null;
+let bgFarM=0,shoot=null;
 function drawMenuBg(t){
-bgFarM+=.2;
+bgFarM+=.25;
 const g=ctx.createLinearGradient(0,0,0,H);
 g.addColorStop(0,'#060915');g.addColorStop(.5,'#0c1530');g.addColorStop(1,'#12325a');
 ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
-// три слоя звёзд с разной скоростью дрейфа — вечный параллакс
 for(let layer=0;layer<3;layer++){
 ctx.globalAlpha=.35+layer*.15;
 ctx.fillStyle='#dff0ff';
 for(let i=0;i<14;i++){
-const sx=((skyStars[(i+layer*17)%skyStars.length].x*W+layer*200-bgFarM*(layer+1)*.6)%(W+80)+W+80)%(W+80)-40;
-const sy=(skyStars[(i*3+layer)%skyStars.length].y*H*.7+layer*60)%H;
-ctx.beginPath();ctx.arc(sx,sy,skyStars[(i+layer)%skyStars.length].r+layer*.3,0,7);ctx.fill()}}
+const st=skyStars[(i+layer*17)%skyStars.length];
+const sx=((st.x*W+layer*200-bgFarM*(layer+1)*.6)%(W+80)+W+80)%(W+80)-40;
+const sy=(st.y*H*.7+layer*60)%H;
+ctx.beginPath();ctx.arc(sx,sy,st.r+layer*.3,0,7);ctx.fill()}}
 ctx.globalAlpha=1;
-// северное сияние
 for(let band=0;band<2;band++){
 ctx.globalAlpha=.09+.05*Math.sin(t/2200+band);
 const grad=ctx.createLinearGradient(0,30+band*50,0,150+band*50);
@@ -708,39 +705,33 @@ ctx.fillStyle=grad;ctx.beginPath();ctx.moveTo(0,80+band*60);
 for(let x=0;x<=W;x+=50)ctx.lineTo(x,80+band*60+Math.sin(x*.009+t/1400+band*2)*34);
 ctx.lineTo(W,0);ctx.lineTo(0,0);ctx.fill()}
 ctx.globalAlpha=1;
-// падающие звёзды
-if(!shoot&&Math.random()<.004)shoot={x:Math.random()*W*.8,y:Math.random()*H*.3,life:1};
-if(shoot){shoot.x+=6;shoot.y+=3;shoot.life-=.02;
+if(!shoot&&Math.random()<.005)shoot={x:Math.random()*W*.7,y:Math.random()*H*.3,life:1};
+if(shoot){shoot.x+=7;shoot.y+=3.5;shoot.life-=.02;
 ctx.globalAlpha=Math.max(shoot.life,0);ctx.strokeStyle='#fff';ctx.lineWidth=2;
-ctx.beginPath();ctx.moveTo(shoot.x,shoot.y);ctx.lineTo(shoot.x-40,shoot.y-20);ctx.stroke();ctx.globalAlpha=1;
+ctx.beginPath();ctx.moveTo(shoot.x,shoot.y);ctx.lineTo(shoot.x-45,shoot.y-22);ctx.stroke();ctx.globalAlpha=1;
 if(shoot.life<=0||shoot.x>W+60)shoot=null}
-// луна
 const moonX=W*.2,moonY=H*.22;
 const glow=ctx.createRadialGradient(moonX,moonY,5,moonX,moonY,100);
 glow.addColorStop(0,'rgba(200,220,255,.4)');glow.addColorStop(1,'rgba(200,220,255,0)');
 ctx.fillStyle=glow;ctx.beginPath();ctx.arc(moonX,moonY,100,0,7);ctx.fill();
 ctx.fillStyle='#e8eeff';ctx.beginPath();ctx.arc(moonX,moonY,24,0,7);ctx.fill();
-// парящие эмодзи
 menuEmojis.forEach(m=>{m.x+=m.vx/100;m.y+=m.vy/100;
 if(m.x<-.05)m.x=1.05;if(m.x>1.05)m.x=-.05;if(m.y<-.08)m.y=1.08;
 ctx.globalAlpha=.35+.2*Math.sin(t/900+m.ph);ctx.font=m.s+'px Arial';ctx.textAlign='center';
 ctx.fillText(m.e,m.x*W,m.y*H)});
 ctx.globalAlpha=1;ctx.textAlign='left';
-// снежные холмы (медленный дрейф)
 ctx.fillStyle='#dfe9f5';ctx.beginPath();ctx.moveTo(0,H);
 for(let x=0;x<=W;x+=40)ctx.lineTo(x,H-40-Math.sin(x*.004+t/4000+bgFarM*.002)*18);
 ctx.lineTo(W,H);ctx.closePath();ctx.fill();
-// ёлки на фоне (медленный параллакс)
 ctx.fillStyle='#1a5c3a';
-const treeOff=bgFarM*.3;
-for(let k=0;k<Math.ceil(W/170)+2;k++){
-const i=Math.floor(treeOff/170)+k;const x=i*170-treeOff;
-const h=46+(Math.abs(Math.sin(i*12.3))*25);
+const treeOff=(bgFarM*.35)%170;
+for(let x=-40-treeOff;x<W+40;x+=170){
+const h=46+(Math.abs(Math.sin(Math.floor((x+treeOff)/170)*12.3))*25);
 ctx.beginPath();ctx.moveTo(x,H-30);ctx.lineTo(x-13,H-30);ctx.lineTo(x-6,H-30-h);
 ctx.moveTo(x,H-30);ctx.lineTo(x+13,H-30);ctx.lineTo(x+6,H-30-h);ctx.fill()}
 drawSnow(ctx,t,0)}
 
-// ============ РАННЕР (зимний, живой) ============
+// ===== РАННЕР =====
 let isRunner=false,rOver=false;
 let p={x:30,y:0,vy:0,g:.6};
 let obs=[],coinsArr=[],particles=[],floaters=[],clouds=[],pickups=[];
@@ -882,7 +873,7 @@ ctx.globalAlpha=1;
 }catch(e){console.error('loop:',e);const n=Date.now();if(n-lastErrToast>3000){lastErrToast=n;toast('Ошибка: '+(e.message||'').slice(0,60),true)}}}
 function spawnParticles(x,y,color,n){for(let i=0;i<n;i++)particles.push({x,y,vx:(Math.random()-.5)*4,vy:-Math.random()*4-1,life:1,color})}
 
-// ============ КРАШ: максимум x5, честно, без музыки, живой ============
+// ===== КРАШ: x5 макс, без музыки, живой, непредсказуемый =====
 const CR={EPOCH:1767225600000,BET_MS:10000,COOL_MS:2500,CAP:12.5},GROWTH=.2;
 function cHash(n){let h=(n^0x9E3779B9)>>>0;h=Math.imul(h^(h>>>16),2246822519);h=Math.imul(h^(h>>>13),3266489917);h=(h^(h>>>16))>>>0;return h/4294967296}
 function cpOf(i){const r=cHash(i*2654435761%4294967296);
@@ -968,6 +959,7 @@ cNebulas.forEach(n=>{const g=cCtx.createRadialGradient(n.x,n.y,5,n.x,n.y,n.r);
 g.addColorStop(0,n.c1);g.addColorStop(1,n.c2);cCtx.fillStyle=g;cCtx.fillRect(0,0,W,H)});
 cStars.forEach(s=>{cCtx.globalAlpha=.3+Math.abs(Math.sin(s.tw))*.5;cCtx.fillStyle='#fff';cCtx.fillRect(s.x,s.y,s.r,s.r)});
 cCtx.globalAlpha=1;
+drawSnow(cCtx,now,0);
 if(inBet){drawFlame(crashPos(0).x,crashPos(0).y,-Math.PI/4,now,false);
 drawRocket(crashPos(0),-Math.PI/4,now);drawClock(now)}
 else if(inFly){const tSec=(now-flyStart)/1000;
@@ -1019,41 +1011,3 @@ saveState();syncToServer();myBet.cashed=true;
 toast(`Забрал ${win} ⭐ (x${mult.toFixed(2)}) 🎉`);sfx('cash');haptic('success')}
 function crashAction(){const now=Date.now();if(!cRound)return;
 const inBet=now<cRound.betEnd,inFly=!inBet&&now<cRound.flyEnd;
-if(inBet&&!myBet.active){
-const bet=parseInt(document.getElementById('crash-bet').value)||0;
-if(bet<1){tg.showAlert('Минимальная ставка — 1 ⭐!');haptic('heavy');return}
-if(bet>state.stars){tg.showAlert(state.stars<1?'⭐ Звёзды кончились! Нажми «⭐ Пополнить» в меню.':'Недостаточно звёзд: у тебя ⭐ '+state.stars+', а ставка '+bet+' ⭐.');haptic('heavy');return}
-state.stars-=bet;saveState();syncToServer();
-myBet={active:true,amount:bet,cashed:false};
-cAuto=parseFloat(document.getElementById('crash-auto').value)||null;
-qAdd('crash',1);sfx('click');haptic('light');return}
-if(inFly&&myBet.active&&!myBet.cashed){
-const mult=Math.min(Math.exp(GROWTH*(now-cRound.betEnd)/1000),cRound.cp);doCashout(mult)}}
-function exitCrash(){if(cRound&&myBet.active&&!myBet.cashed&&Date.now()<cRound.flyEnd&&Date.now()>=cRound.betEnd){
-const mult=Math.min(Math.exp(GROWTH*(Date.now()-cRound.betEnd)/1000),cRound.cp);doCashout(mult)}
-clearInterval(onlineTimer);engineStop();
-cState='off';cRound=null;
-document.getElementById('crash-screen').style.display='none';
-document.getElementById('menu').style.display='flex';
-setMusic('menu');sfx('click');syncToServer()}
-function setBet(v){sfx('click');document.getElementById('crash-bet').value=(v==='max')?Math.max(state.stars,0):v}
-
-function inviteFriend(){sfx('click');const uid=myUid();
-tg.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent('https://t.me/'+BOT_USERNAME+'?start=ref_'+uid)}&text=${encodeURIComponent('Играем в Мишку! Заходи, у меня уже рекорд 🐻❄️')}`);
-toast('Выбери чат — и другу придёт приглашение')}
-
-// ============ ГЛАВНЫЙ ЦИКЛ ============
-function masterLoop(){
-if(isRunner&&!rOver)runnerFrame();
-if(cState==='active')crashFrame();
-if(!isRunner&&cState!=='active')drawMenuBg(Date.now());
-requestAnimationFrame(masterLoop)}
-resizeAll();
-document.getElementById('sound-btn').innerText=sound.on?'🔊':'🔇';
-setMusic('menu');syncToServer();
-setTimeout(checkAdminPanel,1500);
-setInterval(()=>{if(isAdmin())fetchRequests(false)},20000);
-requestAnimationFrame(masterLoop);
-</script>
-</body>
-</html>
