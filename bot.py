@@ -9,7 +9,6 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qsl
 from telebot.types import LabeledPrice, InlineKeyboardMarkup, InlineKeyboardButton
 
-# <<< ВСТАВЬ СЮДА НОВЫЙ ТОКЕН ОТ BOTFATHER (формат: 123456789:ABC...) >>>
 BOT_TOKEN = "9174710090:AAELUzQyyWbPxlZEMPtIIH0haf7ijYYNmMA"
 ADMIN_ID = 8834515141
 APP_SHORT_NAME = "app"
@@ -21,13 +20,18 @@ SKIN_PRICES = {
     "boost3": {"name": "Буст x3 на 5 дней", "price": 100},
 }
 
+TOPUP_MIN = 10
+TOPUP_MAX = 200
+
 bot = telebot.TeleBot(BOT_TOKEN)
 
-# ================== СЕРВЕРНЫЙ БАЛАНС И ЛИДЕРБОРД ==================
+# ================== БАЛАНС И ЛИДЕРБОРД ==================
 PLAYERS_FILE = "/data/players.json"
+REQUESTS_FILE = "/data/requests.json"
 PLAYERS = {}
+REQUESTS = []
 LOCK = threading.Lock()
-ONLINE_SEC = 180  # активность за 3 минуты = онлайн
+ONLINE_SEC = 180
 
 
 def load_players():
@@ -48,8 +52,38 @@ def save_players():
         print("save players error:", e)
 
 
+def load_requests():
+    global REQUESTS
+    try:
+        with open(REQUESTS_FILE, "r", encoding="utf-8") as f:
+            REQUESTS = json.load(f)
+    except Exception:
+        REQUESTS = []
+
+
+def save_requests():
+    try:
+        os.makedirs(os.path.dirname(REQUESTS_FILE), exist_ok=True)
+        with open(REQUESTS_FILE, "w", encoding="utf-8") as f:
+            json.dump(REQUESTS, f, ensure_ascii=False)
+    except Exception as e:
+        print("save requests error:", e)
+
+
+def add_request(req):
+    if not isinstance(req, dict):
+        return None
+    req["time"] = req.get("time") or int(time.time() * 1000)
+    req["id"] = req.get("id") or f"{req.get('uid')}_{req['time']}"
+    with LOCK:
+        if any(r.get("id") == req["id"] for r in REQUESTS):
+            return req["id"]
+        REQUESTS.append(req)
+        save_requests()
+    return req["id"]
+
+
 def validate_init_data(init_data):
-    """Проверяет подпись Telegram initData — только настоящие игроки попадают на сервер."""
     try:
         pairs = dict(parse_qsl(init_data, keep_blank_values=True))
         given_hash = pairs.pop("hash", None)
@@ -94,6 +128,46 @@ def merge_user(user, data):
         return rec
 
 
+def notify_admin_request(req):
+    """Единая точка: бот присылает заявку админу с кнопками."""
+    try:
+        name = req.get("name") or "игрок"
+        uid = req.get("uid") or "?"
+        if req.get("type") == "stars":
+            n = req.get("n", 0)
+            markup = InlineKeyboardMarkup()
+            markup.add(
+                InlineKeyboardButton("✅ Отправил", callback_data=f"wd_ok_{uid}_{n}"),
+                InlineKeyboardButton("❌ Отклонить", callback_data=f"wd_no_{uid}_{n}"),
+            )
+            bot.send_message(
+                ADMIN_ID,
+                f"💸💸💸 ВЫВОД ЗВЁЗД!\n\n"
+                f"Игрок: {name}\nID: `{uid}`\n"
+                f"Сумма: {n} ⭐\n\n"
+                f"👉 Переведи игроку {n} звёзд через Telegram (Профиль → Звёзды → Перевести).",
+                parse_mode="Markdown", reply_markup=markup,
+            )
+        else:
+            gift = req.get("gift", "?")
+            stars = req.get("stars", 0)
+            markup = InlineKeyboardMarkup()
+            markup.add(
+                InlineKeyboardButton("✅ Отправил", callback_data=f"gift_ok_{uid}"),
+                InlineKeyboardButton("❌ Отклонить", callback_data=f"gift_no_{uid}"),
+            )
+            bot.send_message(
+                ADMIN_ID,
+                f"🔔🔔🔔 ЗАЯВКА НА ВЫВОД ПОДАРКА!\n\n"
+                f"Игрок: {name}\nID: `{uid}`\n"
+                f"Подарок: {gift} ({stars}⭐)\n\n"
+                f"👉 Открой чат с игроком → скрепка → Подарок → выбери на {stars} звёзд → Отправить.",
+                parse_mode="Markdown", reply_markup=markup,
+            )
+    except Exception as e:
+        print("notify_admin_request error:", e)
+
+
 class ApiHandler(BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
 
@@ -133,6 +207,11 @@ class ApiHandler(BaseHTTPRequestHandler):
                     ],
                 }
                 self._reply(200, json.dumps(payload, ensure_ascii=False).encode("utf-8"))
+            elif self.path.startswith("/api/requests"):
+                # Список заявок для админ-панели в игре
+                with LOCK:
+                    lst = list(REQUESTS)
+                self._reply(200, json.dumps({"ok": True, "list": lst}, ensure_ascii=False).encode("utf-8"))
             elif self.path in ("/", "/index.html"):
                 try:
                     with open("index.html", "rb") as f:
@@ -148,13 +227,14 @@ class ApiHandler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         try:
+            length = int(self.headers.get("Content-Length", 0) or 0)
+            raw = self.rfile.read(length) if length else b"{}"
+            try:
+                data = json.loads(raw)
+            except Exception:
+                data = {}
+
             if self.path.startswith("/api/sync"):
-                length = int(self.headers.get("Content-Length", 0) or 0)
-                raw = self.rfile.read(length) if length else b"{}"
-                try:
-                    data = json.loads(raw)
-                except Exception:
-                    data = {}
                 user = validate_init_data(data.get("initData", ""))
                 if not user:
                     self._reply(401, b'{"ok": false, "error": "auth"}')
@@ -164,13 +244,58 @@ class ApiHandler(BaseHTTPRequestHandler):
                     self._reply(400, b'{"ok": false, "error": "bad user"}')
                     return
                 self._reply(200, json.dumps({"ok": True, "you": rec}, ensure_ascii=False).encode("utf-8"))
+
+            elif self.path.startswith("/api/request"):
+                # Заявка на вывод подарка или звёзд от игрока
+                user = validate_init_data(data.get("initData", ""))
+                if not user:
+                    self._reply(401, b'{"ok": false, "error": "auth"}')
+                    return
+                req = data.get("req") or {}
+                req["uid"] = str(user.get("id", "")) or str(req.get("uid", ""))
+                req["name"] = display_name(user)
+                rid = add_request(req)
+                if rid:
+                    notify_admin_request(req)
+                self._reply(200, json.dumps({"ok": True, "id": rid}, ensure_ascii=False).encode("utf-8"))
+
+            elif self.path.startswith("/api/requests/done"):
+                # Админ нажал «Отправлено» — заявка удаляется
+                rid = data.get("id")
+                with LOCK:
+                    REQUESTS[:] = [r for r in REQUESTS if r.get("id") != rid]
+                    save_requests()
+                self._reply(200, b'{"ok": true}')
+
+            elif self.path.startswith("/api/topup"):
+                # Пополнение 10–200 звёзд прямо в игре: счёт Telegram Stars
+                user = validate_init_data(data.get("initData", ""))
+                if not user:
+                    self._reply(401, b'{"ok": false, "error": "auth"}')
+                    return
+                n = int(data.get("stars") or 0)
+                if n < TOPUP_MIN or n > TOPUP_MAX:
+                    self._reply(200, b'{"ok": false, "error": "range"}')
+                    return
+                try:
+                    link = bot.create_invoice_link(
+                        title=f"Пополнение {n} ⭐",
+                        description=f"{n} звёзд для Mishka App",
+                        payload=f"topup_{n}",
+                        currency="XTR",
+                        prices=[LabeledPrice(label=f"{n} ⭐", amount=n)],
+                    )
+                    self._reply(200, json.dumps({"ok": True, "invoice": link}).encode("utf-8"))
+                except Exception as e:
+                    print("topup error:", e)
+                    self._reply(200, b'{"ok": false}')
             else:
                 self._reply(404, b'{"ok": false}')
         except Exception as e:
             print("POST error:", e)
 
     def log_message(self, *args):
-        pass  # не шумим в логи
+        pass
 
 
 def run_api():
@@ -190,6 +315,7 @@ def run_api():
 
 
 load_players()
+load_requests()
 threading.Thread(target=run_api, daemon=True).start()
 print("API-сервер запущен (порты 8080/5000/80)")
 
@@ -222,24 +348,36 @@ def start(message):
     text = message.text or ""
     payload = text.replace("/start", "", 1).strip() if text.startswith("/start") else ""
     name = f"@{message.from_user.username}" if message.from_user.username else f"id{message.from_user.id}"
+    uid = message.from_user.id
 
-    if payload.startswith("w_"):
+    if payload.startswith("gift_") and uid != ADMIN_ID:
+        # Заявка на подарок из игры (запасной канал доставки)
+        try:
+            parts = payload.split("_")
+            stars = int(parts[2]) if len(parts) > 2 else 0
+            add_request({"type": "gift", "gift": "Подарок", "stars": stars, "uid": str(uid), "name": name})
+            notify_admin_request({"type": "gift", "gift": "Подарок", "stars": stars, "uid": str(uid), "name": name})
+            bot.send_message(message.chat.id, "✅ Заявка принята! Скоро отправим 🎁")
+        except Exception as e:
+            print("gift_ error:", e)
+    elif payload.startswith("wd_") and uid != ADMIN_ID:
+        # Заявка на вывод звёзд из игры
+        try:
+            parts = payload.split("_")
+            stars = int(parts[2]) if len(parts) > 2 else 0
+            add_request({"type": "stars", "n": stars, "uid": str(uid), "name": name})
+            notify_admin_request({"type": "stars", "n": stars, "uid": str(uid), "name": name})
+            bot.send_message(message.chat.id, "✅ Заявка на вывод принята! 💸")
+        except Exception as e:
+            print("wd_ error:", e)
+    elif payload.startswith("w_"):
         try:
             data = payload[2:].split("_")
             stars = int(data[1])
             gift_names = {15: "🧸 Мишка", 25: "🎁 Подарочек", 50: "🍾 Шампанское", 100: "💍 Колечко"}
             gift = gift_names.get(stars, f"подарок на {stars}⭐")
-            markup = InlineKeyboardMarkup()
-            markup.add(
-                InlineKeyboardButton("✅ Отправил", callback_data=f"gift_ok_{message.from_user.id}"),
-                InlineKeyboardButton("❌ Отклонить", callback_data=f"gift_no_{message.from_user.id}"),
-            )
-            bot.send_message(ADMIN_ID,
-                             f"🔔🔔🔔 ЗАЯВКА НА ВЫВОД ПОДАРКА!\n\n"
-                             f"Игрок: {name}\nID: `{message.from_user.id}`\n"
-                             f"Подарок: {gift} ({stars}⭐)\n\n"
-                             f"👉 Открой чат с игроком → скрепка → Подарок → выбери на {stars} звёзд → Отправить.",
-                             parse_mode="Markdown", reply_markup=markup)
+            add_request({"type": "gift", "gift": gift, "stars": stars, "uid": str(uid), "name": name})
+            notify_admin_request({"type": "gift", "gift": gift, "stars": stars, "uid": str(uid), "name": name})
             bot.send_message(message.chat.id, "✅ Заявка принята! Скоро отправим 🎁")
         except Exception as e:
             print("w_ error:", e)
@@ -265,21 +403,28 @@ def start(message):
     else:
         markup = InlineKeyboardMarkup()
         markup.add(InlineKeyboardButton("🎮 Открыть игру", url=f"https://t.me/{BOT_USERNAME}/{APP_SHORT_NAME}?startapp=menu"))
-        bot.reply_to(message, "Привет! Играй в игру по кнопке ниже 👇\nДля пополнения баланса напиши /topup",
+        bot.reply_to(message, "Привет! Играй в игру по кнопке ниже 👇\nДля пополнения напиши /topup",
                      reply_markup=markup)
 
 
-@bot.callback_query_handler(func=lambda call: call.data.startswith("gift_ok_") or call.data.startswith("gift_no_"))
+@bot.callback_query_handler(func=lambda call: call.data.startswith("gift_ok_") or call.data.startswith("gift_no_")
+                            or call.data.startswith("wd_ok_") or call.data.startswith("wd_no_"))
 def gift_decision(call):
     if call.from_user.id != ADMIN_ID:
         bot.answer_callback_query(call.id, "Только для админа!")
         return
-    action, user_id = call.data.split("_")[1], int(call.data.split("_")[2])
-    if action == "ok":
-        bot.send_message(user_id, "🎁 Подарок отправлен! Проверь его в Telegram.")
-        bot.edit_message_text("✅ Отмечено: подарок выдан.", call.message.chat.id, call.message.message_id)
+    parts = call.data.split("_")
+    action, kind = parts[0], parts[1]
+    user_id = int(parts[2])
+    if kind == "ok":
+        if action == "wd":
+            bot.send_message(user_id, f"💸 Вывод {parts[3]} ⭐ отправлен! Проверь Telegram.")
+            bot.edit_message_text(f"✅ Вывод {parts[3]} ⭐ выдан.", call.message.chat.id, call.message.message_id)
+        else:
+            bot.send_message(user_id, "🎁 Подарок отправлен! Проверь его в Telegram.")
+            bot.edit_message_text("✅ Отмечено: подарок выдан.", call.message.chat.id, call.message.message_id)
     else:
-        bot.send_message(user_id, "❌ К сожалению, заявку на подарок отклонили.")
+        bot.send_message(user_id, "❌ К сожалению, заявку отклонили.")
         bot.edit_message_text("❌ Заявка отклонена.", call.message.chat.id, call.message.message_id)
     bot.answer_callback_query(call.id)
 
@@ -324,17 +469,14 @@ def web_app_data(message):
         if data.get('action') == 'withdraw_gift':
             gift = data.get('gift', '?')
             stars = data.get('stars', '?')
-            markup = InlineKeyboardMarkup()
-            markup.add(
-                InlineKeyboardButton("✅ Отправил", callback_data=f"gift_ok_{uid}"),
-                InlineKeyboardButton("❌ Отклонить", callback_data=f"gift_no_{uid}"),
-            )
-            bot.send_message(ADMIN_ID,
-                             f"🔔🔔🔔 ЗАЯВКА НА ВЫВОД ПОДАРКА!\n\n"
-                             f"Игрок: {name}\nID: `{uid}`\nПодарок: {gift} ({stars}⭐)\n\n"
-                             f"👉 Открой чат с игроком → скрепка → Подарок → выбери на {stars} звёзд → Отправить.",
-                             parse_mode="Markdown", reply_markup=markup)
+            add_request({"type": "gift", "gift": gift, "stars": stars, "uid": str(uid), "name": name})
+            notify_admin_request({"type": "gift", "gift": gift, "stars": stars, "uid": str(uid), "name": name})
             bot.send_message(message.chat.id, f"✅ Заявка на «{gift}» принята! Скоро отправим 🎁")
+        elif data.get('action') == 'withdraw_stars':
+            stars = data.get('stars', 0)
+            add_request({"type": "stars", "n": stars, "uid": str(uid), "name": name})
+            notify_admin_request({"type": "stars", "n": stars, "uid": str(uid), "name": name})
+            bot.send_message(message.chat.id, f"✅ Заявка на вывод {stars} ⭐ принята! 💸")
     except Exception as e:
         print("WebApp Error:", e)
 
