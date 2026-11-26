@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Mishka App 3.0</title>
+    <title>Mishka App 3.5</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -90,8 +90,8 @@
     </div>
 
     <div id="menu">
-        <h1>🐻 Mishka App 3.0</h1>
-        <div class="tagline">GRAND UPDATE · Беги. Крути. Забирай.</div>
+        <h1>🐻 Mishka App 3.5</h1>
+        <div class="tagline">Беги. Крути. Забирай.</div>
         <div class="lvl-line" id="lvl-line">🏅 Уровень 1</div>
         <button class="btn" onclick="startRunner()">🏃‍♂️ Раннер</button>
         <button class="btn btn-red" onclick="openCrash()">🚀 Краш · играют все</button>
@@ -292,13 +292,43 @@
             } catch(e) {}
         }
 
-        // ================== МУЗЫКА ==================
-        const CHORDS = [
-            [220.00, 261.63, 329.63],
-            [174.61, 220.00, 261.63],
-            [261.63, 329.63, 392.00],
-            [196.00, 246.94, 293.66],
-        ];
+        // ================== МУЗЫКА: СВОЯ ДЛЯ КАЖДОГО РЕЖИМА ==================
+        // Меню — спокойная. Раннер — бодрая, мажорная. Краш — тревожная, минорная, быстрая.
+        const MUSIC_CFG = {
+            menu: {
+                step: 230,
+                chords: [
+                    [220.00, 261.63, 329.63],  // Am
+                    [174.61, 220.00, 261.63],  // F
+                    [261.63, 329.63, 392.00],  // C
+                    [196.00, 246.94, 293.66],  // G
+                ],
+                lead: 'sine', leadVol: 0.06, leadDur: 0.5,
+                kick: false, deep: true
+            },
+            runner: {
+                step: 145,
+                chords: [
+                    [261.63, 329.63, 392.00],  // C
+                    [293.66, 349.23, 440.00],  // Dm
+                    [329.63, 392.00, 493.88],  // Em
+                    [392.00, 493.88, 587.33],  // G
+                ],
+                lead: 'triangle', leadVol: 0.09, leadDur: 0.22,
+                kick: true, deep: false
+            },
+            crash: {
+                step: 115,
+                chords: [
+                    [220.00, 261.63, 329.63],  // Am
+                    [207.65, 246.94, 311.13],  // Abm
+                    [164.81, 196.00, 246.94],  // Em
+                    [185.00, 233.08, 277.18],  // F#m
+                ],
+                lead: 'sawtooth', leadVol: 0.05, leadDur: 0.18,
+                kick: true, deep: true
+            }
+        };
         const sound = { on: true };
         const music = { mode: null, timer: null, step: 0 };
         function musicTick() {
@@ -306,15 +336,16 @@
                 const ctx = getAudio();
                 if (!ctx || !sound.on || !music.mode) return;
                 if (ctx.state !== 'running') { ctx.resume(); return; }
-                const runner = music.mode === 'runner';
-                const chord = CHORDS[Math.floor(music.step / 8) % 4];
+                const cfg = MUSIC_CFG[music.mode];
+                if (!cfg) return;
+                const chord = cfg.chords[Math.floor(music.step / 8) % cfg.chords.length];
                 const arp = [chord[0], chord[1], chord[2], chord[1], chord[2], chord[0], chord[1], chord[2]];
-                playNote(arp[music.step % 8], runner ? 'triangle' : 'sine', runner ? 0.09 : 0.06, runner ? 0.22 : 0.5);
-                if (runner) {
+                playNote(arp[music.step % 8], cfg.lead, cfg.leadVol, cfg.leadDur);
+                if (cfg.kick) {
                     if (music.step % 4 === 0) playNote(chord[0] / 2, 'square', 0.10, 0.18);
                     if (music.step % 8 === 0) playNote(90, 'sine', 0.18, 0.09);
                     if (music.step % 8 === 4) playNote(150, 'sine', 0.10, 0.05);
-                } else {
+                } else if (cfg.deep) {
                     if (music.step % 8 === 0) playNote(chord[0] / 2, 'sine', 0.08, 1.6);
                 }
                 music.step++;
@@ -324,7 +355,7 @@
             if (music.mode === mode && !force) return;
             clearInterval(music.timer);
             music.mode = mode; music.step = 0;
-            if (mode) { getAudio(); music.timer = setInterval(musicTick, mode === 'runner' ? 145 : 220); }
+            if (mode) { getAudio(); music.timer = setInterval(musicTick, MUSIC_CFG[mode].step); }
         }
         function toggleSound() {
             sound.on = !sound.on;
@@ -355,7 +386,6 @@
         if (!state.stats) state.stats = { games: 0, coinsEarned: 0, crashWins: 0, caseOpens: 0, spins: 0, maxMult: 0 };
         if (state.vipUntil === undefined) state.vipUntil = 0;
         if (state.lastWheel === undefined) state.lastWheel = 0;
-        if (state.streak === undefined) state.streak = 0;
         sound.on = state.musicOn;
 
         // ================== СКИНЫ ==================
@@ -507,13 +537,13 @@
             toast(`🎁 Бонус дня: +${reward} 🪙${vipActive() ? ' (VIP x2)' : ''}!`); sfx('cash'); haptic('success');
         }
 
-        // ================== КВЕСТЫ ==================
+        // ================== КВЕСТЫ (усложнены, награды урезаны) ==================
         const questsData = [
-            { id: 'coins', emoji: '🪙', name: 'Собери 50 монет в раннере', goal: 50, rCoins: 300 },
-            { id: 'runs',  emoji: '🏃', name: 'Сделай 3 забега', goal: 3, rCoins: 500 },
-            { id: 'crash', emoji: '🚀', name: 'Поставь в краше 2 ставки', goal: 2, rStars: 10 },
-            { id: 'cases', emoji: '📦', name: 'Открой 1 кейс', goal: 1, rCoins: 400 },
-            { id: 'jumps', emoji: '🦘', name: 'Прыгни 30 раз', goal: 30, rCoins: 200 },
+            { id: 'coins', emoji: '🪙', name: 'Собери 100 монет в раннере', goal: 100, rCoins: 120 },
+            { id: 'runs',  emoji: '🏃', name: 'Сделай 5 забегов', goal: 5, rCoins: 150 },
+            { id: 'crash', emoji: '🚀', name: 'Поставь в краше 3 ставки', goal: 3, rStars: 5 },
+            { id: 'cases', emoji: '📦', name: 'Открой 2 кейса', goal: 2, rCoins: 150 },
+            { id: 'score', emoji: '💯', name: 'Дойди до счёта 500 в забеге', goal: 500, rCoins: 200 },
         ];
         function ensureQuestDay() {
             const d = new Date().toDateString();
@@ -525,20 +555,26 @@
             state.quests.prog[id] = (state.quests.prog[id] || 0) + n;
             saveState();
         }
+        function qAddMax(id, n) {
+            ensureQuestDay();
+            if (!questsData.find(q => q.id === id)) return;
+            if ((state.quests.prog[id] || 0) < n) { state.quests.prog[id] = n; saveState(); }
+        }
         function renderQuests() {
             sfx('click');
             ensureQuestDay();
             const c = document.getElementById('quests-container'); c.innerHTML = '';
             questsData.forEach(q => {
-                const p = Math.min(state.quests.prog[q.id] || 0, q.goal);
+                let p = state.quests.prog[q.id] || 0;
+                if (q.id === 'score') p = Math.max(p, Math.min(state.best || 0, q.goal));
                 const done = p >= q.goal;
                 const claimed = state.quests.claimed[q.id];
-                const pct = Math.floor(p / q.goal * 100);
+                const pct = Math.floor(Math.min(p, q.goal) / q.goal * 100);
                 c.innerHTML += `<div class="card">
                     <div style="font-size:26px;">${q.emoji}</div>
                     <div style="flex:1; text-align:left; padding-left:10px; font-weight:bold; font-size:13px;">
                         ${q.name}
-                        <div style="color:#8aa; font-size:11px; margin-top:2px;">${p} / ${q.goal} · награда: ${q.rCoins ? '🪙 ' + q.rCoins : ''}${q.rStars ? '⭐ ' + q.rStars : ''}</div>
+                        <div style="color:#8aa; font-size:11px; margin-top:2px;">${Math.min(p, q.goal)} / ${q.goal} · награда: ${q.rCoins ? '🪙 ' + q.rCoins : ''}${q.rStars ? '⭐ ' + q.rStars : ''}</div>
                         <div class="prog-bar"><div class="prog-fill" style="width:${pct}%;"></div></div>
                     </div>
                     <button class="card-btn" style="background:${claimed ? '#555' : (done ? '#f1c40f' : '#444')}; color:${claimed ? '#999' : (done ? '#000' : '#fff')};" ${done && !claimed ? `onclick="claimQuest('${q.id}')"` : 'disabled'}>${claimed ? '✓' : (done ? 'Забрать' : '…')}</button>
@@ -551,7 +587,9 @@
             const q = questsData.find(x => x.id === id);
             if (!q) return;
             if (state.quests.claimed[id]) return;
-            if ((state.quests.prog[id] || 0) < q.goal) return;
+            let p = state.quests.prog[id] || 0;
+            if (q.id === 'score') p = Math.max(p, state.best || 0);
+            if (p < q.goal) return;
             state.quests.claimed[id] = true;
             if (q.rCoins) state.wallet += q.rCoins;
             if (q.rStars) state.stars += q.rStars;
@@ -822,7 +860,7 @@
             document.getElementById('stats').style.display = 'flex';
         }
 
-        // ================== МАГАЗИН СКИНОВ ==================
+        // ================== МАГАЗИН ==================
         function renderShop() {
             sfx('click');
             const c = document.getElementById('skins-container'); c.innerHTML = '';
@@ -995,6 +1033,11 @@
             if (p) p.y = playerBase();
             cStars = [];
             for (let i = 0; i < 40; i++) cStars.push({ x: Math.random() * W, y: Math.random() * H, r: Math.random() * 1.5 + 0.5, tw: Math.random() * 6 });
+            cNebulas = [
+                { x: W * 0.25, y: H * 0.25, r: Math.min(W, H) * 0.5, c1: 'rgba(147,51,234,0.18)', c2: 'rgba(147,51,234,0)' },
+                { x: W * 0.75, y: H * 0.6, r: Math.min(W, H) * 0.45, c1: 'rgba(236,72,153,0.14)', c2: 'rgba(236,72,153,0)' },
+                { x: W * 0.5, y: H * 0.15, r: Math.min(W, H) * 0.4, c1: 'rgba(56,189,248,0.12)', c2: 'rgba(56,189,248,0)' },
+            ];
         }
         window.addEventListener('resize', resizeAll);
 
@@ -1041,7 +1084,7 @@
         let obs = [], coinsArr = [], particles = [], floaters = [], clouds = [], pickups = [];
         let bgFar = 0, bgMid = 0, bgNear = 0;
         let speed = 4.0, score = 0, lastObstacle = 0, lastCoin = 0, nextCoinIn = 8000, showHint = 0;
-        let curBob = 0, shieldRun = false, lastPickup = 0, jumpsUsed = 0, runCoinQ = 0;
+        let curBob = 0, shieldRun = false, lastPickup = 0, runCoinQ = 0;
 
         const GROUND_H = 55;
         const groundY = () => H - GROUND_H;
@@ -1054,7 +1097,7 @@
         let skyStars = [];
         function initStars() {
             skyStars = [];
-            for (let i = 0; i < 70; i++) skyStars.push({ x: Math.random(), y: Math.random() * 0.6, r: Math.random() * 1.5 + 0.5, tw: Math.random() * Math.PI * 2 });
+            for (let i = 0; i < 40; i++) skyStars.push({ x: Math.random(), y: Math.random() * 0.5, r: Math.random() * 1.2 + 0.4, tw: Math.random() * Math.PI * 2 });
         }
         initStars();
 
@@ -1066,7 +1109,7 @@
             p.y = playerBase(); p.vy = 0;
             speed = baseSpeed(); score = 0; lastObstacle = 0; lastCoin = 0;
             nextCoinIn = 6000 + Math.random() * 6000;
-            showHint = 2500; rOver = false; lastPickup = 0; jumpsUsed = 0; runCoinQ = 0;
+            showHint = 2500; rOver = false; lastPickup = 0; runCoinQ = 0;
             shieldRun = (state.upgrades.shield || 0) >= 1;
             state.stats.games++;
             ensureQuestDay(); qAdd('runs', 1);
@@ -1093,16 +1136,9 @@
         function doJump() {
             try {
                 if (!isRunner || rOver) return;
-                if (p.y >= playerBase() - 2) {
-                    p.vy = JUMP_V; jumpsUsed = 1;
-                    sfx('jump'); haptic('light');
-                    qAdd('jumps', 1);
-                } else if (jumpsUsed < 2) {
-                    p.vy = JUMP_V * 0.85; jumpsUsed = 2;
-                    sfx('jump'); haptic('light');
-                    qAdd('jumps', 1);
-                    spawnParticles(p.x + 20, p.y + 40, '#8ab', 6);
-                }
+                if (p.y < playerBase() - 2) return; // в воздухе прыжок только один
+                p.vy = JUMP_V;
+                sfx('jump'); haptic('light');
             } catch(e) {}
         }
         document.body.addEventListener('touchstart', (e) => {
@@ -1118,45 +1154,28 @@
             } catch(err) {}
         });
 
+        // фон раннера: рассветная пустошь — отдельная палитра, отличная от меню и краша
         function drawSky(t) {
             const g = ctx.createLinearGradient(0, 0, 0, groundY());
-            g.addColorStop(0, '#05070f');
-            g.addColorStop(0.45, '#0d1430');
-            g.addColorStop(0.8, '#1c2b52');
-            g.addColorStop(1, '#2b3a6b');
+            g.addColorStop(0, '#1a0a2e');
+            g.addColorStop(0.4, '#4a1a4e');
+            g.addColorStop(0.75, '#8e3b5e');
+            g.addColorStop(1, '#e8745a');
             ctx.fillStyle = g; ctx.fillRect(0, 0, W, groundY());
-            for (let band = 0; band < 2; band++) {
-                ctx.globalAlpha = 0.06 + 0.03 * Math.sin(t / 2000 + band);
-                const grad = ctx.createLinearGradient(0, 40 + band * 60, 0, 160 + band * 60);
-                grad.addColorStop(0, band ? '#7cf5c8' : '#8a7cf5');
-                grad.addColorStop(1, 'rgba(0,0,0,0)');
-                ctx.fillStyle = grad;
-                ctx.beginPath();
-                ctx.moveTo(0, 90 + band * 70);
-                for (let x = 0; x <= W; x += 50) {
-                    ctx.lineTo(x, 90 + band * 70 + Math.sin(x * 0.01 + t / 1500 + band * 2) * 30);
-                }
-                ctx.lineTo(W, 0); ctx.lineTo(0, 0);
-                ctx.fill();
-            }
-            ctx.globalAlpha = 1;
             skyStars.forEach(s => {
-                ctx.globalAlpha = 0.4 + Math.abs(Math.sin(t / 800 + s.tw)) * 0.6;
-                ctx.fillStyle = '#fff';
-                ctx.beginPath(); ctx.arc(s.x * W, s.y * groundY(), s.r, 0, 7); ctx.fill();
+                ctx.globalAlpha = 0.3 + Math.abs(Math.sin(t / 900 + s.tw)) * 0.3;
+                ctx.fillStyle = '#ffe9d6';
+                ctx.beginPath(); ctx.arc(s.x * W, s.y * groundY() * 0.7, s.r, 0, 7); ctx.fill();
             });
             ctx.globalAlpha = 1;
-            const moonX = W * 0.2, moonY = groundY() * 0.28;
-            const glow = ctx.createRadialGradient(moonX, moonY, 5, moonX, moonY, 100);
-            glow.addColorStop(0, 'rgba(200,220,255,0.5)');
-            glow.addColorStop(1, 'rgba(200,220,255,0)');
-            ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(moonX, moonY, 100, 0, 7); ctx.fill();
-            ctx.fillStyle = '#e8eeff'; ctx.beginPath(); ctx.arc(moonX, moonY, 26, 0, 7); ctx.fill();
-            ctx.fillStyle = '#cdd6ea';
-            ctx.beginPath(); ctx.arc(moonX - 8, moonY - 5, 5, 0, 7); ctx.fill();
-            ctx.beginPath(); ctx.arc(moonX + 7, moonY + 8, 7, 0, 7); ctx.fill();
-            ctx.beginPath(); ctx.arc(moonX + 10, moonY - 9, 4, 0, 7); ctx.fill();
-            ctx.fillStyle = 'rgba(180,200,255,0.08)';
+            // восходящее солнце вместо луны
+            const sunX = W * 0.75, sunY = groundY() * 0.42;
+            const glow = ctx.createRadialGradient(sunX, sunY, 5, sunX, sunY, 130);
+            glow.addColorStop(0, 'rgba(255,180,100,0.55)');
+            glow.addColorStop(1, 'rgba(255,180,100,0)');
+            ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(sunX, sunY, 130, 0, 7); ctx.fill();
+            ctx.fillStyle = '#ffcf87'; ctx.beginPath(); ctx.arc(sunX, sunY, 30, 0, 7); ctx.fill();
+            ctx.fillStyle = 'rgba(255,220,180,0.10)';
             clouds.forEach(c => {
                 c.x -= c.s; if (c.x < -120) c.x = W + 100;
                 if (canEllipse) {
@@ -1186,7 +1205,7 @@
             ctx.lineTo(W, groundY());
             ctx.closePath(); ctx.fill();
             if (caps) {
-                ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 4;
+                ctx.strokeStyle = 'rgba(255,200,150,0.30)'; ctx.lineWidth = 4;
                 ctx.beginPath();
                 pts.forEach((pt, i) => i ? ctx.lineTo(pt[0], pt[1]) : ctx.moveTo(pt[0], pt[1]));
                 ctx.stroke();
@@ -1199,23 +1218,23 @@
                 const seed = Math.abs(Math.sin(i * 127.1) * 43758.5) % 1;
                 const x = i * period - offset + seed * 60;
                 const h = 50 + seed * 50;
-                ctx.fillStyle = '#0b1220';
+                ctx.fillStyle = '#1c0d26';
                 ctx.beginPath();
                 ctx.moveTo(x, groundY() + 2); ctx.lineTo(x - 15, groundY() + 2); ctx.lineTo(x - 7, groundY() - h); ctx.lineTo(x, groundY() + 2);
                 ctx.moveTo(x, groundY() + 2); ctx.lineTo(x + 15, groundY() + 2); ctx.lineTo(x + 7, groundY() - h); ctx.lineTo(x, groundY() + 2);
                 ctx.fill();
-                ctx.fillStyle = 'rgba(255,255,255,0.25)';
+                ctx.fillStyle = 'rgba(255,200,150,0.20)';
                 ctx.fillRect(x - 4, groundY() - h + 4, 8, 3);
             }
         }
         function drawGround(offset) {
-            ctx.fillStyle = '#3a4560';
+            ctx.fillStyle = '#5a4458';
             ctx.fillRect(0, groundY(), W, GROUND_H);
-            ctx.fillStyle = '#e8eeff';
+            ctx.fillStyle = '#ffd9a0';
             ctx.globalAlpha = 0.85;
             ctx.fillRect(0, groundY(), W, 5);
             ctx.globalAlpha = 1;
-            ctx.fillStyle = 'rgba(255,255,255,0.12)';
+            ctx.fillStyle = 'rgba(255,220,180,0.14)';
             for (let x = -(offset % 60); x < W; x += 60) {
                 ctx.fillRect(x, groundY() + 18, 16, 3);
                 ctx.fillRect(x + 28, groundY() + 36, 12, 3);
@@ -1227,6 +1246,7 @@
                 sfx('explosion'); haptic('heavy');
                 const final = Math.floor(score);
                 if (final > state.best) state.best = final;
+                qAddMax('score', final);
                 saveState(); syncToServer();
                 document.getElementById('final-score').innerText = 'Счёт: ' + final + '   Рекорд: ' + Math.floor(state.best);
                 const go = document.getElementById('game-over');
@@ -1242,8 +1262,8 @@
                 const t = Date.now();
                 drawSky(t);
                 bgFar += speed * 0.15; bgMid += speed * 0.4; bgNear += speed * 0.75;
-                drawMountains(bgFar, '#1b2440', 60, 90, true);
-                drawMountains(bgMid, '#141b33', 45, 45, true);
+                drawMountains(bgFar, '#2d1435', 60, 90, true);
+                drawMountains(bgMid, '#3a1c3f', 45, 45, true);
                 drawTrees(bgNear);
                 drawGround(bgNear);
 
@@ -1258,7 +1278,7 @@
                 ctx.globalAlpha = 1;
 
                 p.vy += p.g; p.y += p.vy;
-                if (p.y > playerBase()) { p.y = playerBase(); p.vy = 0; jumpsUsed = 0; }
+                if (p.y > playerBase()) { p.y = playerBase(); p.vy = 0; }
                 const skin = skinsData.find(s => s.id === state.currentSkin) || skinsData[0];
                 const grounded = p.y >= playerBase() - 1;
 
@@ -1281,10 +1301,10 @@
                 if (grounded && Math.random() < 0.35) {
                     if (skin.fx === 'flame' || skin.fx === 'fire') particles.push({ x: p.x, y: drawY + 34, vx: -1.5, vy: -Math.random() * 1.5, life: 0.6, color: skin.fx === 'fire' ? '#ff6b1a' : '#ff9c40' });
                     if (skin.fx === 'sparkle') particles.push({ x: p.x, y: drawY + 20 + Math.random() * 20, vx: -1, vy: -Math.random() * 1.5, life: 0.7, color: '#f1c40f' });
-                    if (skin.fx === 'snow') particles.push({ x: p.x, y: drawY + 20, vx: -1, vy: -Math.random(), life: 0.8, color: 'rgba(180,220,255,0.8)' });
+                    if (skin.fx === 'snow') particles.push({ x: p.x, y: drawY + 20, vx: -1, vy: -Math.random(), life: 0.8, color: 'rgba(255,200,150,0.8)' });
                 }
                 if (grounded && Math.random() < 0.3) {
-                    particles.push({ x: p.x + 8, y: drawY + 40, vx: -2, vy: -Math.random(), life: 0.5, color: 'rgba(255,255,255,0.5)' });
+                    particles.push({ x: p.x + 8, y: drawY + 40, vx: -2, vy: -Math.random(), life: 0.5, color: 'rgba(255,220,180,0.5)' });
                 }
 
                 score += speed * 0.05;
@@ -1305,15 +1325,15 @@
                 if (showHint > 0) {
                     showHint -= 40;
                     ctx.globalAlpha = Math.min(1, showHint / 800);
-                    ctx.font = 'bold 15px Arial'; ctx.fillStyle = '#f1c40f'; ctx.textAlign = 'center';
-                    ctx.fillText('👆 Тапни — прыжок · второй тап в воздухе — двойной!', W / 2, H * 0.4);
+                    ctx.font = 'bold 15px Arial'; ctx.fillStyle = '#ffd9a0'; ctx.textAlign = 'center';
+                    ctx.fillText('👆 Тапни по экрану — прыжок', W / 2, H * 0.4);
                     ctx.textAlign = 'left';
                     ctx.globalAlpha = 1;
                 }
 
                 const interval = 1500 + Math.max(0, (6.5 - speed)) * 150;
                 if ((!lastObstacle || t - lastObstacle > interval) && obs.length < 2) {
-                    const ob = { x: W, y: groundY() - 30, w: 30, h: 30, emoji: Math.random() > 0.5 ? '🌲' : '🪨' };
+                    const ob = { x: W, y: groundY() - 30, w: 30, h: 30, emoji: Math.random() > 0.5 ? '🌵' : '🪨' };
                     obs.push(ob);
                     lastObstacle = t;
                     if (Math.random() < 0.2) {
@@ -1380,8 +1400,7 @@
                     ctx.font = '26px Arial';
                     ctx.fillText('🪙', c.x, c.y);
                     if (Math.hypot(pcx - (c.x + 12), pcy - (c.y - 12)) < COLLECT_R) {
-                        let gain = COIN_SCORE * 0 + 1;
-                        gain = Math.round(1 * getMult() * coinValue());
+                        const gain = Math.max(1, Math.round(1 * getMult() * coinValue()));
                         state.wallet += gain;
                         state.stats.coinsEarned += gain;
                         runCoinQ++;
@@ -1448,7 +1467,7 @@
 
         let cState = 'off', cRound = null, cIdx = 0, cStart = 0;
         let myBet = { active: false, amount: 0, cashed: false };
-        let crashStars = [], onlineTimer = null;
+        let cStars = [], cNebulas = [], cTrail = [], onlineTimer = null;
 
         function initSchedule(now) {
             let s = CR.EPOCH, i = 0;
@@ -1467,6 +1486,7 @@
                 const betEnd = cStart + CR.BET_MS, flyEnd = betEnd + d, end = flyEnd + CR.COOL_MS;
                 if (now < end) {
                     cRound = { i: cIdx, start: cStart, betEnd, flyEnd, end, cp, mEff: Math.min(cp, CAP_MULT), settled: false };
+                    cTrail = [];
                     return;
                 }
                 cIdx++; cStart = end;
@@ -1499,6 +1519,7 @@
             fetchOnline();
             clearInterval(onlineTimer);
             onlineTimer = setInterval(fetchOnline, 20000);
+            setMusic('crash');
         }
         function settleCrash() {
             if (!cRound || cRound.settled) return;
@@ -1529,31 +1550,96 @@
                 updateCrashUI(now, inBet, inFly, flyStart);
             } catch(e) { console.error('crashframe:', e); }
         }
+        // траектория: изогнутая дуга (как у настоящих краш-игр) — x по прогрессу, y по квадрату
+        function crashPos(prog) {
+            const x0 = 40, x1 = W * 0.8;
+            const y0 = H - 110, y1 = H * 0.12;
+            const x = x0 + (x1 - x0) * prog;
+            const y = y0 - (y0 - y1) * Math.pow(prog, 1.5);
+            return { x, y };
+        }
         function drawCrashScene(now, inBet, inFly, flyStart) {
-            cCtx.fillStyle = '#050505'; cCtx.fillRect(0, 0, W, H);
+            // космический фон с туманностями — отдельный от меню и раннера
+            cCtx.fillStyle = '#04040a'; cCtx.fillRect(0, 0, W, H);
+            cNebulas.forEach(n => {
+                const g = cCtx.createRadialGradient(n.x, n.y, 5, n.x, n.y, n.r);
+                g.addColorStop(0, n.c1); g.addColorStop(1, n.c2);
+                cCtx.fillStyle = g;
+                cCtx.fillRect(0, 0, W, H);
+            });
             cStars.forEach(s => {
                 cCtx.globalAlpha = 0.3 + Math.abs(Math.sin(s.tw)) * 0.5;
                 cCtx.fillStyle = 'white';
                 cCtx.fillRect(s.x, s.y, s.r, s.r);
             });
             cCtx.globalAlpha = 1;
-            let rx = 50, ry = H - 100;
-            if (inFly || (!inBet && now >= cRound.flyEnd)) {
-                const totalProg = inFly
-                    ? Math.min((now - flyStart) / (cRound.flyEnd - flyStart), Math.log(cRound.mEff) / GROWTH / ((cRound.flyEnd - flyStart) / 1000))
-                    : Math.min(Math.log(cRound.mEff) / GROWTH / ((cRound.flyEnd - flyStart) / 1000), 1);
-                rx = 50 + (W * 0.75 - 50) * totalProg;
-                ry = (H - 100) - (H - 180) * totalProg;
-                cCtx.strokeStyle = myBet.active && !myBet.cashed ? '#f1c40f' : '#555';
-                cCtx.lineWidth = 3;
-                cCtx.beginPath(); cCtx.moveTo(50, H - 100); cCtx.lineTo(rx, ry); cCtx.stroke();
-            }
-            if (!cRound.settled) {
-                cCtx.font = '50px Arial'; cCtx.fillStyle = '#fff';
-                cCtx.fillText('🚀', rx, ry);
+
+            const maxProg = Math.log(cRound.mEff) / GROWTH / ((cRound.flyEnd - flyStart) / 1000);
+            let prog = 0, exploded = cRound.settled;
+            if (!inBet) {
+                prog = inFly
+                    ? Math.min((now - flyStart) / (cRound.flyEnd - flyStart), maxProg)
+                    : maxProg;
+                const pos = crashPos(prog);
+                if (inFly && cTrail.length === 0) cTrail = [];
+                if (inFly) cTrail.push(pos);
+                if (cTrail.length > 120) cTrail.shift();
+
+                // светящийся изогнутый шлейф
+                if (cTrail.length > 1) {
+                    const lineCol = myBet.active && !myBet.cashed ? '#f1c40f' : '#7a5cff';
+                    cCtx.strokeStyle = lineCol;
+                    cCtx.lineWidth = 4;
+                    cCtx.shadowColor = lineCol;
+                    cCtx.shadowBlur = 14;
+                    cCtx.beginPath();
+                    cCtx.moveTo(cTrail[0].x, cTrail[0].y);
+                    for (let i = 1; i < cTrail.length; i++) cCtx.lineTo(cTrail[i].x, cTrail[i].y);
+                    cCtx.stroke();
+                    cCtx.shadowBlur = 0;
+                }
+
+                // крупная ракета под углом к траектории
+                if (!exploded) {
+                    cCtx.save();
+                    cCtx.translate(pos.x, pos.y);
+                    const next = crashPos(Math.min(prog + 0.01, 1));
+                    const ang = Math.atan2(next.y - pos.y, next.x - pos.x);
+                    cCtx.rotate(ang);
+                    cCtx.font = '64px Arial'; cCtx.textAlign = 'center'; cCtx.textBaseline = 'middle';
+                    cCtx.fillText('🚀', 0, 0);
+                    cCtx.restore();
+                    cCtx.textAlign = 'left'; cCtx.textBaseline = 'alphabetic';
+                    // выхлоп
+                    if (Math.random() < 0.8) {
+                        cCtx.fillStyle = Math.random() < 0.5 ? 'rgba(255,150,50,0.7)' : 'rgba(255,220,120,0.7)';
+                        cCtx.beginPath();
+                        cCtx.arc(pos.x - 28 + Math.random() * 8, pos.y + 20 + Math.random() * 8, 3 + Math.random() * 4, 0, 7);
+                        cCtx.fill();
+                    }
+                } else {
+                    // взрыв с разлётом частиц
+                    cCtx.font = '70px Arial'; cCtx.textAlign = 'center';
+                    cCtx.fillText('💥', pos.x, pos.y);
+                    for (let i = 0; i < 5; i++) {
+                        cCtx.globalAlpha = 0.5;
+                        cCtx.fillStyle = ['#ff6b1a','#f1c40f','#e74c3c'][i % 3];
+                        const a = Math.random() * Math.PI * 2, d = 20 + Math.random() * 60;
+                        cCtx.beginPath();
+                        cCtx.arc(pos.x + Math.cos(a) * d, pos.y + Math.sin(a) * d, 2 + Math.random() * 3, 0, 7);
+                        cCtx.fill();
+                    }
+                    cCtx.globalAlpha = 1; cCtx.textAlign = 'left';
+                }
             } else {
-                cCtx.font = '60px Arial';
-                cCtx.fillText('💥', rx, ry);
+                // на стадии ставок ракета стоит на стартовой площадке
+                cCtx.save();
+                cCtx.translate(40, H - 110);
+                cCtx.rotate(-Math.PI / 4);
+                cCtx.font = '64px Arial'; cCtx.textAlign = 'center'; cCtx.textBaseline = 'middle';
+                cCtx.fillText('🚀', 0, 0);
+                cCtx.restore();
+                cCtx.textAlign = 'left'; cCtx.textBaseline = 'alphabetic';
             }
         }
         function updateCrashUI(now, inBet, inFly, flyStart) {
@@ -1635,6 +1721,7 @@
             cState = 'off'; cRound = null;
             document.getElementById('crash-screen').style.display = 'none';
             document.getElementById('menu').style.display = 'flex';
+            setMusic('menu');
             sfx('click');
             syncToServer();
         }
@@ -1649,13 +1736,6 @@
             if (cState === 'active') crashFrame();
             if (!isRunner && cState !== 'active') drawMenuBg(Date.now());
             requestAnimationFrame(masterLoop);
-        }
-
-        // ================== VIP ==================
-        function buyVip() {
-            sfx('click');
-            tg.openTelegramLink(`https://t.me/${BOT_USERNAME}?start=buy_vip`);
-            toast('Оплати звёздами — VIP придёт в игру');
         }
 
         // ================== СТАРТ ==================
