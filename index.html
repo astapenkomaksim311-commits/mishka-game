@@ -128,7 +128,7 @@
     <div id="admin" class="modal">
         <button class="close-modal" onclick="closeModal('admin')">✕</button>
         <div class="modal-header" style="color:#e74c3c;">🔔 Заявки на подарки</div>
-        <div style="color:#888; font-size:12px; margin-bottom:12px; text-align:center; max-width:350px;">Каждая заявка игрока попадает сюда и горит красным, пока ты её не отметишь «Отправлено». Панель сама открывается при входе, пока есть новые заявки.</div>
+        <div style="color:#888; font-size:12px; margin-bottom:12px; text-align:center; max-width:350px;">Заявка горит красным, пока ты не отметишь «Отправлено». При входе в игру панель открывается сама, пока есть новые заявки.</div>
         <div id="admin-container" style="width:100%; display:flex; flex-direction:column; align-items:center;"></div>
     </div>
 
@@ -246,7 +246,7 @@
         try { tg.expand(); tg.ready(); } catch(e) {}
         const BOT_USERNAME = "MishkaRunGame_bot";
         const API = "https://mishka-final-mishka-bot.mia0.amvera.tech";
-        const ADMIN_ID = "8834515141"; // << твой Telegram ID — панель заявок видна только тебе
+        const ADMIN_ID = "8834515141"; // твой Telegram ID — панель заявок видна только тебе
 
         // ================== ТОСТ И ОШИБКИ ==================
         let toastTimer = null, lastErrToast = 0;
@@ -462,8 +462,7 @@
                         initData: tg.initData,
                         wallet: state.wallet, stars: state.stars, best: state.best,
                         gifts: state.ownedGifts, skins: state.ownedSkins,
-                        currentSkin: state.currentSkin, boostUntil: state.boostUntil,
-                        pendingGifts: state.pendingGifts || []
+                        currentSkin: state.currentSkin, boostUntil: state.boostUntil
                     })
                 });
                 const d = await res.json();
@@ -771,10 +770,12 @@
             if (left <= 0) {
                 timer.innerText = '🎁 Бесплатное вращение доступно!';
                 btn.innerText = 'Крутить бесплатно';
+                btn.disabled = false;
             } else {
                 const h = Math.floor(left / 3600000), m = Math.floor(left % 3600000 / 60000), sec = Math.floor(left % 60000 / 1000);
                 timer.innerText = `⏳ Бесплатно через ${h}ч ${m}м ${sec}с · или за 🪙 ${WHEEL_COST}`;
                 btn.innerText = `Крутить за 🪙 ${WHEEL_COST}`;
+                btn.disabled = false;
             }
         }
         function doSpin() {
@@ -860,7 +861,7 @@
             document.getElementById('stats').style.display = 'flex';
         }
 
-        // ================== ПАНЕЛЬ ЗАЯВОК (только для админа) ==================
+        // ================== ПАНЕЛЬ ЗАЯВОК ==================
         function renderAdmin() {
             sfx('click');
             const c = document.getElementById('admin-container');
@@ -884,9 +885,14 @@
         }
         function markSent(i) {
             state.pendingGifts.splice(i, 1);
-            saveState(); syncToServer();
+            saveState();
             sfx('beep');
             renderAdmin();
+        }
+        function checkAdminPanel() {
+            if (isAdmin() && state.pendingGifts.length && document.getElementById('menu').style.display !== 'none') {
+                renderAdmin();
+            }
         }
 
         // ================== МАГАЗИН ==================
@@ -957,7 +963,7 @@
             toast('Оплати звёздами — буст придёт в игру');
         }
 
-        // ================== ПОДАРКИ + ЗАЯВКИ АДМИНУ ==================
+        // ================== ПОДАРКИ + ЗАЯВКИ ==================
         const giftsData = [
             { id: 'tg15',  emoji: '🧸', name: 'Мишка',      stars: 15,  coins: 1500 },
             { id: 'tg25',  emoji: '🎁', name: 'Подарочек',  stars: 25,  coins: 2500 },
@@ -985,23 +991,22 @@
             const g = giftsData.find(x => x.id === id);
             if (!g) return;
             if (state.ownedGifts.includes(id)) {
-                // Заявка уходит админу НАВСЕГДА, пока он не отметит её «Отправлено»
                 if (!Array.isArray(state.pendingGifts)) state.pendingGifts = [];
                 state.pendingGifts.push({
                     gift: g.name, emoji: g.emoji, stars: g.stars, gid: g.id,
                     name: myName(), uid: myUid(), time: Date.now()
                 });
                 state.ownedGifts = state.ownedGifts.filter(x => x !== id);
-                saveState(); syncToServer(); renderGifts();
+                saveState(); renderGifts();
                 sfx('win'); haptic('success');
-                tg.showAlert('🎉 Заявка отправлена админу!\n\nОн получил уведомление и отправит подарок в Telegram. Подарок будет закреплён в панели заявок, пока не дойдёт до тебя.');
-                // страховка: прямое сообщение боту с данными заявки
+                tg.showAlert('🎉 Заявка отправлена админу!\n\nПодарок появится в панели заявок и не исчезнет, пока админ не отправит его тебе.');
                 try { tg.sendData(JSON.stringify({ action: 'withdraw_gift', gift: g.name, stars: g.stars, user: myUid() })); } catch(e) {}
+                updateHUD();
                 if (isAdmin()) renderAdmin();
             } else {
                 if (state.wallet >= g.coins) {
                     state.wallet -= g.coins; state.ownedGifts.push(id);
-                    saveState(); renderGifts(); syncToServer();
+                    saveState(); renderGifts();
                     toast('Подарок куплен! Жми «Вывести» 🎁'); sfx('cash');
                 } else {
                     tg.showAlert(`Не хватает монет: нужно 🪙 ${g.coins}, у тебя 🪙 ${state.wallet}.`);
@@ -1470,7 +1475,7 @@
             }
         }
 
-        // ================== КРАШ: ГЛОБАЛЬНЫЕ РАУНДЫ + ПЛАВНАЯ РАКЕТА ==================
+        // ================== КРАШ: ГЛОБАЛЬНЫЕ РАУНДЫ, ПЛАВНАЯ РАКЕТА ==================
         const CR = { EPOCH: 1767225600000, BET_MS: 10000, COOL_MS: 2500, CAP: 12.5 };
         const GROWTH = 0.2;
         function cHash(n) {
@@ -1574,8 +1579,8 @@
             } catch(e) { console.error('crashframe:', e); }
         }
 
-        // Единая траектория: ракета и линия считаются от одной функции — они никогда не разойдутся.
-        // Прогресс ЛИНЕЙНЫЙ по времени: ракета движется с постоянной скоростью в каждом раунде.
+        // Единая траектория: ракета и линия считаются от одной функции. Прогресс линейный
+        // по времени — ракета движется с постоянной скоростью, какой бы ни был раунд.
         function crashPos(prog) {
             const x0 = 40, x1 = W * 0.78;
             const y0 = H - 130, y1 = H * 0.18;
@@ -1586,22 +1591,18 @@
         }
 
         function drawFlame(cx, cy, ang, now, big) {
-            // живое анимированное пламя за ракетой: мерцание, смена цвета, искры
             const fx = cx - Math.cos(ang) * (big ? 30 : 26);
             const fy = cy - Math.sin(ang) * (big ? 30 : 26);
             const flick = Math.sin(now / 40) * 0.5 + 0.5;
             const size = (big ? 20 : 14) + flick * (big ? 10 : 7);
-            // внешнее пламя (оранжевое)
             const g = cCtx.createRadialGradient(fx, fy, 2, fx, fy, size);
             g.addColorStop(0, 'rgba(255,240,150,0.95)');
             g.addColorStop(0.4, 'rgba(255,150,40,0.8)');
             g.addColorStop(1, 'rgba(255,80,0,0)');
             cCtx.fillStyle = g;
             cCtx.beginPath(); cCtx.arc(fx, fy, size, 0, 7); cCtx.fill();
-            // внутреннее ядро
             cCtx.fillStyle = 'rgba(255,255,200,0.9)';
             cCtx.beginPath(); cCtx.arc(fx, fy, size * 0.35, 0, 7); cCtx.fill();
-            // искры: вылетают против направления полёта
             if (cFlames.length < 60 && Math.random() < 0.7) {
                 cFlames.push({
                     x: fx, y: fy,
@@ -1626,7 +1627,7 @@
         function drawRocket(pos, ang) {
             cCtx.save();
             cCtx.translate(pos.x, pos.y);
-            cCtx.rotate(ang + Math.PI / 4); // эмодзи 🚀 смотрит вверх-вправо (~-45°), поэтому +45° разворот на курс
+            cCtx.rotate(ang + Math.PI / 4);
             cCtx.font = '64px Arial'; cCtx.textAlign = 'center'; cCtx.textBaseline = 'middle';
             cCtx.shadowColor = 'rgba(120,160,255,0.8)';
             cCtx.shadowBlur = 18;
@@ -1637,16 +1638,13 @@
         }
 
         function drawClock(now) {
-            // Живой циферблат: кольцо прогресса + вращающаяся стрелка + пульсирующие деления
             const cx = W / 2, cy = H * 0.42, R = Math.min(W, H) * 0.16;
-            const frac = (now - cRound.start) / CR.BET_MS; // 0..1 за время ставок
-            // дышащее внешнее кольцо
+            const frac = Math.max(0, Math.min(1, (now - cRound.start) / CR.BET_MS));
             const breathe = 1 + Math.sin(now / 300) * 0.02;
             cCtx.lineWidth = 5;
             cCtx.strokeStyle = 'rgba(255,255,255,0.08)';
             cCtx.beginPath(); cCtx.arc(cx, cy, R * breathe, 0, Math.PI * 2); cCtx.stroke();
-            // дуга оставшегося времени
-            const leftFrac = Math.max(0, 1 - frac);
+            const leftFrac = 1 - frac;
             const urgent = leftFrac < 0.3;
             const col = urgent ? '#e74c3c' : '#1abc9c';
             cCtx.strokeStyle = col;
@@ -1655,7 +1653,6 @@
             cCtx.arc(cx, cy, R * breathe, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * leftFrac);
             cCtx.stroke();
             cCtx.shadowBlur = 0;
-            // вращающаяся стрелка (полный оборот за период ставок)
             const handAng = -Math.PI / 2 + frac * Math.PI * 2;
             cCtx.strokeStyle = '#fff';
             cCtx.lineWidth = 3;
@@ -1663,7 +1660,6 @@
             cCtx.moveTo(cx, cy);
             cCtx.lineTo(cx + Math.cos(handAng) * R * 0.8, cy + Math.sin(handAng) * R * 0.8);
             cCtx.stroke();
-            // центр — стрелочные часы
             cCtx.font = Math.round(R * 0.55) + 'px Arial'; cCtx.textAlign = 'center'; cCtx.textBaseline = 'middle';
             cCtx.fillText('⏰', cx, cy);
             cCtx.textAlign = 'left'; cCtx.textBaseline = 'alphabetic';
@@ -1685,7 +1681,6 @@
             cCtx.globalAlpha = 1;
 
             if (inBet) {
-                // стартовая площадка: ракета с_IDLE-пламенем + живой циферблат
                 drawFlame(crashPos(0).x, crashPos(0).y, -Math.PI / 4, now, false);
                 drawRocket(crashPos(0), -Math.PI / 4);
                 drawClock(now);
@@ -1697,7 +1692,6 @@
                 const ang = Math.atan2(next.y - pos.y, next.x - pos.x);
                 cTrail.push({ x: pos.x, y: pos.y });
                 if (cTrail.length > 140) cTrail.shift();
-                // шлейф — свечение, привязанное к пути ракеты
                 if (cTrail.length > 1) {
                     const lineCol = myBet.active && !myBet.cashed ? '#f1c40f' : '#7a5cff';
                     cCtx.strokeStyle = lineCol;
@@ -1713,7 +1707,6 @@
                 drawFlame(pos.x, pos.y, ang, now, true);
                 drawRocket(pos, ang);
             } else {
-                // взрыв: кольцо разлёта + затухающие частицы
                 const endPos = crashPos(1);
                 const since = cRound.settledAt ? (now - cRound.settledAt) : 0;
                 const ringR = 10 + since * 0.25;
@@ -1742,6 +1735,7 @@
                 const left = Math.ceil((cRound.betEnd - now) / 1000);
                 mm.innerText = '⏱ ' + left + 'с';
                 mm.style.color = myBet.active ? '#f1c40f' : '#8ab';
+                mm.classList.add('pulsing');
                 if (myBet.active) {
                     btn.innerText = `Ставка ${myBet.amount} ⭐ принята ✓`;
                     btn.className = 'crash-action-btn btn-cooldown';
@@ -1752,6 +1746,7 @@
                 al.innerText = 'Раунд #' + cRound.i + ' — ставки открыты';
             } else if (inFly) {
                 const mult = Math.min(Math.exp(GROWTH * (now - flyStart) / 1000), cRound.mEff);
+                mm.classList.remove('pulsing');
                 mm.innerText = mult.toFixed(2) + 'x';
                 if (myBet.active && !myBet.cashed) {
                     mm.style.color = '#fff';
@@ -1766,10 +1761,79 @@
                 }
                 al.innerText = cAuto ? `🤖 Авто-вывод на x${cAuto.toFixed(2)}` : 'Полёт идёт!';
             } else {
+                mm.classList.remove('pulsing');
                 mm.innerText = 'ВЗРЫВ 💥 x' + cRound.mEff.toFixed(2); mm.style.color = '#e74c3c';
                 const left = Math.ceil((cRound.end - now) / 1000);
                 btn.innerText = 'Следующий раунд через ' + left + 'с';
                 btn.className = 'crash-action-btn btn-cooldown';
                 al.innerText = '';
             }
-            // пульсиру
+        }
+        let cAuto = null;
+        function doCashout(mult) {
+            if (!myBet.active || myBet.cashed) return;
+            const win = Math.floor(myBet.amount * mult);
+            state.stars += win;
+            state.stats.crashWins++;
+            state.stats.maxMult = Math.max(state.stats.maxMult || 0, mult);
+            saveState(); syncToServer();
+            myBet.cashed = true;
+            toast(`Забрал ${win} ⭐ (x${mult.toFixed(2)}) 🎉`); sfx('cash'); haptic('success');
+        }
+        function crashAction() {
+            const now = Date.now();
+            if (!cRound) return;
+            const inBet = now < cRound.betEnd;
+            const inFly = !inBet && now < cRound.flyEnd;
+            if (inBet && !myBet.active) {
+                const bet = parseInt(document.getElementById('crash-bet').value) || 0;
+                if (bet < 1) { tg.showAlert('Минимальная ставка — 1 звезда!'); return; }
+                if (state.stars < bet) { tg.showAlert('Мало звёзд! Нажми «⭐ Звёзды» в меню.'); haptic('heavy'); return; }
+                state.stars -= bet; saveState(); syncToServer();
+                myBet = { active: true, amount: bet, cashed: false };
+                cAuto = parseFloat(document.getElementById('crash-auto').value) || null;
+                qAdd('crash', 1);
+                sfx('click'); haptic('light');
+                return;
+            }
+            if (inFly && myBet.active && !myBet.cashed) {
+                const mult = Math.min(Math.exp(GROWTH * (now - cRound.betEnd) / 1000), cRound.mEff);
+                doCashout(mult);
+            }
+        }
+        function exitCrash() {
+            if (cRound && myBet.active && !myBet.cashed && Date.now() < cRound.flyEnd && Date.now() >= cRound.betEnd) {
+                const mult = Math.min(Math.exp(GROWTH * (Date.now() - cRound.betEnd) / 1000), cRound.mEff);
+                doCashout(mult);
+            }
+            clearInterval(onlineTimer);
+            cState = 'off'; cRound = null;
+            document.getElementById('crash-screen').style.display = 'none';
+            document.getElementById('menu').style.display = 'flex';
+            setMusic('menu');
+            sfx('click');
+            syncToServer();
+        }
+        function setBet(val) {
+            sfx('click');
+            document.getElementById('crash-bet').value = (val === 'max') ? Math.max(state.stars, 1) : val;
+        }
+
+        // ================== ГЛАВНЫЙ ЦИКЛ (60 FPS) ==================
+        function masterLoop() {
+            if (isRunner && !rOver) runnerFrame();
+            if (cState === 'active') crashFrame();
+            if (!isRunner && cState !== 'active') drawMenuBg(Date.now());
+            requestAnimationFrame(masterLoop);
+        }
+
+        // ================== СТАРТ ==================
+        resizeAll();
+        document.getElementById('sound-btn').innerText = sound.on ? '🔊' : '🔇';
+        setMusic('menu');
+        syncToServer();
+        setTimeout(checkAdminPanel, 1500);
+        requestAnimationFrame(masterLoop);
+    </script>
+</body>
+</html>
