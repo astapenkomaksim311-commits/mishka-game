@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>Mishka App 4.1</title>
+<title>Mishka App 4.2</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -97,7 +97,7 @@ h1{color:#7fd4ff;font-size:30px;margin:0 0 4px;animation:glowPulse 2.6s ease-in-
 </div>
 
 <div id="menu">
-  <h1>🐻 Mishka 4.1</h1>
+  <h1>🐻 Mishka 4.2</h1>
   <div class="tagline">Живой мир · честная экономика</div>
   <div class="lvl-line" id="lvl-line">🏅 Уровень 1</div>
   <button class="btn" onclick="startRunner()">🏃‍♂️ Раннер</button>
@@ -200,7 +200,7 @@ h1{color:#7fd4ff;font-size:30px;margin:0 0 4px;animation:glowPulse 2.6s ease-in-
 <div id="topup" class="modal">
   <button class="close-modal" onclick="closeModal('topup')">✕</button>
   <div class="modal-header" style="color:#f1c40f">⭐ Пополнить звёзды</div>
-  <div style="color:#888;font-size:12px;margin-bottom:12px;text-align:center;max-width:350px">От 10 до 200 ⭐ за раз. Оплата — Telegram Stars, счёт откроется в игре.</div>
+  <div style="color:#888;font-size:12px;margin-bottom:12px;text-align:center;max-width:350px">От 10 до 200 ⭐ за раз. Оплата — Telegram Stars, счёт откроется прямо здесь, в игре.</div>
   <div id="topup-container" style="width:100%;display:flex;flex-direction:column;align-items:center"></div>
 </div>
 
@@ -399,7 +399,8 @@ if(n<TOPUP_MIN||n>TOPUP_MAX){tg.showAlert(`Можно от ${TOPUP_MIN} до ${T
 toast('Открываю счёт оплаты…');
 const r=await apiPost('/api/topup',{initData:tg.initData||'',stars:n});
 if(r&&r.ok&&r.invoice){try{tg.openInvoice(r.invoice);return}catch(e){}}
-tg.openTelegramLink(`https://t.me/${BOT_USERNAME}?start=topup_${n}`)}
+tg.showAlert('Сервер оплаты недоступен. Попробуй позже — счёт откроется прямо в игре.');
+haptic('heavy')}
 
 function dailyBonus(){sfx('click');const READY=20*3600000;const left=READY-(Date.now()-(state.lastDaily||0));
 if(left>0){const h=Math.floor(left/3600000),m=Math.floor(left%3600000/60000);tg.showAlert(`Бонус уже забран! Следующий через ${h}ч ${m}м ⏳`);return}
@@ -500,14 +501,13 @@ updateWheelUI();clearInterval(window.wheelTimer);window.wheelTimer=setInterval(u
 buildStrip(document.getElementById('wheel-strip'),wheelPool,wheelPool[0])}
 function updateWheelUI(){if(wheelBusy)return;const left=WHEEL_COOLDOWN-(Date.now()-(state.lastWheel||0));
 const btn=document.getElementById('wheel-btn'),timer=document.getElementById('wheel-timer');
-if(left<=0){timer.innerText='🎁 Бесплатное вращение доступно!';btn.innerText='Крутить бесплатно'}
+if(left<=0){timer.innerText='🎁 Первое вращение за 🪙 '+WHEEL_COST;btn.innerText='Крутить за 🪙 '+WHEEL_COST}
 else{const h=Math.floor(left/3600000),m=Math.floor(left%3600000/60000),s=Math.floor(left%60000/1000);
-timer.innerText=`⏳ Бесплатно через ${h}ч ${m}м ${s}с · или за 🪙 ${WHEEL_COST}`;btn.innerText='Крутить за 🪙 '+WHEEL_COST}}
+timer.innerText=`⏳ Ближайшее бесплатное через ${h}ч ${m}м ${s}с · или за 🪙 ${WHEEL_COST}`;btn.innerText='Крутить за 🪙 '+WHEEL_COST}}
 let wheelBusy=false;
 function doSpin(){if(wheelBusy){toast('⏳ Колесо уже крутится!',true);return}
-const left=WHEEL_COOLDOWN-(Date.now()-(state.lastWheel||0));
-if(left>0){if(state.wallet<WHEEL_COST){tg.showAlert(`Нужно 🪙 ${WHEEL_COST}, у тебя 🪙 ${state.wallet}.`);haptic('heavy');return}state.wallet-=WHEEL_COST}
-wheelBusy=true;state.lastWheel=Date.now();state.stats.spins++;saveState();syncToServer();
+if(state.wallet<WHEEL_COST){tg.showAlert(`Нужно 🪙 ${WHEEL_COST}, у тебя 🪙 ${state.wallet}.`);haptic('heavy');return}
+wheelBusy=true;state.wallet-=WHEEL_COST;state.lastWheel=Date.now();state.stats.spins++;saveState();syncToServer();
 const winner=pickDrop(wheelPool);const el=document.getElementById('wheel-strip');const wi=buildStrip(el,wheelPool,winner);sfx('click');
 spinRoulette(el,wi,()=>{document.getElementById('wheel-result').innerText='🎉 '+applyDrop(winner);
 saveState();syncToServer();sfx('win');haptic('success');wheelBusy=false;updateWheelUI()})}
@@ -981,6 +981,8 @@ document.getElementById('crash-balance').innerText='⭐ '+state.stars;
 if(inBet){const left=Math.ceil((cRound.betEnd-now)/1000);
 mm.innerText='⏱ '+left+'с';mm.style.color=myBet.active?'#f1c40f':'#8ab';mm.classList.add('pulsing');
 const bet=parseInt(document.getElementById('crash-bet').value)||0;
+if(window._cdRound!==cRound.i){window._cdRound=cRound.i;window._lastCd=null}
+if(window._lastCd!==left){window._lastCd=left;sfx('beep')}
 if(myBet.active){btn.innerText=`Ставка ${myBet.amount} ⭐ принята ✓`;btn.className='crash-action-btn btn-cooldown'}
 else if(bet<1||bet>state.stars){btn.innerText=state.stars<1?'Звёзды кончились — пополни ⭐':'Недостаточно звёзд (⭐ '+state.stars+')';btn.className='crash-action-btn btn-insufficient'}
 else{btn.innerText='Поставить ставку';btn.className='crash-action-btn btn-start'}
