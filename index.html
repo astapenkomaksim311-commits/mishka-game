@@ -35,6 +35,7 @@
         .card.me { border-color: #f1c40f; background: #2a2413; }
         .card-btn { color: white; border: none; padding: 7px 13px; border-radius: 9px; font-weight: bold; font-size: 13px; transition: transform .12s; }
         .card-btn:active { transform: scale(0.92); }
+        @keyframes popCenter { from { opacity: 0; transform: translate(-50%, -50%) scale(0.9); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
         @keyframes floaty { 0%,100% { transform: translateY(0) rotate(-3deg); } 50% { transform: translateY(-6px) rotate(3deg); } }
         @keyframes pulseGlow { 0%,100% { filter: drop-shadow(0 0 4px #f1c40f); } 50% { filter: drop-shadow(0 0 14px #f1c40f); } }
         @keyframes fireFlick { 0%,100% { transform: scale(1) rotate(-4deg); } 50% { transform: scale(1.12) rotate(4deg); } }
@@ -62,7 +63,7 @@
         .btn-start { background: #fff; color: #000; }
         .btn-cashout { background: #f1c40f; color: #000; animation: pulseGlow 1s ease-in-out infinite; }
         .btn-cooldown { background: #333; color: #888; }
-        #game-over { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(20, 20, 25, 0.95); padding: 18px; border-radius: 18px; text-align: center; display: none; border: 2px solid #e74c3c; width: 90%; max-width: 320px; z-index: 40; animation: fadeIn 0.25s ease; }
+        #game-over { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(20, 20, 25, 0.95); padding: 18px; border-radius: 18px; text-align: center; display: none; border: 2px solid #e74c3c; width: 90%; max-width: 320px; z-index: 40; animation: popCenter 0.25s ease; }
     </style>
 </head>
 <body>
@@ -400,7 +401,7 @@
         // ================== ЕЖЕДНЕВНЫЙ БОНУС ==================
         function dailyBonus() {
             sfx('click');
-            const DAY = 86400000, READY = 20 * 3600000;
+            const READY = 20 * 3600000;
             const left = READY - (Date.now() - (state.lastDaily || 0));
             if (left > 0) {
                 const h = Math.floor(left / 3600000), m = Math.floor(left % 3600000 / 60000);
@@ -856,7 +857,11 @@
                 if (final > state.best) state.best = final;
                 saveState(); syncToServer();
                 document.getElementById('final-score').innerText = 'Счёт: ' + final + '   Рекорд: ' + Math.floor(state.best);
-                document.getElementById('game-over').style.display = 'block';
+                const go = document.getElementById('game-over');
+                go.style.animation = 'none';
+                go.style.display = 'block';
+                void go.offsetWidth;
+                go.style.animation = 'popCenter 0.25s ease';
                 setMusic(null); sfx('lose');
             } catch(e) { console.error('crash:', e); }
         }
@@ -1038,16 +1043,13 @@
         }
 
         // ================== КРАШ: ГЛОБАЛЬНЫЕ РАУНДЫ ==================
-        // Раунды идут по общему расписанию для всех игроков: у раунда с номером i
-        // точка краша всегда одна и та же — она считается из номера раунда.
-        // Поэтому у всех игроков краш происходит в один и тот же момент.
         const CR = {
-            EPOCH: 1767225600000,  // 1 января 2026, 00:00 UTC — общая точка отсчёта
-            BET_MS: 10000,         // 10 секунд на ставки
-            COOL_MS: 2500,         // пауза после взрыва
-            CAP: 12.5              // максимальная длина полёта, сек
+            EPOCH: 1767225600000,
+            BET_MS: 10000,
+            COOL_MS: 2500,
+            CAP: 12.5
         };
-        const GROWTH = 0.2; // множитель = e^(0.2 * секунды): 2x за ~3.5с, 10x за ~11.5с
+        const GROWTH = 0.2;
 
         function cHash(n) {
             let h = (n ^ 0x9E3779B9) >>> 0;
@@ -1062,7 +1064,7 @@
             if (r < 0.8)  return +(1.3 + ((r - 0.35) / 0.45) * 1.5).toFixed(2);
             return +(2.8 + ((r - 0.8) / 0.2) * 7.2).toFixed(2);
         }
-        function flightDur(cp) { return Math.min(Math.log(cp) / GROWTH, CR.CAP); } // сек
+        function flightDur(cp) { return Math.min(Math.log(cp) / GROWTH, CR.CAP); }
         const CAP_MULT = Math.exp(GROWTH * CR.CAP);
 
         let cState = 'off';
@@ -1149,7 +1151,6 @@
 
                 if (!inBet && !inFly && !cRound.settled) settleCrash();
 
-                // Авто-вывод
                 if (inFly && myBet.active && !myBet.cashed) {
                     const mult = Math.min(Math.exp(GROWTH * (now - flyStart) / 1000), cRound.mEff);
                     if (cAuto && mult >= cAuto) { doCashout(cAuto); }
@@ -1171,19 +1172,18 @@
 
             let rx = 50, ry = H - 100;
             if (inFly || (!inBet && now >= cRound.flyEnd)) {
-                const prog = inFly ? (now - flyStart) / (cRound.flyEnd - flyStart) : 1;
-                const cp = cRound.settled ? 1 : Math.min(Math.exp(GROWTH * (now - flyStart) / 1000), cRound.mEff);
-                const totalProg = Math.min(prog, Math.log(cRound.mEff) / GROWTH / ((cRound.flyEnd - flyStart) / 1000));
+                const totalProg = inFly
+                    ? Math.min((now - flyStart) / (cRound.flyEnd - flyStart), Math.log(cRound.mEff) / GROWTH / ((cRound.flyEnd - flyStart) / 1000))
+                    : Math.min(Math.log(cRound.mEff) / GROWTH / ((cRound.flyEnd - flyStart) / 1000), 1);
                 rx = 50 + (W * 0.75 - 50) * totalProg;
                 ry = (H - 100) - (H - 180) * totalProg;
-                // светящаяся траектория
                 cCtx.strokeStyle = myBet.active && !myBet.cashed ? '#f1c40f' : '#555';
                 cCtx.lineWidth = 3;
                 cCtx.beginPath(); cCtx.moveTo(50, H - 100); cCtx.lineTo(rx, ry); cCtx.stroke();
             }
             if (!cRound.settled) {
                 cCtx.font = '50px Arial'; cCtx.fillStyle = '#fff';
-                cCtx.fillText(inBet ? '🚀' : '🚀', rx, ry);
+                cCtx.fillText('🚀', rx, ry);
             } else {
                 cCtx.font = '60px Arial';
                 cCtx.fillText('💥', rx, ry);
@@ -1261,7 +1261,6 @@
         }
 
         function exitCrash() {
-            // если ставка ещё в игре — считаем честный вывод по текущему иксу
             if (cRound && myBet.active && !myBet.cashed && Date.now() < cRound.flyEnd && Date.now() >= cRound.betEnd) {
                 const mult = Math.min(Math.exp(GROWTH * (Date.now() - cRound.betEnd) / 1000), cRound.mEff);
                 doCashout(mult);
