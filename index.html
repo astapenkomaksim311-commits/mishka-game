@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Mishka App 3.5</title>
+    <title>Mishka App 3.6</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -35,6 +35,8 @@
         .close-modal { position: absolute; top: calc(12px + env(safe-area-inset-top)); right: 12px; background: #333; color: white; border: none; width: 36px; height: 36px; border-radius: 50%; font-size: 18px; font-weight: bold; z-index: 31; }
         .card { background: #1a1a20; border: 1px solid #333; border-radius: 14px; padding: 12px; width: 100%; max-width: 350px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; animation: fadeIn 0.3s ease; }
         .card.me { border-color: #f1c40f; background: #2a2413; }
+        .card.alert { border-color: #e74c3c; background: #2a1414; animation: alertBlink 1.2s ease-in-out infinite; }
+        @keyframes alertBlink { 0%,100% { border-color: #e74c3c; } 50% { border-color: #ff9c40; } }
         .card-btn { color: white; border: none; padding: 8px 13px; border-radius: 9px; font-weight: bold; font-size: 13px; }
         .card-btn:disabled { opacity: 0.45; }
         @keyframes popCenter { from { opacity: 0; transform: translate(-50%, -50%) scale(0.9); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
@@ -68,6 +70,8 @@
         .hist-badge { background: #222; padding: 4px 10px; border-radius: 13px; font-weight: bold; font-size: 12px; border: 1px solid #444; animation: fadeIn 0.3s ease; }
         #crash-online { background: rgba(20,40,20,0.8); border-color: #2e7d32; color: #4cd137; }
         #crash-multiplier { position: absolute; top: 14vh; width: 100%; text-align: center; font-size: 58px; font-weight: 900; color: #fff; text-shadow: 0 0 30px #f1c40f; z-index: 2; }
+        #crash-multiplier.pulsing { animation: numPulse 1s ease-in-out infinite; }
+        @keyframes numPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.09); } }
         #crash-autolabel { position: absolute; top: 14vh; margin-top: 70px; width: 100%; text-align: center; font-size: 15px; color: #f1c40f; font-weight: bold; z-index: 2; }
         #crash-controls { position: absolute; bottom: calc(14px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); width: 90%; max-width: 400px; display: flex; flex-direction: column; z-index: 2; }
         .crash-input-label { color: #888; font-size: 11px; text-align: center; margin-bottom: 2px; }
@@ -90,7 +94,7 @@
     </div>
 
     <div id="menu">
-        <h1>🐻 Mishka App 3.5</h1>
+        <h1>🐻 Mishka App 3.6</h1>
         <div class="tagline">Беги. Крути. Забирай.</div>
         <div class="lvl-line" id="lvl-line">🏅 Уровень 1</div>
         <button class="btn" onclick="startRunner()">🏃‍♂️ Раннер</button>
@@ -115,7 +119,17 @@
             <button class="btn btn-purple" onclick="renderGifts()">🎁 Подарки</button>
             <button class="btn btn-stars" onclick="topUpStars()">⭐ Звёзды</button>
         </div>
-        <button class="btn btn-green" onclick="inviteFriend()">🤝 Пригласить друга — +500 🪙</button>
+        <div class="btn-row">
+            <button class="btn btn-green" onclick="inviteFriend()">🤝 Пригласить друга</button>
+            <button class="btn" id="admin-btn" style="background:#e67e22; display:none;" onclick="renderAdmin()">🔔 Заявки</button>
+        </div>
+    </div>
+
+    <div id="admin" class="modal">
+        <button class="close-modal" onclick="closeModal('admin')">✕</button>
+        <div class="modal-header" style="color:#e74c3c;">🔔 Заявки на подарки</div>
+        <div style="color:#888; font-size:12px; margin-bottom:12px; text-align:center; max-width:350px;">Каждая заявка игрока попадает сюда и горит красным, пока ты её не отметишь «Отправлено». Панель сама открывается при входе, пока есть новые заявки.</div>
+        <div id="admin-container" style="width:100%; display:flex; flex-direction:column; align-items:center;"></div>
     </div>
 
     <div id="cases" class="modal">
@@ -179,7 +193,7 @@
     <div id="gifts-shop" class="modal">
         <button class="close-modal" onclick="closeModal('gifts-shop')">✕</button>
         <div class="modal-header" style="color:#e74c3c;">Подарки</div>
-        <div style="color:#888; font-size:12px; margin-bottom:12px; text-align:center; max-width:350px;">Курс: 1 ⭐ = 100 🪙. Купи подарок монетами → «Вывести» → админ отправит настоящий подарок в Telegram.</div>
+        <div style="color:#888; font-size:12px; margin-bottom:12px; text-align:center; max-width:350px;">Курс: 1 ⭐ = 100 🪙. Купи подарок монетами → «Вывести» → заявка уйдёт админу, он отправит подарок в Telegram.</div>
         <div id="gifts-container" style="width:100%; display:flex; flex-direction:column; align-items:center;"></div>
     </div>
 
@@ -232,6 +246,7 @@
         try { tg.expand(); tg.ready(); } catch(e) {}
         const BOT_USERNAME = "MishkaRunGame_bot";
         const API = "https://mishka-final-mishka-bot.mia0.amvera.tech";
+        const ADMIN_ID = "8834515141"; // << твой Telegram ID — панель заявок видна только тебе
 
         // ================== ТОСТ И ОШИБКИ ==================
         let toastTimer = null, lastErrToast = 0;
@@ -292,41 +307,22 @@
             } catch(e) {}
         }
 
-        // ================== МУЗЫКА: СВОЯ ДЛЯ КАЖДОГО РЕЖИМА ==================
-        // Меню — спокойная. Раннер — бодрая, мажорная. Краш — тревожная, минорная, быстрая.
+        // ================== МУЗЫКА ПО РЕЖИМАМ ==================
         const MUSIC_CFG = {
             menu: {
                 step: 230,
-                chords: [
-                    [220.00, 261.63, 329.63],  // Am
-                    [174.61, 220.00, 261.63],  // F
-                    [261.63, 329.63, 392.00],  // C
-                    [196.00, 246.94, 293.66],  // G
-                ],
-                lead: 'sine', leadVol: 0.06, leadDur: 0.5,
-                kick: false, deep: true
+                chords: [ [220.00,261.63,329.63], [174.61,220.00,261.63], [261.63,329.63,392.00], [196.00,246.94,293.66] ],
+                lead: 'sine', leadVol: 0.06, leadDur: 0.5, kick: false, deep: true
             },
             runner: {
                 step: 145,
-                chords: [
-                    [261.63, 329.63, 392.00],  // C
-                    [293.66, 349.23, 440.00],  // Dm
-                    [329.63, 392.00, 493.88],  // Em
-                    [392.00, 493.88, 587.33],  // G
-                ],
-                lead: 'triangle', leadVol: 0.09, leadDur: 0.22,
-                kick: true, deep: false
+                chords: [ [261.63,329.63,392.00], [293.66,349.23,440.00], [329.63,392.00,493.88], [392.00,493.88,587.33] ],
+                lead: 'triangle', leadVol: 0.09, leadDur: 0.22, kick: true, deep: false
             },
             crash: {
                 step: 115,
-                chords: [
-                    [220.00, 261.63, 329.63],  // Am
-                    [207.65, 246.94, 311.13],  // Abm
-                    [164.81, 196.00, 246.94],  // Em
-                    [185.00, 233.08, 277.18],  // F#m
-                ],
-                lead: 'sawtooth', leadVol: 0.05, leadDur: 0.18,
-                kick: true, deep: true
+                chords: [ [220.00,261.63,329.63], [207.65,246.94,311.13], [164.81,196.00,246.94], [185.00,233.08,277.18] ],
+                lead: 'sawtooth', leadVol: 0.05, leadDur: 0.18, kick: true, deep: true
             }
         };
         const sound = { on: true };
@@ -337,7 +333,6 @@
                 if (!ctx || !sound.on || !music.mode) return;
                 if (ctx.state !== 'running') { ctx.resume(); return; }
                 const cfg = MUSIC_CFG[music.mode];
-                if (!cfg) return;
                 const chord = cfg.chords[Math.floor(music.step / 8) % cfg.chords.length];
                 const arp = [chord[0], chord[1], chord[2], chord[1], chord[2], chord[0], chord[1], chord[2]];
                 playNote(arp[music.step % 8], cfg.lead, cfg.leadVol, cfg.leadDur);
@@ -386,7 +381,12 @@
         if (!state.stats) state.stats = { games: 0, coinsEarned: 0, crashWins: 0, caseOpens: 0, spins: 0, maxMult: 0 };
         if (state.vipUntil === undefined) state.vipUntil = 0;
         if (state.lastWheel === undefined) state.lastWheel = 0;
+        if (!Array.isArray(state.pendingGifts)) state.pendingGifts = [];
         sound.on = state.musicOn;
+
+        const myUid = () => { const u = tg.initDataUnsafe && tg.initDataUnsafe.user; return u ? String(u.id) : '0'; };
+        const myName = () => { const u = tg.initDataUnsafe && tg.initDataUnsafe.user; return u ? (u.username ? '@' + u.username : (u.first_name || 'игрок')) : 'игрок'; };
+        function isAdmin() { return myUid() === ADMIN_ID; }
 
         // ================== СКИНЫ ==================
         const skinsData = [
@@ -416,7 +416,6 @@
             { id: 'boost2', emoji: '⚡', name: 'Буст x3 — 2 дня',   stars: 50 },
             { id: 'boost3', emoji: '⚡', name: 'Буст x3 — 5 дней',  stars: 100 },
         ];
-
         if (!Array.isArray(state.ownedSkins)) state.ownedSkins = ['bear'];
         state.ownedSkins = state.ownedSkins.filter(id => skinsData.some(s => s.id === id) && !skinsData.find(s => s.id === id).stars);
         if (!state.ownedSkins.includes('bear')) state.ownedSkins.push('bear');
@@ -433,10 +432,14 @@
             document.getElementById('stars').innerText = state.stars;
             const vip = vipActive() ? ' 👑' : '';
             document.getElementById('lvl-line').innerText = `🏅 Уровень ${level()} · x${getMult()}${vip}`;
+            const ab = document.getElementById('admin-btn');
+            if (ab) {
+                const n = (state.pendingGifts || []).length;
+                ab.style.display = isAdmin() && n > 0 ? 'block' : 'none';
+                ab.innerText = `🔔 Заявки (${n})`;
+            }
         }
         function level() { return 1 + Math.floor((state.best || 0) / 500); }
-        updateHUD();
-
         function getMult() {
             if (state.boostUntil && Date.now() < state.boostUntil) return 3;
             const s = skinsData.find(x => x.id === state.currentSkin);
@@ -459,7 +462,8 @@
                         initData: tg.initData,
                         wallet: state.wallet, stars: state.stars, best: state.best,
                         gifts: state.ownedGifts, skins: state.ownedSkins,
-                        currentSkin: state.currentSkin, boostUntil: state.boostUntil
+                        currentSkin: state.currentSkin, boostUntil: state.boostUntil,
+                        pendingGifts: state.pendingGifts || []
                     })
                 });
                 const d = await res.json();
@@ -515,8 +519,7 @@
         }
         function inviteFriend() {
             sfx('click');
-            const u = tg.initDataUnsafe && tg.initDataUnsafe.user;
-            const uid = u ? u.id : 0;
+            const uid = myUid();
             tg.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent('https://t.me/' + BOT_USERNAME + '?start=ref_' + uid)}&text=${encodeURIComponent('Играем в Мишку! Заходи, у меня уже рекорд 🐻')}`);
             toast('Выбери чат — и другу придёт приглашение');
         }
@@ -537,7 +540,7 @@
             toast(`🎁 Бонус дня: +${reward} 🪙${vipActive() ? ' (VIP x2)' : ''}!`); sfx('cash'); haptic('success');
         }
 
-        // ================== КВЕСТЫ (усложнены, награды урезаны) ==================
+        // ================== КВЕСТЫ ==================
         const questsData = [
             { id: 'coins', emoji: '🪙', name: 'Собери 100 монет в раннере', goal: 100, rCoins: 120 },
             { id: 'runs',  emoji: '🏃', name: 'Сделай 5 забегов', goal: 5, rCoins: 150 },
@@ -711,7 +714,7 @@
             const cs = casesData.find(x => x.id === id);
             if (!cs) return;
             if (state.wallet < cs.price) {
-                tg.showAlert(`Не хватает монет! Нужно 🪙 ${cs.price}, у тебя 🪙 ${state.wallet}. Зарабатывай в раннере и квестах 📜`);
+                tg.showAlert(`Не хватает монет! Нужно 🪙 ${cs.price}, у тебя 🪙 ${state.wallet}.`);
                 haptic('heavy');
                 return;
             }
@@ -759,7 +762,7 @@
             clearInterval(window.wheelTimer);
             window.wheelTimer = setInterval(updateWheelUI, 1000);
             const stripEl = document.getElementById('wheel-strip');
-            const winIdx = buildStrip(stripEl, wheelPool, wheelPool[0]);
+            buildStrip(stripEl, wheelPool, wheelPool[0]);
         }
         function updateWheelUI() {
             const left = WHEEL_COOLDOWN - (Date.now() - (state.lastWheel || 0));
@@ -768,12 +771,10 @@
             if (left <= 0) {
                 timer.innerText = '🎁 Бесплатное вращение доступно!';
                 btn.innerText = 'Крутить бесплатно';
-                btn.disabled = false;
             } else {
                 const h = Math.floor(left / 3600000), m = Math.floor(left % 3600000 / 60000), sec = Math.floor(left % 60000 / 1000);
                 timer.innerText = `⏳ Бесплатно через ${h}ч ${m}м ${sec}с · или за 🪙 ${WHEEL_COST}`;
                 btn.innerText = `Крутить за 🪙 ${WHEEL_COST}`;
-                btn.disabled = false;
             }
         }
         function doSpin() {
@@ -825,7 +826,6 @@
                     <button class="card-btn" style="background:${maxed ? '#555' : (state.wallet >= cost ? '#34495e' : '#444')}" ${maxed ? 'disabled' : `onclick="buyUpgrade('${u.id}')"`}>${maxed ? 'MAX' : `🪙 ${cost}`}</button>
                 </div>`;
             });
-            c.innerHTML += '<div style="color:#666; font-size:11px; text-align:center;">Прокачка работает в каждом забеге навсегда.</div>';
             document.getElementById('upgrades').style.display = 'flex';
         }
         function buyUpgrade(id) {
@@ -860,12 +860,40 @@
             document.getElementById('stats').style.display = 'flex';
         }
 
+        // ================== ПАНЕЛЬ ЗАЯВОК (только для админа) ==================
+        function renderAdmin() {
+            sfx('click');
+            const c = document.getElementById('admin-container');
+            if (!state.pendingGifts.length) {
+                c.innerHTML = '<div style="color:#888; margin-top:20px;">Пока заявок нет ✓</div>';
+            } else {
+                c.innerHTML = '';
+                state.pendingGifts.forEach((g, i) => {
+                    const dt = new Date(g.time).toLocaleString('ru-RU');
+                    c.innerHTML += `<div class="card alert">
+                        <div class="skin-emoji">${g.emoji}</div>
+                        <div style="flex:1; text-align:left; padding-left:10px; font-weight:bold; font-size:13px;">
+                            ${g.gift} (${g.stars}⭐)<br>
+                            <span style="color:#ff9c40; font-size:12px;">${g.name} · ${dt}</span>
+                        </div>
+                        <button class="card-btn" style="background:#27ae60;" onclick="markSent(${i})">Отправлено ✓</button>
+                    </div>`;
+                });
+            }
+            document.getElementById('admin').style.display = 'flex';
+        }
+        function markSent(i) {
+            state.pendingGifts.splice(i, 1);
+            saveState(); syncToServer();
+            sfx('beep');
+            renderAdmin();
+        }
+
         // ================== МАГАЗИН ==================
         function renderShop() {
             sfx('click');
             const c = document.getElementById('skins-container'); c.innerHTML = '';
             if (!boostActive() && state.boostUntil) state.boostUntil = 0;
-            const mult = getMult();
             skinsData.forEach(s => {
                 if (s.stars) {
                     const active = boostActive();
@@ -899,17 +927,15 @@
                 const isEq = state.currentSkin === s.id;
                 const btn = isEq ? 'Надет' : (owned ? 'Надеть' : 'Купить');
                 const color = isEq ? '#4cd137' : (owned ? '#555' : '#3498db');
-                const price = s.coins > 0 ? `🪙 ${s.coins}` : '';
                 const xtag = s.mult === 2 ? ' <span style="color:#2ecc71;">x2!</span>' : (s.mult === 3 ? ' <span style="color:#f1c40f;">x3!</span>' : '');
                 c.innerHTML += `<div class="card">
                     <div class="skin-emoji fx-${s.fx}">${s.emoji}</div>
                     <div style="flex:1; text-align:left; padding-left:12px; font-weight:bold;">
-                        ${s.name}${xtag}<br><span style="color:#f1c40f; font-size:12px;">${owned ? '' : price}</span>
+                        ${s.name}${xtag}<br><span style="color:#f1c40f; font-size:12px;">${owned ? '' : (s.coins > 0 ? '🪙 ' + s.coins : '')}</span>
                     </div>
                     <button class="card-btn" style="background:${color};" onclick="buySkin('${s.id}')">${btn}</button>
                 </div>`;
             });
-            c.innerHTML += `<div style="color:#666; font-size:11px; margin-top:6px;">Текущий множитель: x${mult} к монетам за сбор.</div>`;
             document.getElementById('shop').style.display = 'flex';
         }
         function buySkin(id) {
@@ -931,7 +957,7 @@
             toast('Оплати звёздами — буст придёт в игру');
         }
 
-        // ================== ПОДАРКИ ==================
+        // ================== ПОДАРКИ + ЗАЯВКИ АДМИНУ ==================
         const giftsData = [
             { id: 'tg15',  emoji: '🧸', name: 'Мишка',      stars: 15,  coins: 1500 },
             { id: 'tg25',  emoji: '🎁', name: 'Подарочек',  stars: 25,  coins: 2500 },
@@ -959,19 +985,19 @@
             const g = giftsData.find(x => x.id === id);
             if (!g) return;
             if (state.ownedGifts.includes(id)) {
-                tg.showAlert('Скоро отправим! 🎁');
-                let sent = false;
-                try {
-                    tg.sendData(JSON.stringify({ action: 'withdraw_gift', gift: g.name, stars: g.stars, gift_id: g.id }));
-                    sent = true;
-                } catch(e) { sent = false; }
-                if (!sent) {
-                    const u = tg.initDataUnsafe && tg.initDataUnsafe.user;
-                    const uid = u ? u.id : 0;
-                    tg.openTelegramLink(`https://t.me/${BOT_USERNAME}?start=w_${uid}_${g.stars}`);
-                }
+                // Заявка уходит админу НАВСЕГДА, пока он не отметит её «Отправлено»
+                if (!Array.isArray(state.pendingGifts)) state.pendingGifts = [];
+                state.pendingGifts.push({
+                    gift: g.name, emoji: g.emoji, stars: g.stars, gid: g.id,
+                    name: myName(), uid: myUid(), time: Date.now()
+                });
                 state.ownedGifts = state.ownedGifts.filter(x => x !== id);
-                saveState(); renderGifts(); syncToServer();
+                saveState(); syncToServer(); renderGifts();
+                sfx('win'); haptic('success');
+                tg.showAlert('🎉 Заявка отправлена админу!\n\nОн получил уведомление и отправит подарок в Telegram. Подарок будет закреплён в панели заявок, пока не дойдёт до тебя.');
+                // страховка: прямое сообщение боту с данными заявки
+                try { tg.sendData(JSON.stringify({ action: 'withdraw_gift', gift: g.name, stars: g.stars, user: myUid() })); } catch(e) {}
+                if (isAdmin()) renderAdmin();
             } else {
                 if (state.wallet >= g.coins) {
                     state.wallet -= g.coins; state.ownedGifts.push(id);
@@ -990,7 +1016,7 @@
             const c = document.getElementById('lb-container');
             c.innerHTML = '<div style="color:#888; margin-top:20px;">Загрузка…</div>';
             document.getElementById('leaderboard').style.display = 'flex';
-            const me = tg.initDataUnsafe && tg.initDataUnsafe.user ? String(tg.initDataUnsafe.user.id) : '';
+            const me = myUid();
             fetch(API + '/api/leaderboard').then(r => r.json()).then(d => {
                 if (!d || !d.ok) throw new Error('bad');
                 let html = `<div style="color:#4cd137; font-weight:bold; margin-bottom:10px;">🟢 Сейчас онлайн: ${d.online} · 👥 Всего игроков: ${d.total}</div>`;
@@ -1136,7 +1162,7 @@
         function doJump() {
             try {
                 if (!isRunner || rOver) return;
-                if (p.y < playerBase() - 2) return; // в воздухе прыжок только один
+                if (p.y < playerBase() - 2) return;
                 p.vy = JUMP_V;
                 sfx('jump'); haptic('light');
             } catch(e) {}
@@ -1154,7 +1180,6 @@
             } catch(err) {}
         });
 
-        // фон раннера: рассветная пустошь — отдельная палитра, отличная от меню и краша
         function drawSky(t) {
             const g = ctx.createLinearGradient(0, 0, 0, groundY());
             g.addColorStop(0, '#1a0a2e');
@@ -1168,7 +1193,6 @@
                 ctx.beginPath(); ctx.arc(s.x * W, s.y * groundY() * 0.7, s.r, 0, 7); ctx.fill();
             });
             ctx.globalAlpha = 1;
-            // восходящее солнце вместо луны
             const sunX = W * 0.75, sunY = groundY() * 0.42;
             const glow = ctx.createRadialGradient(sunX, sunY, 5, sunX, sunY, 130);
             glow.addColorStop(0, 'rgba(255,180,100,0.55)');
@@ -1446,7 +1470,7 @@
             }
         }
 
-        // ================== КРАШ: ГЛОБАЛЬНЫЕ РАУНДЫ ==================
+        // ================== КРАШ: ГЛОБАЛЬНЫЕ РАУНДЫ + ПЛАВНАЯ РАКЕТА ==================
         const CR = { EPOCH: 1767225600000, BET_MS: 10000, COOL_MS: 2500, CAP: 12.5 };
         const GROWTH = 0.2;
         function cHash(n) {
@@ -1467,7 +1491,7 @@
 
         let cState = 'off', cRound = null, cIdx = 0, cStart = 0;
         let myBet = { active: false, amount: 0, cashed: false };
-        let cStars = [], cNebulas = [], cTrail = [], onlineTimer = null;
+        let cStars = [], cNebulas = [], cTrail = [], cFlames = [], onlineTimer = null;
 
         function initSchedule(now) {
             let s = CR.EPOCH, i = 0;
@@ -1485,7 +1509,7 @@
                 const cp = cpOf(cIdx), d = flightDur(cp) * 1000;
                 const betEnd = cStart + CR.BET_MS, flyEnd = betEnd + d, end = flyEnd + CR.COOL_MS;
                 if (now < end) {
-                    cRound = { i: cIdx, start: cStart, betEnd, flyEnd, end, cp, mEff: Math.min(cp, CAP_MULT), settled: false };
+                    cRound = { i: cIdx, start: cStart, betEnd, flyEnd, end, cp, mEff: Math.min(cp, CAP_MULT), settled: false, settledAt: 0 };
                     cTrail = [];
                     return;
                 }
@@ -1524,12 +1548,11 @@
         function settleCrash() {
             if (!cRound || cRound.settled) return;
             cRound.settled = true;
+            cRound.settledAt = Date.now();
             if (myBet.active && !myBet.cashed) {
                 toast('💥 Ставка сгорела: x' + cRound.mEff.toFixed(2), true);
                 sfx('explosion'); haptic('heavy');
                 syncToServer();
-            } else if (myBet.cashed) {
-                sfx('beep');
             }
             myBet.active = false;
         }
@@ -1550,16 +1573,103 @@
                 updateCrashUI(now, inBet, inFly, flyStart);
             } catch(e) { console.error('crashframe:', e); }
         }
-        // траектория: изогнутая дуга (как у настоящих краш-игр) — x по прогрессу, y по квадрату
+
+        // Единая траектория: ракета и линия считаются от одной функции — они никогда не разойдутся.
+        // Прогресс ЛИНЕЙНЫЙ по времени: ракета движется с постоянной скоростью в каждом раунде.
         function crashPos(prog) {
-            const x0 = 40, x1 = W * 0.8;
-            const y0 = H - 110, y1 = H * 0.12;
-            const x = x0 + (x1 - x0) * prog;
-            const y = y0 - (y0 - y1) * Math.pow(prog, 1.5);
+            const x0 = 40, x1 = W * 0.78;
+            const y0 = H - 130, y1 = H * 0.18;
+            const pr = Math.max(0, Math.min(prog, 1));
+            const x = x0 + (x1 - x0) * pr;
+            const y = y0 - (y0 - y1) * (0.15 * pr + 0.85 * pr * pr);
             return { x, y };
         }
+
+        function drawFlame(cx, cy, ang, now, big) {
+            // живое анимированное пламя за ракетой: мерцание, смена цвета, искры
+            const fx = cx - Math.cos(ang) * (big ? 30 : 26);
+            const fy = cy - Math.sin(ang) * (big ? 30 : 26);
+            const flick = Math.sin(now / 40) * 0.5 + 0.5;
+            const size = (big ? 20 : 14) + flick * (big ? 10 : 7);
+            // внешнее пламя (оранжевое)
+            const g = cCtx.createRadialGradient(fx, fy, 2, fx, fy, size);
+            g.addColorStop(0, 'rgba(255,240,150,0.95)');
+            g.addColorStop(0.4, 'rgba(255,150,40,0.8)');
+            g.addColorStop(1, 'rgba(255,80,0,0)');
+            cCtx.fillStyle = g;
+            cCtx.beginPath(); cCtx.arc(fx, fy, size, 0, 7); cCtx.fill();
+            // внутреннее ядро
+            cCtx.fillStyle = 'rgba(255,255,200,0.9)';
+            cCtx.beginPath(); cCtx.arc(fx, fy, size * 0.35, 0, 7); cCtx.fill();
+            // искры: вылетают против направления полёта
+            if (cFlames.length < 60 && Math.random() < 0.7) {
+                cFlames.push({
+                    x: fx, y: fy,
+                    vx: -Math.cos(ang) * (1.5 + Math.random() * 2.5) + (Math.random() - 0.5),
+                    vy: -Math.sin(ang) * (1.5 + Math.random() * 2.5) + (Math.random() - 0.5),
+                    life: 0.5 + Math.random() * 0.4,
+                    r: 1.5 + Math.random() * 2.5,
+                    col: ['#ff6b1a', '#ffd24a', '#ff9c40'][Math.floor(Math.random() * 3)]
+                });
+            }
+            for (let i = cFlames.length - 1; i >= 0; i--) {
+                const f = cFlames[i];
+                f.x += f.vx; f.y += f.vy; f.life -= 0.045;
+                if (f.life <= 0) { cFlames.splice(i, 1); continue; }
+                cCtx.globalAlpha = Math.max(f.life, 0);
+                cCtx.fillStyle = f.col;
+                cCtx.beginPath(); cCtx.arc(f.x, f.y, f.r, 0, 7); cCtx.fill();
+            }
+            cCtx.globalAlpha = 1;
+        }
+
+        function drawRocket(pos, ang) {
+            cCtx.save();
+            cCtx.translate(pos.x, pos.y);
+            cCtx.rotate(ang + Math.PI / 4); // эмодзи 🚀 смотрит вверх-вправо (~-45°), поэтому +45° разворот на курс
+            cCtx.font = '64px Arial'; cCtx.textAlign = 'center'; cCtx.textBaseline = 'middle';
+            cCtx.shadowColor = 'rgba(120,160,255,0.8)';
+            cCtx.shadowBlur = 18;
+            cCtx.fillText('🚀', 0, 0);
+            cCtx.shadowBlur = 0;
+            cCtx.restore();
+            cCtx.textAlign = 'left'; cCtx.textBaseline = 'alphabetic';
+        }
+
+        function drawClock(now) {
+            // Живой циферблат: кольцо прогресса + вращающаяся стрелка + пульсирующие деления
+            const cx = W / 2, cy = H * 0.42, R = Math.min(W, H) * 0.16;
+            const frac = (now - cRound.start) / CR.BET_MS; // 0..1 за время ставок
+            // дышащее внешнее кольцо
+            const breathe = 1 + Math.sin(now / 300) * 0.02;
+            cCtx.lineWidth = 5;
+            cCtx.strokeStyle = 'rgba(255,255,255,0.08)';
+            cCtx.beginPath(); cCtx.arc(cx, cy, R * breathe, 0, Math.PI * 2); cCtx.stroke();
+            // дуга оставшегося времени
+            const leftFrac = Math.max(0, 1 - frac);
+            const urgent = leftFrac < 0.3;
+            const col = urgent ? '#e74c3c' : '#1abc9c';
+            cCtx.strokeStyle = col;
+            cCtx.shadowColor = col; cCtx.shadowBlur = urgent ? 18 : 10;
+            cCtx.beginPath();
+            cCtx.arc(cx, cy, R * breathe, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * leftFrac);
+            cCtx.stroke();
+            cCtx.shadowBlur = 0;
+            // вращающаяся стрелка (полный оборот за период ставок)
+            const handAng = -Math.PI / 2 + frac * Math.PI * 2;
+            cCtx.strokeStyle = '#fff';
+            cCtx.lineWidth = 3;
+            cCtx.beginPath();
+            cCtx.moveTo(cx, cy);
+            cCtx.lineTo(cx + Math.cos(handAng) * R * 0.8, cy + Math.sin(handAng) * R * 0.8);
+            cCtx.stroke();
+            // центр — стрелочные часы
+            cCtx.font = Math.round(R * 0.55) + 'px Arial'; cCtx.textAlign = 'center'; cCtx.textBaseline = 'middle';
+            cCtx.fillText('⏰', cx, cy);
+            cCtx.textAlign = 'left'; cCtx.textBaseline = 'alphabetic';
+        }
+
         function drawCrashScene(now, inBet, inFly, flyStart) {
-            // космический фон с туманностями — отдельный от меню и раннера
             cCtx.fillStyle = '#04040a'; cCtx.fillRect(0, 0, W, H);
             cNebulas.forEach(n => {
                 const g = cCtx.createRadialGradient(n.x, n.y, 5, n.x, n.y, n.r);
@@ -1574,101 +1684,84 @@
             });
             cCtx.globalAlpha = 1;
 
-            const maxProg = Math.log(cRound.mEff) / GROWTH / ((cRound.flyEnd - flyStart) / 1000);
-            let prog = 0, exploded = cRound.settled;
-            if (!inBet) {
-                prog = inFly
-                    ? Math.min((now - flyStart) / (cRound.flyEnd - flyStart), maxProg)
-                    : maxProg;
+            if (inBet) {
+                // стартовая площадка: ракета с_IDLE-пламенем + живой циферблат
+                drawFlame(crashPos(0).x, crashPos(0).y, -Math.PI / 4, now, false);
+                drawRocket(crashPos(0), -Math.PI / 4);
+                drawClock(now);
+            } else if (inFly) {
+                const dur = cRound.flyEnd - flyStart;
+                const prog = Math.min((now - flyStart) / dur, 1);
                 const pos = crashPos(prog);
-                if (inFly && cTrail.length === 0) cTrail = [];
-                if (inFly) cTrail.push(pos);
-                if (cTrail.length > 120) cTrail.shift();
-
-                // светящийся изогнутый шлейф
+                const next = crashPos(Math.min(prog + 0.008, 1));
+                const ang = Math.atan2(next.y - pos.y, next.x - pos.x);
+                cTrail.push({ x: pos.x, y: pos.y });
+                if (cTrail.length > 140) cTrail.shift();
+                // шлейф — свечение, привязанное к пути ракеты
                 if (cTrail.length > 1) {
                     const lineCol = myBet.active && !myBet.cashed ? '#f1c40f' : '#7a5cff';
                     cCtx.strokeStyle = lineCol;
-                    cCtx.lineWidth = 4;
-                    cCtx.shadowColor = lineCol;
-                    cCtx.shadowBlur = 14;
+                    cCtx.lineWidth = 5;
+                    cCtx.shadowColor = lineCol; cCtx.shadowBlur = 16;
+                    cCtx.lineJoin = 'round'; cCtx.lineCap = 'round';
                     cCtx.beginPath();
                     cCtx.moveTo(cTrail[0].x, cTrail[0].y);
                     for (let i = 1; i < cTrail.length; i++) cCtx.lineTo(cTrail[i].x, cTrail[i].y);
                     cCtx.stroke();
                     cCtx.shadowBlur = 0;
                 }
-
-                // крупная ракета под углом к траектории
-                if (!exploded) {
-                    cCtx.save();
-                    cCtx.translate(pos.x, pos.y);
-                    const next = crashPos(Math.min(prog + 0.01, 1));
-                    const ang = Math.atan2(next.y - pos.y, next.x - pos.x);
-                    cCtx.rotate(ang);
-                    cCtx.font = '64px Arial'; cCtx.textAlign = 'center'; cCtx.textBaseline = 'middle';
-                    cCtx.fillText('🚀', 0, 0);
-                    cCtx.restore();
-                    cCtx.textAlign = 'left'; cCtx.textBaseline = 'alphabetic';
-                    // выхлоп
-                    if (Math.random() < 0.8) {
-                        cCtx.fillStyle = Math.random() < 0.5 ? 'rgba(255,150,50,0.7)' : 'rgba(255,220,120,0.7)';
-                        cCtx.beginPath();
-                        cCtx.arc(pos.x - 28 + Math.random() * 8, pos.y + 20 + Math.random() * 8, 3 + Math.random() * 4, 0, 7);
-                        cCtx.fill();
-                    }
-                } else {
-                    // взрыв с разлётом частиц
-                    cCtx.font = '70px Arial'; cCtx.textAlign = 'center';
-                    cCtx.fillText('💥', pos.x, pos.y);
-                    for (let i = 0; i < 5; i++) {
-                        cCtx.globalAlpha = 0.5;
-                        cCtx.fillStyle = ['#ff6b1a','#f1c40f','#e74c3c'][i % 3];
-                        const a = Math.random() * Math.PI * 2, d = 20 + Math.random() * 60;
-                        cCtx.beginPath();
-                        cCtx.arc(pos.x + Math.cos(a) * d, pos.y + Math.sin(a) * d, 2 + Math.random() * 3, 0, 7);
-                        cCtx.fill();
-                    }
-                    cCtx.globalAlpha = 1; cCtx.textAlign = 'left';
-                }
+                drawFlame(pos.x, pos.y, ang, now, true);
+                drawRocket(pos, ang);
             } else {
-                // на стадии ставок ракета стоит на стартовой площадке
-                cCtx.save();
-                cCtx.translate(40, H - 110);
-                cCtx.rotate(-Math.PI / 4);
-                cCtx.font = '64px Arial'; cCtx.textAlign = 'center'; cCtx.textBaseline = 'middle';
-                cCtx.fillText('🚀', 0, 0);
-                cCtx.restore();
-                cCtx.textAlign = 'left'; cCtx.textBaseline = 'alphabetic';
+                // взрыв: кольцо разлёта + затухающие частицы
+                const endPos = crashPos(1);
+                const since = cRound.settledAt ? (now - cRound.settledAt) : 0;
+                const ringR = 10 + since * 0.25;
+                cCtx.globalAlpha = Math.max(0, 1 - since / 1600);
+                cCtx.strokeStyle = '#ff9c40';
+                cCtx.lineWidth = 4;
+                cCtx.beginPath(); cCtx.arc(endPos.x, endPos.y, ringR, 0, 7); cCtx.stroke();
+                cCtx.font = '70px Arial'; cCtx.textAlign = 'center'; cCtx.textBaseline = 'middle';
+                cCtx.fillText('💥', endPos.x, endPos.y);
+                for (let i = 0; i < 6; i++) {
+                    cCtx.fillStyle = ['#ff6b1a', '#f1c40f', '#e74c3c'][i % 3];
+                    const a = Math.random() * Math.PI * 2, d = 20 + Math.random() * Math.min(90, ringR + 30);
+                    cCtx.beginPath();
+                    cCtx.arc(endPos.x + Math.cos(a) * d, endPos.y + Math.sin(a) * d, 2 + Math.random() * 3, 0, 7);
+                    cCtx.fill();
+                }
+                cCtx.globalAlpha = 1; cCtx.textAlign = 'left'; cCtx.textBaseline = 'alphabetic';
             }
         }
+
         function updateCrashUI(now, inBet, inFly, flyStart) {
             const mm = document.getElementById('crash-multiplier');
             const btn = document.getElementById('crash-action-btn');
             const al = document.getElementById('crash-autolabel');
             if (inBet) {
                 const left = Math.ceil((cRound.betEnd - now) / 1000);
+                mm.innerText = '⏱ ' + left + 'с';
+                mm.style.color = myBet.active ? '#f1c40f' : '#8ab';
                 if (myBet.active) {
-                    mm.innerText = '⏱ ' + left + 'с'; mm.style.color = '#f1c40f';
                     btn.innerText = `Ставка ${myBet.amount} ⭐ принята ✓`;
                     btn.className = 'crash-action-btn btn-cooldown';
                 } else {
-                    mm.innerText = '⏱ ' + left + 'с'; mm.style.color = '#8ab';
                     btn.innerText = 'Поставить ставку';
                     btn.className = 'crash-action-btn btn-start';
                 }
                 al.innerText = 'Раунд #' + cRound.i + ' — ставки открыты';
             } else if (inFly) {
                 const mult = Math.min(Math.exp(GROWTH * (now - flyStart) / 1000), cRound.mEff);
+                mm.innerText = mult.toFixed(2) + 'x';
                 if (myBet.active && !myBet.cashed) {
-                    mm.innerText = mult.toFixed(2) + 'x'; mm.style.color = '#fff';
+                    mm.style.color = '#fff';
                     btn.innerText = `Забрать ${Math.floor(myBet.amount * mult)} ⭐`;
                     btn.className = 'crash-action-btn btn-cashout';
                 } else if (myBet.cashed) {
-                    mm.innerText = mult.toFixed(2) + 'x'; mm.style.color = '#2ecc71';
+                    mm.style.color = '#2ecc71';
                     btn.innerText = 'Забрано ✓'; btn.className = 'crash-action-btn btn-cooldown';
                 } else {
-                    mm.innerText = mult.toFixed(2) + 'x'; mm.style.color = '#9aa';
+                    mm.style.color = '#9aa';
                     btn.innerText = 'Наблюдаем…'; btn.className = 'crash-action-btn btn-cooldown';
                 }
                 al.innerText = cAuto ? `🤖 Авто-вывод на x${cAuto.toFixed(2)}` : 'Полёт идёт!';
@@ -1679,71 +1772,4 @@
                 btn.className = 'crash-action-btn btn-cooldown';
                 al.innerText = '';
             }
-        }
-        let cAuto = null;
-        function doCashout(mult) {
-            if (!myBet.active || myBet.cashed) return;
-            const win = Math.floor(myBet.amount * mult);
-            state.stars += win;
-            state.stats.crashWins++;
-            state.stats.maxMult = Math.max(state.stats.maxMult || 0, mult);
-            saveState(); syncToServer();
-            myBet.cashed = true;
-            toast(`Забрал ${win} ⭐ (x${mult.toFixed(2)}) 🎉`); sfx('cash'); haptic('success');
-        }
-        function crashAction() {
-            const now = Date.now();
-            if (!cRound) return;
-            const inBet = now < cRound.betEnd;
-            const inFly = !inBet && now < cRound.flyEnd;
-            if (inBet && !myBet.active) {
-                const bet = parseInt(document.getElementById('crash-bet').value) || 0;
-                if (bet < 1) { tg.showAlert('Минимальная ставка — 1 звезда!'); return; }
-                if (state.stars < bet) { tg.showAlert('Мало звёзд! Нажми «⭐ Звёзды» в меню.'); haptic('heavy'); return; }
-                state.stars -= bet; saveState(); syncToServer();
-                myBet = { active: true, amount: bet, cashed: false };
-                cAuto = parseFloat(document.getElementById('crash-auto').value) || null;
-                qAdd('crash', 1);
-                sfx('click'); haptic('light');
-                return;
-            }
-            if (inFly && myBet.active && !myBet.cashed) {
-                const mult = Math.min(Math.exp(GROWTH * (now - cRound.betEnd) / 1000), cRound.mEff);
-                doCashout(mult);
-            }
-        }
-        function exitCrash() {
-            if (cRound && myBet.active && !myBet.cashed && Date.now() < cRound.flyEnd && Date.now() >= cRound.betEnd) {
-                const mult = Math.min(Math.exp(GROWTH * (Date.now() - cRound.betEnd) / 1000), cRound.mEff);
-                doCashout(mult);
-            }
-            clearInterval(onlineTimer);
-            cState = 'off'; cRound = null;
-            document.getElementById('crash-screen').style.display = 'none';
-            document.getElementById('menu').style.display = 'flex';
-            setMusic('menu');
-            sfx('click');
-            syncToServer();
-        }
-        function setBet(val) {
-            sfx('click');
-            document.getElementById('crash-bet').value = (val === 'max') ? Math.max(state.stars, 1) : val;
-        }
-
-        // ================== ГЛАВНЫЙ ЦИКЛ (60 FPS) ==================
-        function masterLoop() {
-            if (isRunner && !rOver) runnerFrame();
-            if (cState === 'active') crashFrame();
-            if (!isRunner && cState !== 'active') drawMenuBg(Date.now());
-            requestAnimationFrame(masterLoop);
-        }
-
-        // ================== СТАРТ ==================
-        resizeAll();
-        document.getElementById('sound-btn').innerText = sound.on ? '🔊' : '🔇';
-        setMusic('menu');
-        syncToServer();
-        requestAnimationFrame(masterLoop);
-    </script>
-</body>
-</html>
+            // пульсиру
