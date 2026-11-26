@@ -107,10 +107,22 @@ def validate_init_data(init_data):
 
 
 def display_name(p):
-    """Точный юзернейм с @ и всеми подчёркиваниями, либо имя."""
-    if p.get("username"):
-        return "@" + p["username"]
-    return p.get("first_name") or "Игрок"
+    """Работает и с dict, и с объектом Telegram User."""
+    if p is None:
+        return "Игрок"
+    if isinstance(p, dict):
+        uname = p.get("username")
+        fname = p.get("first_name")
+    else:
+        uname = getattr(p, "username", None)
+        fname = getattr(p, "first_name", None)
+    if uname:
+        return "@" + uname
+    return fname or "Игрок"
+
+
+def esc(s):
+    return html.escape(str(s or ""), quote=False)
 
 
 def merge_user(user, data):
@@ -135,10 +147,6 @@ def merge_user(user, data):
         PLAYERS[uid] = rec
         save_players()
         return rec
-
-
-def esc(s):
-    return html.escape(str(s or ""), quote=False)
 
 
 def notify_admin_request(req):
@@ -291,6 +299,7 @@ class ApiHandler(BaseHTTPRequestHandler):
                     return
                 try:
                     link = bot.create_invoice_link(
+                        provider_token="",
                         title=f"Пополнение {n} ⭐",
                         description=f"{n} звёзд для Mishka App",
                         payload=f"topup_{n}",
@@ -375,7 +384,6 @@ def start(message):
             bot.send_message(message.chat.id, "✅ Заявка принята! Ожидай подарок 🎁")
         except Exception as e:
             print("gift_ error:", e)
-            traceback.print_exc()
     elif payload.startswith("wd_") and uid != ADMIN_ID:
         try:
             parts = payload.split("_")
@@ -386,7 +394,6 @@ def start(message):
             bot.send_message(message.chat.id, "✅ Заявка на вывод принята! 💸")
         except Exception as e:
             print("wd_ error:", e)
-            traceback.print_exc()
     elif payload.startswith("w_"):
         try:
             data = payload[2:].split("_")
@@ -399,7 +406,6 @@ def start(message):
             bot.send_message(message.chat.id, "✅ Заявка принята! Ожидай подарок 🎁")
         except Exception as e:
             print("w_ error:", e)
-            traceback.print_exc()
     elif payload.startswith("buy_"):
         try:
             item_id = payload[4:]
@@ -419,7 +425,6 @@ def start(message):
                 bot.reply_to(message, "Такого товара нет 🤷")
         except Exception as e:
             print("buy_ error:", e)
-            traceback.print_exc()
     else:
         markup = InlineKeyboardMarkup()
         markup.add(InlineKeyboardButton("🎮 Открыть игру", url=f"https://t.me/{BOT_USERNAME}/{APP_SHORT_NAME}?startapp=menu"))
@@ -432,7 +437,7 @@ def start(message):
 def decision(call):
     """Уведомление получает ТОЛЬКО тот игрок, который подавал заявку."""
     if call.from_user.id != ADMIN_ID:
-        bot.answer_callback_query(call.id, "Только для админа!")
+        bot.answer_callback_query(call.id, "Только для админa!")
         return
     try:
         parts = call.data.split("_")
@@ -448,8 +453,8 @@ def decision(call):
         else:
             bot.send_message(user_id, "❌ К сожалению, твою заявку отклонили.")
             bot.edit_message_text("❌ Заявка отклонена.", call.message.chat.id, call.message.message_id)
-    except Exception as e:
-        print("decision error:", e)
+    except Exception as new_e:
+        print("decision error:", new_e)
         traceback.print_exc()
     bot.answer_callback_query(call.id)
 
