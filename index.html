@@ -1630,7 +1630,7 @@ c.innerHTML+=`<div class="card" style="padding:7px 10px${g?' ;border-color:#f1c4
 <button class="card-btn" style="background:${cf?'#555':'#27ae60'};font-size:10px;padding:5px 8px" ${reached&&!cf?`onclick="claimPass(${l})"`:'disabled'}>${cf?'✓':'Забрать'}</button></div>`}}
 
 // ===== ПАТЧ B: квесты — 18 заданий, каждый день 10 новых =====
-const questsPool=[
+var questsPool=[
 {id:'c1',ev:'coins',emoji:'🪙',name:'Собери 100 монет',goal:100,rCoins:40,xp:2},
 {id:'c2',ev:'coins',emoji:'🪙',name:'Собери 250 монет',goal:250,rCoins:70,xp:2},
 {id:'c3',ev:'coins',emoji:'🪙',name:'Собери 400 монет',goal:400,rCoins:110,xp:3},
