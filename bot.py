@@ -343,6 +343,7 @@ def notify_admin_request(req):
         print("notify_admin_request error:", e)
 
 
+@bot.message_handler(commands=['data'])
 def cmd_data(message):
     if message.from_user.id != ADMIN_ID:
         return
@@ -912,3 +913,37 @@ def run_api():
             ThreadingHTTPServer(("0.0.0.0", port), ApiHandler).serve_forever()
         except Exception as e:
             print("API port", port, "failed:", e)
+@bot.message_handler(commands=['start'])
+def cmd_start(message):
+    ensure_season()
+    uid = str(message.from_user.id)
+    uname = (message.from_user.username or "").lstrip("@")
+    with LOCK:
+        p = PLAYERS.get(uid)
+        if p is not None and uname and p.get("username") != uname:
+            p["username"] = uname
+            save_players()
+        changed = False
+        for r in REQUESTS:
+            if r.get("uid") == uid and uname and r.get("username") != uname:
+                r["username"] = uname
+                changed = True
+        if changed:
+            save_json(REQUESTS_FILE, REQUESTS)
+    markup = InlineKeyboardMarkup()
+    markup.add(InlineKeyboardButton("🎮 Открыть игру",
+                                    url=f"https://t.me/{BOT_USERNAME}/{APP_SHORT_NAME}"))
+    bot.send_message(message.chat.id,
+                     "Привет! Играй в игру по кнопке ниже 👇\nДля пополнения нажми ⭐ в самой игре",
+                     reply_markup=markup)
+
+
+def run_bot():
+    bot.infinity_polling(timeout=25, long_polling_timeout=25)
+
+
+if __name__ == "__main__":
+    load_all()
+    ensure_season()
+    threading.Thread(target=run_api, daemon=True).start()
+    run_bot()
