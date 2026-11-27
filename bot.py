@@ -16,17 +16,13 @@ ADMIN_ID = 8834515141
 APP_SHORT_NAME = "app"
 BOT_USERNAME = "MishkaRunGame_bot"
 
-SKIN_PRICES = {
-    "boost1": {"name": "Буст x3 на 1 день", "price": 30},
-    "boost2": {"name": "Буст x3 на 2 дня",  "price": 50},
-    "boost3": {"name": "Буст x3 на 5 дней", "price": 100},
-}
 TOPUP_MIN = 10
 TOPUP_MAX = 200
 DUEL_TIMEOUT = 45
 MARKET_FEE = 0.05
 SEASON_PRIZES = [50, 15, 10, 5, 5, 3, 3, 3, 3, 3]
 CLAN_WAR_PRIZE = 200
+LEVEL_GIFTS = {30: "tg15", 35: "tg15", 40: "tg15", 45: "tg15", 50: "tg100"}
 
 bot = telebot.TeleBot(BOT_TOKEN)
 
@@ -91,7 +87,6 @@ def week_num():
 
 
 def crash_round(now=None):
-    """Тот же расчёт раунда, что в index.html (для дуэлей)."""
     EPOCH, BET_MS, COOL_MS, GROWTH = 1767225600000, 10000, 2500, 0.2
     now = now or int(time.time() * 1000)
 
@@ -122,8 +117,12 @@ def crash_round(now=None):
         i += 1
 
 
+def player_level(p):
+    return min(50, 1 + int(p.get("best", 0) or 0) // 300)
+
+
 def ensure_season():
-    """Смена недели: выплата призов сезона, победа кланов в войне, сброс очков."""
+    """Смена недели: выплата призов сезона и война кланов, сброс очков у ВСЕХ."""
     global SEASON
     wk = week_num()
     with LOCK:
@@ -131,39 +130,43 @@ def ensure_season():
             return
         prev = SEASON.get("num", "")
         if prev:
-            ranked = sorted(
-                [(uid, p) for uid, p in PLAYERS.items() if p.get("seasonNum") == prev],
-                key=lambda kv: kv[1].get("seasonPts", 0), reverse=True)[:10]
+            ranked = []
+            for uid, p in PLAYERS.items():
+                if p.get("seasonNum") == prev:
+                    pts = int(p.get("seasonPts", 0) or 0)
+                    if pts > 0:
+                        ranked.append((uid, pts, p))
+            ranked.sort(key=lambda x: x[1], reverse=True)
             if ranked:
-                msg = f"🏆 Сезон {prev} завершён! Победитель: {ranked[0][1].get('name')} (+50 ⭐)"
-                for i, (uid, p) in enumerate(ranked):
+                winner = ranked[0][2].get("name") or "игрок"
+                for i, (uid, pts, p) in enumerate(ranked[:10]):
                     if i < len(SEASON_PRIZES):
-                        p["sdelta"] = p.get("sdelta", 0) + SEASON_PRIZES[i]
+                        p["sdelta"] = int(p.get("sdelta", 0) or 0) + SEASON_PRIZES[i]
                 save_players()
                 try:
-                    bot.send_message(ADMIN_ID, msg)
+                    bot.send_message(ADMIN_ID, f"🏆 Сезон {prev} завершён! Победитель: {winner}. Топ-10 получил звёзды.")
                 except Exception:
                     pass
+            # Война кланов за прошлую неделю
+            if CLANS:
+                powers = {}
+                for name, cl in CLANS.items():
+                    powers[name] = sum(int(PLAYERS[m].get("best", 0) or 0) for m in cl.get("members", []) if m in PLAYERS)
+                if powers and max(powers.values()) > 0:
+                    win_clan = max(powers, key=powers.get)
+                    for m in CLANS[win_clan].get("members", []):
+                        if m in PLAYERS:
+                            PLAYERS[m]["delta"] = int(PLAYERS[m].get("delta", 0) or 0) + CLAN_WAR_PRIZE
+                    save_players()
+                    try:
+                        bot.send_message(ADMIN_ID, f"⚔️ Война кланов: победил «{win_clan}»! Участникам +{CLAN_WAR_PRIZE} 🪙")
+                    except Exception:
+                        pass
         SEASON = {"num": wk, "paid": True}
         for p in PLAYERS.values():
             p["seasonNum"] = wk
+            p["seasonStart"] = int(p.get("best", 0) or 0)
             p["seasonPts"] = 0
-            p["seasonBest"] = 0
-        # Война кланов за прошлую неделю
-        if CLANS:
-            powers = {}
-            for name, cl in CLANS.items():
-                powers[name] = sum(PLAYERS[m].get("best", 0) for m in cl.get("members", []) if m in PLAYERS)
-            if powers:
-                win_clan = max(powers, key=powers.get)
-                for m in CLANS[win_clan].get("members", []):
-                    if m in PLAYERS:
-                        PLAYERS[m]["delta"] = PLAYERS[m].get("delta", 0) + CLAN_WAR_PRIZE
-                save_players()
-                try:
-                    bot.send_message(ADMIN_ID, f"⚔️ Война кланов: победил «{win_clan}»! Участникам +{CLAN_WAR_PRIZE} 🪙")
-                except Exception:
-                    pass
         save_json(SEASON_FILE, SEASON)
 
 
@@ -221,7 +224,7 @@ def remove_request(rid):
 
 
 def merge_user(user, data):
-    """Баланс = клиент + серверные начисления (delta/sdelta). Рекорд — максимум."""
+    """Баланс = клиент + серверные начисления. Очки сезона = рекорд − старт недели."""
     uid = str(user.get("id", ""))
     if not uid:
         return None
@@ -234,16 +237,21 @@ def merge_user(user, data):
         skins = sorted(set(old.get("skins", []) or []) | set(data.get("skins", []) or []))
         if grants:
             for g in grants:
-                if g.get("type") == "skin" and g.get("id"):
-                    if g["id"] not in skins:
-                        skins.append(g["id"])
+                if g.get("type") == "skin" and g.get("id") and g["id"] not in skins:
+                    skins.append(g["id"])
             grants = []
         best_new = max(int(old.get("best", 0) or 0), int(data.get("best", 0) or 0))
+        inv = list(data.get("gifts", []) or []) if isinstance(data.get("gifts"), list) else list(old.get("inv", []) or [])
+        # Сезон: старт недели фиксируем на рекорде игрока на момент смены недели
         if old.get("seasonNum") == wk:
-            prev_sb = int(old.get("seasonBest", 0) or 0)
-            pts = int(old.get("seasonPts", 0) or 0) + max(0, best_new - prev_sb)
+            season_start = int(old.get("seasonStart", 0) or 0)
+            if season_start <= 0:
+                season_start = best_new
+                if old.get("best", 0):
+                    season_start = int(old.get("best", 0) or 0)
         else:
-            pts = best_new
+            season_start = int(old.get("best", 0) or 0) if old else best_new
+        pts = max(0, best_new - season_start)
         rec = {
             "id": uid,
             "username": (user.get("username") or "").lstrip("@"),
@@ -251,33 +259,37 @@ def merge_user(user, data):
             "wallet": int(data.get("wallet", old.get("wallet", 0)) or 0) + delta,
             "stars": int(data.get("stars", old.get("stars", 0)) or 0) + sdelta,
             "best": best_new,
-            "gifts": list(data.get("gifts", old.get("gifts", []))),
+            "inv": inv,
             "skins": skins,
+            "currentSkin": data.get("currentSkin") if data.get("currentSkin") in skins else old.get("currentSkin") or "bear",
             "boostUntil": max(int(old.get("boostUntil", 0) or 0), int(data.get("boostUntil", 0) or 0)),
             "clan": old.get("clan"),
             "delta": 0, "sdelta": 0, "grants": [],
-            "seasonNum": wk, "seasonPts": pts, "seasonBest": best_new,
+            "seasonNum": wk, "seasonStart": season_start, "seasonPts": pts,
             "ts": time.time(),
         }
         PLAYERS[uid] = rec
         save_players()
         out = dict(rec)
-        out["grant"] = []
         return out
 
 
 def grant_to(uid, kind, n, note=""):
-    """Начисление игроку между его заходами: монеты/звёзды/скин."""
+    """Начисление между заходами: монеты/звёзды/скин/подарок."""
     with LOCK:
         p = PLAYERS.get(uid)
         if not p:
             return False
         if kind == "coins":
-            p["delta"] = p.get("delta", 0) + n
+            p["delta"] = int(p.get("delta", 0) or 0) + n
         elif kind == "stars":
-            p["sdelta"] = p.get("sdelta", 0) + n
+            p["sdelta"] = int(p.get("sdelta", 0) or 0) + n
         elif kind == "skin":
-            p.setdefault("grants", []).append({"type": "skin", "id": n})
+            if n not in (p.get("skins") or []):
+                p.setdefault("skins", []).append(n)
+        elif kind == "gift":
+            if n not in (p.get("inv") or []):
+                p.setdefault("inv", []).append(n)
         save_players()
         return True
 
@@ -332,8 +344,8 @@ def duel_join(uid, stake):
                 if not pa or not pb:
                     QUEUE.append(q)
                     return {"ok": True}
-                pa["sdelta"] = pa.get("sdelta", 0) - stake
-                pb["sdelta"] = pb.get("sdelta", 0) - stake
+                pa["sdelta"] = int(pa.get("sdelta", 0) or 0) - stake
+                pb["sdelta"] = int(pb.get("sdelta", 0) or 0) - stake
                 save_players()
                 rnd = crash_round()
                 DUELS[q["uid"]] = {"stake": stake, "mate": uid, "created": time.time(), "round": rnd}
@@ -347,14 +359,15 @@ def duel_join(uid, stake):
 def duel_status(uid):
     now = time.time()
     with LOCK:
-        # Раздача готовых результатов
         res = RESULTS.pop(uid, None)
         d = DUELS.get(uid)
         if d and now - d["created"] > DUEL_TIMEOUT:
             mate = d["mate"]
+
             def roll(x):
                 h = hmac.new(str(x).encode(), str(d["created"]).encode(), hashlib.sha256).hexdigest()
                 return int(h[:8], 16)
+
             r1, r2 = roll(uid), roll(mate)
             if r1 == r2:
                 RESULTS[uid] = {"win": None, "payout": d["stake"]}
@@ -423,16 +436,16 @@ class ApiHandler(BaseHTTPRequestHandler):
                 self._reply(200, json.dumps(payload, ensure_ascii=False).encode("utf-8"))
             elif self.path.startswith("/api/season"):
                 ensure_season()
-                now = time.time()
                 with LOCK:
                     ranked = sorted([(uid, p) for uid, p in PLAYERS.items() if p.get("seasonNum") == week_num()],
-                                    key=lambda kv: kv[1].get("seasonPts", 0), reverse=True)[:20]
-                    top = [{"id": uid, "name": display_name(p), "pts": p.get("seasonPts", 0)}
-                           for uid, p in ranked]
-                sec_left = max(0, 7 * 86400 - (time.gmtime().tm_wday * 86400 +
-                               time.gmtime().tm_hour * 3600 + time.gmtime().tm_min * 60))
-                days = sec_left // 86400
-                hours = (sec_left % 86400) // 3600
+                                    key=lambda kv: int(kv[1].get("seasonPts", 0) or 0), reverse=True)[:20]
+                    top = [{"id": uid, "name": display_name(p), "pts": int(p.get("seasonPts", 0) or 0)}
+                           for uid, p in ranked if int(p.get("seasonPts", 0) or 0) > 0]
+                secs_left = 7 * 86400 - (time.gmtime().tm_wday * 86400 + time.gmtime().tm_hour * 3600 +
+                                         time.gmtime().tm_min * 60 + time.gmtime().tm_sec)
+                secs_left = max(0, secs_left)
+                days = secs_left // 86400
+                hours = (secs_left % 86400) // 3600
                 payload = {"ok": True, "num": week_num(), "top": top, "endsIn": f"{days}д {hours}ч"}
                 self._reply(200, json.dumps(payload, ensure_ascii=False).encode("utf-8"))
             elif self.path.startswith("/api/clans"):
@@ -442,7 +455,7 @@ class ApiHandler(BaseHTTPRequestHandler):
                 lst = []
                 for name, cl in CLANS.items():
                     members = [m for m in cl.get("members", []) if m in players]
-                    power = sum(players[m].get("best", 0) for m in members)
+                    power = sum(int(players[m].get("best", 0) or 0) for m in members)
                     lst.append({"name": name, "members": len(members), "power": power})
                 lst.sort(key=lambda x: x["power"], reverse=True)
                 self._reply(200, json.dumps({"ok": True, "clans": lst[:20]}, ensure_ascii=False).encode("utf-8"))
@@ -487,9 +500,17 @@ class ApiHandler(BaseHTTPRequestHandler):
                 if not rec:
                     self._reply(400, b'{"ok": false, "error": "bad user"}')
                     return
-                grant = rec.pop("grant", [])
-                self._reply(200, json.dumps({"ok": True, "you": rec, "clanName": rec.get("clan"),
-                                             "grant": grant}, ensure_ascii=False).encode("utf-8"))
+                grant = rec.pop("grants", [])
+                lvl = player_level(rec)
+                payload = {"ok": True,
+                           "you": {"id": rec["id"], "name": rec["name"], "wallet": rec["wallet"],
+                                   "stars": rec["stars"], "best": rec["best"], "inv": rec.get("inv", []),
+                                   "skins": rec.get("skins", []), "currentSkin": rec.get("currentSkin"),
+                                   "boostUntil": rec.get("boostUntil", 0), "level": lvl,
+                                   "seasonPts": rec.get("seasonPts", 0)},
+                           "clanName": rec.get("clan"),
+                           "grant": grant}
+                self._reply(200, json.dumps(payload, ensure_ascii=False).encode("utf-8"))
 
             elif self.path.startswith("/api/requests/done"):
                 remove_request(data.get("id"))
@@ -515,7 +536,10 @@ class ApiHandler(BaseHTTPRequestHandler):
                     self._reply(401, b'{"ok": false, "error": "auth"}')
                     return
                 to = str(data.get("to") or "")
-                n = int(data.get("n") or 0)
+                try:
+                    n = int(data.get("n") or 0)
+                except Exception:
+                    n = 0
                 if n < 10 or not to:
                     self._reply(200, b'{"ok": false, "error": "bad"}')
                     return
@@ -547,34 +571,40 @@ class ApiHandler(BaseHTTPRequestHandler):
                             return
                         if me.get("clan"):
                             old_cl = CLANS.get(me["clan"])
-                            if old_cl:
-                                old_cl["members"].remove(uid) if uid in old_cl["members"] else None
+                            if old_cl and uid in old_cl.get("members", []):
+                                old_cl["members"].remove(uid)
+                                if not old_cl["members"]:
+                                    CLANS.pop(me["clan"], None)
                         CLANS[name] = {"owner": uid, "members": [uid], "created": time.time()}
                         me["clan"] = name
                         save_players()
+                        save_json(CLANS_FILE, CLANS)
                         self._reply(200, json.dumps({"ok": True, "clanName": name}).encode("utf-8"))
                         return
                     if action == "join":
                         if name not in CLANS:
                             self._reply(200, b'{"ok": false, "error": "noclan"}')
                             return
-                        if len(CLANS[name]["members"]) >= 50:
+                        if len(CLANS[name].get("members", [])) >= 50:
                             self._reply(200, b'{"ok": false, "error": "full"}')
                             return
-                        if me.get("clan") and me["clan"] in CLANS and uid in CLANS[me["clan"]]["members"]:
+                        if me.get("clan") and me["clan"] in CLANS and uid in CLANS[me["clan"]].get("members", []):
                             CLANS[me["clan"]]["members"].remove(uid)
-                        CLANS[name]["members"].append(uid)
+                        if uid not in CLANS[name]["members"]:
+                            CLANS[name]["members"].append(uid)
                         me["clan"] = name
                         save_players()
+                        save_json(CLANS_FILE, CLANS)
                         self._reply(200, json.dumps({"ok": True, "clanName": name}).encode("utf-8"))
                         return
                     if action == "leave":
                         if me.get("clan") and me["clan"] in CLANS:
                             cl = CLANS[me["clan"]]
-                            if uid in cl["members"]:
+                            if uid in cl.get("members", []):
                                 cl["members"].remove(uid)
-                            if not cl["members"]:
+                            if not cl.get("members"):
                                 CLANS.pop(me["clan"], None)
+                                save_json(CLANS_FILE, CLANS)
                         me["clan"] = None
                         save_players()
                         self._reply(200, b'{"ok": true}')
@@ -626,8 +656,15 @@ class ApiHandler(BaseHTTPRequestHandler):
                         if not sid or price < 100:
                             self._reply(200, b'{"ok": false, "error": "bad"}')
                             return
+                        if sid not in (me.get("skins") or []):
+                            self._reply(200, b'{"ok": false, "error": "noskin"}')
+                            return
+                        (me.get("skins") or []).remove(sid)
+                        if me.get("currentSkin") == sid:
+                            me["currentSkin"] = "bear"
                         MARKET.append({"sid": sid, "seller": uid, "sellerName": display_name(me),
                                        "price": price, "ts": time.time()})
+                        save_players()
                         save_json(MARKET_FILE, MARKET)
                         self._reply(200, b'{"ok": true}')
                         return
@@ -645,6 +682,9 @@ class ApiHandler(BaseHTTPRequestHandler):
                         MARKET.remove(lot)
                         save_json(MARKET_FILE, MARKET)
                         payout = int(lot["price"] * (1 - MARKET_FEE))
+                        if sid not in (me.get("skins") or []):
+                            (me.get("skins") or []).append(sid)
+                        save_players()
                         if seller != uid:
                             grant_to(seller, "coins", payout)
                             notify_admin(f"🔄 Барахолка: {display_name(user)} купил {sid} у "
@@ -674,7 +714,6 @@ class ApiHandler(BaseHTTPRequestHandler):
                         currency="XTR",
                         prices=[LabeledPrice(label=f"{n} ⭐", amount=n)],
                     )
-                    print("topup OK:", n)
                     self._reply(200, json.dumps({"ok": True, "invoice": link}).encode("utf-8"))
                 except Exception as e:
                     print("TOPUP FAILED:", repr(e))
@@ -776,16 +815,16 @@ def start(message):
     elif payload.startswith("buy_"):
         try:
             item_id = payload[4:]
-            if item_id in SKIN_PRICES:
-                item = SKIN_PRICES[item_id]
+            prices = {"boost1": 30, "boost2": 50, "boost3": 100}
+            if item_id in prices:
                 bot.send_invoice(
                     chat_id=message.chat.id,
-                    title=f"Покупка: {item['name']}",
-                    description="Активация буста в игре",
+                    title=f"Покупка: буст x3",
+                    description=f"Буст x3 ({prices[item_id]}⭐)",
                     invoice_payload=f"pay_{item_id}",
                     provider_token="",
                     currency="XTR",
-                    prices=[LabeledPrice(label=item["name"], amount=item["price"])],
+                    prices=[LabeledPrice(label="Буст x3", amount=prices[item_id])],
                     start_parameter="buy-item")
             else:
                 bot.reply_to(message, "Такого товара нет 🤷")
@@ -845,13 +884,12 @@ def got_payment(message):
                          reply_markup=markup)
     elif payload.startswith("pay_"):
         item_id = payload.split('_')[1]
-        item = SKIN_PRICES.get(item_id, {})
         markup = InlineKeyboardMarkup()
         markup.add(InlineKeyboardButton("🎮 Активировать в игре",
                                         url=f"https://t.me/{BOT_USERNAME}/{APP_SHORT_NAME}?startapp=boost_{item_id}"))
         notify_admin(f"💰 ПОКУПКА! Игрок {esc(name)} купил {esc(item_id)} за {amount}⭐!")
         bot.send_message(message.chat.id,
-                         f"✅ Оплата прошла: {item.get('name', item_id)}!\nНажми кнопку — буст активируется:",
+                         "✅ Оплата прошла: буст x3!\nНажми кнопку — буст активируется:",
                          reply_markup=markup)
 
 
