@@ -1679,6 +1679,107 @@ if((state.quests.prog[id]||0)<q.goal)return;
 state.quests.claimed[id]=true;
 if(q.rCoins)state.wallet+=q.rCoins;if(q.rStars)state.stars+=q.rStars;addPassXP(q.xp||1);
 saveState();syncToServer();toast('📜 Квест выполнен!');sfx('cash');haptic('success');renderQuests()}
+// ===== ПАТЧ C: удаление Ловца и Кланов =====
+(function(){
+function hideEl(el){if(el)el.style.display='none'}
+hideEl($('catch-screen'));
+hideEl($('clans'));
+document.querySelectorAll('#menu .btn').forEach(b=>{
+const t=b.textContent||'';
+if(t.indexOf('Ловец')>=0||t.indexOf('Клан')>=0)b.style.display='none'})})();
+function openCatch(){toast('Ловец удалён из игры 🗑',true)}
+function catchStart(){}
+function exitCatch(){}
+function renderClans(){toast('Кланы удалены из игры 🗑',true)}
+function clanAction(){toast('Кланы удалены из игры 🗑',true)}
+
+// ===== ПАТЧ C: HUD и статистика без клана =====
+function updateHUD(){
+$('wallet').innerText=state.wallet;
+$('stars').innerText=state.stars;
+const lv=level();
+$('lvl-line').innerText=`🏅 Уровень ${lv}/50 · x${getMult()}${vipActive()?' 👑':''}`;
+if(lv<MAX_LEVEL){const need=lvlNeed(lv+1);
+$('lvl-next').innerText=`След. уровень: добей рекорд до ${need} (сейчас ${Math.floor(state.best||0)})`+(LEVEL_GIFTS[lv+1]?` · на ${lv+1} ур. подарок!`:'')}
+else $('lvl-next').innerText='🏆 Максимальный уровень! Все подарки получены.';
+const cb=$('crash-balance');if(cb)cb.innerText='⭐ '+state.stars;
+const ab=$('admin-btn');
+if(ab){const n=(state.pendingGifts||[]).length;ab.style.display=isAdmin()&&n>0?'block':'none';ab.innerText=`🔔 Заявки (${n})`}}
+function renderStats(){sfx('click');const c=$('stats-container'),s=state.stats;
+c.innerHTML=`
+<div class="stat-row"><span>🏅 Уровень</span><b>${level()} / ${MAX_LEVEL}</b></div>
+<div class="stat-row"><span>🔥 Стрик бонусов</span><b>${state.streak||0} дн.</b></div>
+<div class="stat-row"><span>🎟 Пропуск</span><b>ур. ${passLevel()}/50${passActive()?' · активен':' · не куплен'}</b></div>
+<div class="stat-row"><span>🧩 Талисманы</span><b>${state.col.length}/8 (+${state.col.length*3}% монет)</b></div>
+<div class="stat-row"><span>🎒 В инвентаре</span><b>${state.inv.length} шт.</b></div>
+<div class="stat-row"><span>🏃 Забегов сыграно</span><b>${s.games||0}</b></div>
+<div class="stat-row"><span>🪙 Монет заработано</span><b>${s.coinsEarned||0}</b></div>
+<div class="stat-row"><span>🚀 Выигрышей в краше</span><b>${s.crashWins||0}</b></div>
+<div class="stat-row"><span>📈 Лучший икс в краше</span><b>x${(s.maxMult||0).toFixed(2)}</b></div>
+<div class="stat-row"><span>📦 Кейсов открыто</span><b>${s.caseOpens||0}</b></div>
+<div class="stat-row"><span>🎡 Вращений колеса</span><b>${s.spins||0}</b></div>
+<div class="stat-row"><span>🛒 Скинов в коллекции</span><b>${state.ownedSkins.length}/${skinsData.filter(x=>!x.stars).length}</b></div>`;
+$('stats').style.display='flex'}
+
+// ===== ПАТЧ C: квесты без Ловца (16 заданий в пуле) =====
+const questsPool=[
+{id:'c1',ev:'coins',emoji:'🪙',name:'Собери 100 монет',goal:100,rCoins:40,xp:2},
+{id:'c2',ev:'coins',emoji:'🪙',name:'Собери 250 монет',goal:250,rCoins:70,xp:2},
+{id:'c3',ev:'coins',emoji:'🪙',name:'Собери 400 монет',goal:400,rCoins:110,xp:3},
+{id:'r1',ev:'runs',emoji:'🏃',name:'Сделай 2 забега',goal:2,rCoins:40,xp:2},
+{id:'r2',ev:'runs',emoji:'🏃',name:'Сделай 3 забега',goal:3,rCoins:55,xp:2},
+{id:'r3',ev:'runs',emoji:'🏃',name:'Сделай 5 забегов',goal:5,rCoins:90,xp:3},
+{id:'x1',ev:'crash',emoji:'🚀',name:'Поставь в краше 2 ставки',goal:2,rCoins:60,xp:2},
+{id:'x2',ev:'crash',emoji:'🚀',name:'Поставь в краше 3 ставки',goal:3,rCoins:85,xp:3},
+{id:'k1',ev:'cases',emoji:'📦',name:'Открой 1 кейс',goal:1,rStars:1,xp:2},
+{id:'k2',ev:'cases',emoji:'📦',name:'Открой 2 кейса',goal:2,rStars:2,xp:3},
+{id:'k3',ev:'cases',emoji:'📦',name:'Открой 3 кейса',goal:3,rCoins:150,xp:4},
+{id:'w1',ev:'wheel',emoji:'🎡',name:'Крутани колесо 1 раз',goal:1,rCoins:50,xp:2},
+{id:'w2',ev:'wheel',emoji:'🎡',name:'Крутани колесо 2 раза',goal:2,rCoins:90,xp:3},
+{id:'s1',ev:'score',emoji:'🎯',name:'Набери счёт 300 за забег',goal:300,rCoins:60,xp:2},
+{id:'s2',ev:'score',emoji:'🎯',name:'Набери счёт 600 за забег',goal:600,rCoins:100,xp:3},
+{id:'s3',ev:'score',emoji:'🎯',name:'Набери счёт 900 за забег',goal:900,rCoins:160,xp:4}];
+function todayQuests(){const h=dayHash(mskDay());const idx=[];for(let i=0;i<questsPool.length;i++)idx.push(i);
+let seed=h;for(let i=idx.length-1;i>0;i--){seed=(seed*1103515245+12345)>>>0;const j=seed%(i+1);const t=idx[i];idx[i]=idx[j];idx[j]=t}
+return idx.slice(0,10).map(i=>questsPool[i])}
+
+// ===== ПАТЧ C: пополнение в раннере — только окно пополнения =====
+function pauseRunner(){if(!isRunner||rOver||paused)return;paused=true;engineStop();
+$('pause-overlay').style.display='none'}
+function resumeRunner(){paused=false;engineStop();
+try{$('pause-overlay').style.display='none'}catch(e){}
+try{$('topup').style.display='none'}catch(e){}
+if(isRunner&&!rOver)setMusic('runner',true)}
+function closeModal(id){try{$(id).style.display='none'}catch(e){}
+if(id==='topup'&&paused)resumeRunner();else sfx('click')}
+function cancelTopup(){sfx('click');closeModal('topup')}
+function topUpStars(){
+if(isRunner&&!rOver&&!paused)pauseRunner();
+sfx('click');
+const c=$('topup-container');c.innerHTML='';
+[10,25,50,100,200].forEach(n=>{
+c.innerHTML+=`<div class="card"><div style="font-size:26px">⭐</div>
+<div class="card-info">Пополнить на ${n} ⭐</div>
+<button class="card-btn" style="background:#f39c12;color:#000" onclick="doTopup(${n})">Купить</button></div>`});
+c.innerHTML+=`<button class="btn" style="background:#333;max-width:300px" onclick="cancelTopup()">Отмена</button>`;
+const m=$('topup');
+m.style.zIndex='50';
+m.style.display='flex'}
+
+// ===== ПАТЧ C: возврат в игру после сворачивания Telegram =====
+document.addEventListener('visibilitychange',()=>{
+if(!document.hidden&&isRunner&&!rOver&&paused){
+let tu=null;try{tu=$('topup')}catch(e){}
+if(!tu||tu.style.display!=='flex')resumeRunner()}});
+
+// ===== ПАТЧ C: главный цикл без Ловца =====
+function masterLoop(){
+const now=Date.now();
+const dt=lastFrameT?Math.min((now-lastFrameT)/1000,.05):.016;lastFrameT=now;
+if(isRunner&&!rOver)runnerFrame(dt);
+if(cState==='active')crashFrame();
+if(!isRunner&&cState!=='active')drawMenuBg(now);
+requestAnimationFrame(masterLoop)}
 
 </script>
 </body>
