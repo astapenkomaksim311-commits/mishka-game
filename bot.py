@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import telebot
 import json
 import os
@@ -281,7 +282,7 @@ def grant_or_create(uid, kind, n):
         if not p:
             PLAYERS[uid] = {"id": uid, "username": "", "name": "РРіСЂРѕРє",
                             "wallet": 0, "stars": 0, "best": 0, "inv": [], "skins": [],
-                            "currentSkin": "bear", "boostUntil": 0,
+                            "currentSkin": "bear", "boostUntil": 0, "clan": None,
                             "delta": 0, "sdelta": 0, "grants": [], "ts": 0}
             p = PLAYERS[uid]
         if kind == "stars":
@@ -329,7 +330,7 @@ def notify_admin_request(req):
             btn_text = f"рџ’¬ РќР°РїРёСЃР°С‚СЊ @{username}"
         else:
             link = f"https://t.me/{BOT_USERNAME}"
-            btn_text = "рџ’¬ РќР°РїРёСЃР°С‚СЊ РёРіСЂРѕРєСѓ (ID РЅРёР¶Рµ)"
+            btn_text = "рџ’¬ РќР°РїРёСЃР°С‚СЊ РёРіСЂРѕРєСѓ (РїРѕ ID РЅРёР¶Рµ)"
         if req.get("type") == "stars":
             n = req.get("n", 0)
             markup = InlineKeyboardMarkup()
@@ -454,18 +455,19 @@ class ApiHandler(BaseHTTPRequestHandler):
                     players = [dict(p) for p in PLAYERS.values()]
                 players.sort(key=lambda p: p.get("best", 0), reverse=True)
                 online = sum(1 for p in players if now - p.get("ts", 0) < ONLINE_SEC)
+                named = [p for p in players if p.get("username")]
                 payload = {"ok": True, "online": online, "total": len(players),
-                           "top": [{"id": p["id"], "name": display_name(p), "best": p.get("best", 0),
+                           "top": [{"id": p["id"], "name": "@" + p.get("username"), "best": p.get("best", 0),
                                     "wallet": p.get("wallet", 0),
-                                    "online": (now - p.get("ts", 0)) < ONLINE_SEC} for p in players[:20]]}
+                                    "online": (now - p.get("ts", 0)) < ONLINE_SEC} for p in named[:20]]}
                 self._reply(200, json.dumps(payload, ensure_ascii=False).encode("utf-8"))
             elif self.path.startswith("/api/season"):
                 ensure_season()
                 with LOCK:
                     ranked = sorted([(uid, p) for uid, p in PLAYERS.items() if p.get("seasonNum") == week_num()],
                                     key=lambda kv: int(kv[1].get("seasonPts", 0) or 0), reverse=True)[:20]
-                    top = [{"id": uid, "name": display_name(p), "pts": int(p.get("seasonPts", 0) or 0)}
-                           for uid, p in ranked if int(p.get("seasonPts", 0) or 0) > 0]
+                    top = [{"id": uid, "name": "@" + (p.get("username") or ""), "pts": int(p.get("seasonPts", 0) or 0)}
+                           for uid, p in ranked if int(p.get("seasonPts", 0) or 0) > 0 and p.get("username")]
                 secs_left = 7 * 86400 - (time.gmtime().tm_wday * 86400 + time.gmtime().tm_hour * 3600 +
                                          time.gmtime().tm_min * 60 + time.gmtime().tm_sec)
                 secs_left = max(0, secs_left)
@@ -900,21 +902,26 @@ def got_payment(message):
     amount = message.successful_payment.total_amount
     uid = str(message.from_user.id)
     name = display_name(message.from_user)
-    markup = InlineKeyboardMarkup()
-    markup.add(InlineKeyboardButton("рџЋ® РћС‚РєСЂС‹С‚СЊ РёРіСЂСѓ",
-                                    url=f"https://t.me/{BOT_USERNAME}/{APP_SHORT_NAME}?startapp=menu"))
+
     if payload.startswith("pay_"):
         item_id = payload.split('_')[1]
+        markup = InlineKeyboardMarkup()
+        markup.add(InlineKeyboardButton("рџЋ® РћС‚РєСЂС‹С‚СЊ РёРіСЂСѓ",
+                                        url=f"https://t.me/{BOT_USERNAME}/{APP_SHORT_NAME}?startapp=boost_{item_id}"))
         notify_admin(f"рџ’° РџРћРљРЈРџРљРђ! РРіСЂРѕРє {esc(name)} РєСѓРїРёР» {esc(item_id)} Р·Р° {amount}в­ђ!")
         bot.send_message(message.chat.id,
                          "вњ… РћРїР»Р°С‚Р° РїСЂРѕС€Р»Р°: Р±СѓСЃС‚ x3!\nРћС‚РєСЂРѕР№ РёРіСЂСѓ вЂ” Р±СѓСЃС‚ Р°РєС‚РёРІРёСЂСѓРµС‚СЃСЏ Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРё:",
                          reply_markup=markup)
         return
+
     grant_or_create(uid, "stars", amount)
     notify_admin(f"рџ’° РџРћРџРћР›РќР•РќРР•! РРіСЂРѕРє {esc(name)} РєСѓРїРёР» {amount} Р·РІС‘Р·Рґ вЂ” РЅР°С‡РёСЃР»РµРЅРѕ РЅР° СЃРµСЂРІРµСЂРµ.")
+    markup = InlineKeyboardMarkup()
+    markup.add(InlineKeyboardButton("рџЋ® РћС‚РєСЂС‹С‚СЊ РёРіСЂСѓ",
+                                    url=f"https://t.me/{BOT_USERNAME}/{APP_SHORT_NAME}?startapp=menu"))
     bot.send_message(message.chat.id,
                      f"вњ… РћРїР»Р°С‚Р° РїСЂРѕС€Р»Р°! {amount} в­ђ СѓР¶Рµ Р·Р°С‡РёСЃР»РµРЅС‹.\n"
-                     "РћС‚РєСЂРѕР№ РёРіСЂСѓ вЂ” Р·РІС‘Р·РґС‹ Р±СѓРґСѓС‚ РЅР° РјРµСЃС‚Рµ (РїРµСЂРµР·Р°Р№РґРё, РµСЃР»Рё РѕРЅР° РѕС‚РєСЂС‹С‚Р°):",
+                     "РћС‚РєСЂРѕР№ РёРіСЂСѓ вЂ” Р·РІС‘Р·РґС‹ Р±СѓРґСѓС‚ РЅР° РјРµСЃС‚Рµ (РµСЃР»Рё РёРіСЂР° Р±С‹Р»Р° РѕС‚РєСЂС‹С‚Р° вЂ” Р·Р°РєСЂРѕР№ Рё Р·Р°Р№РґРё Р·Р°РЅРѕРІРѕ):",
                      reply_markup=markup)
 
 
