@@ -1535,6 +1535,68 @@ resizeAll();
 $('sound-btn').innerText=sound.on?'🔊':'🔇';
 setMusic('menu');syncToServer();
 requestAnimationFrame(masterLoop);
+// ===== ПАТЧ A: защита от фантомных нажатий =====
+let _tX=0,_tY=0,_tT=0;
+document.addEventListener('touchstart',e=>{const t=e.touches&&e.touches[0];if(!t)return;
+_tX=t.clientX;_tY=t.clientY;_tT=Date.now()},{passive:true,capture:true});
+document.addEventListener('click',e=>{
+try{if(Date.now()-_tT>450||!_tX)return;
+const tb=e.target.closest&&e.target.closest('button,.btn,.card-btn,.close-modal,.hud-box');
+if(!tb)return;
+const r=tb.getBoundingClientRect();
+const inside=_tX>=r.left-14&&_tX<=r.right+14&&_tY>=r.top-14&&_tY<=r.bottom+14;
+if(!inside){e.stopPropagation();e.preventDefault()}}catch(x){}},{capture:true});
+
+// ===== ПАТЧ A: звук возвращается после сворачивания Telegram =====
+function soundRevive(){
+try{if(audioCtx&&audioCtx.state==='suspended'){audioCtx.resume().catch(()=>{})}
+if(!audioCtx||audioCtx.state==='closed'){audioCtx=null;getAudio()}
+if(music.mode&&sound.on&&!music.timer)setMusic(music.mode,true)}catch(e){}}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)soundRevive()});
+window.addEventListener('focus',soundRevive);
+window.addEventListener('pageshow',soundRevive);
+['touchend','mousedown'].forEach(ev=>document.addEventListener(ev,soundRevive,{passive:true}));
+
+// ===== ПАТЧ A: краш — возврат ставки при выходе до вылета =====
+function exitCrash(){try{
+const now=Date.now();
+if(cRound&&myBet.active&&!myBet.cashed){
+if(now<cRound.betEnd){state.stars+=myBet.amount;myBet={active:false,amount:0,cashed:false};
+saveState();syncToServer();toast('Ставка возвращена: +'+myBet.amount+' ⭐')}
+else if(now<cRound.flyEnd){const mult=Math.min(Math.exp(GROWTH*(now-cRound.betEnd)/1000),cRound.cp);doCashout(mult)}}
+clearInterval(onlineTimer);engineStop();cState='off';cRound=null;
+$('crash-screen').style.display='none';$('menu').style.display='flex';
+setMusic('menu');sfx('click');updateHUD()}catch(e){console.error(e)}}
+
+// ===== ПАТЧ A: пауза раннера + отмена пополнения =====
+function resumeRunner(){paused=false;engineStop();$('pause-overlay').style.display='none';
+try{$('topup').style.display='none'}catch(e){}sfx('click')}
+function closeModal(id){try{$(id).style.display='none'}catch(e){}
+if(id==='topup'&&paused)resumeRunner();else sfx('click')}
+function cancelTopup(){sfx('click');closeModal('topup')}
+function topUpStars(){
+if(isRunner&&!rOver)pauseRunner();
+sfx('click');
+const c=$('topup-container');c.innerHTML='';
+[10,25,50,100,200].forEach(n=>{
+c.innerHTML+=`<div class="card"><div style="font-size:26px">⭐</div>
+<div class="card-info">Пополнить на ${n} ⭐</div>
+<button class="card-btn" style="background:#f39c12;color:#000" onclick="doTopup(${n})">Купить</button></div>`});
+c.innerHTML+=`<button class="btn" style="background:#333;max-width:300px" onclick="cancelTopup()">Отмена</button>`;
+const m=$('topup');
+m.style.zIndex=paused?'40':'30';
+m.style.display='flex'}
+
+// ===== ПАТЧ A: квест «крутани колесо» учитывается =====
+function doSpin(){if(wheelBusy){toast('⏳ Колесо уже крутится!',true);return}
+if(state.wallet<WHEEL_COST){tg.showAlert(`Нужно 🪙 ${WHEEL_COST}, у тебя 🪙 ${state.wallet}.`);haptic('heavy');return}
+wheelBusy=true;state.wallet-=WHEEL_COST;state.lastWheel=Date.now();state.stats.spins++;addPassXP(1);
+qAdd('wheel',1);saveState();syncToServer();
+const winner=pickDrop(wheelPool);const el=$('wheel-strip');const wi=buildStrip(el,wheelPool,winner);sfx('click');
+spinRoulette(el,wi,()=>{const txt=applyDrop(winner);
+$('wheel-result').innerText='🎉 '+txt;
+saveState();syncToServer();sfx('win');haptic('success');wheelBusy=false;updateWheelUI()})}
+
 </script>
 </body>
 </html>
