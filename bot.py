@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import telebot
 import json
 import os
@@ -123,7 +122,7 @@ def player_level(p):
 
 
 def ensure_season():
-    """РЎРјРµРЅР° РЅРµРґРµР»Рё: РІС‹РїР»Р°С‚Р° РїСЂРёР·РѕРІ СЃРµР·РѕРЅР° Рё РІРѕР№РЅР° РєР»Р°РЅРѕРІ, СЃР±СЂРѕСЃ РѕС‡РєРѕРІ Сѓ Р’РЎР•РҐ."""
+    """Смена недели: выплата призов сезона и война кланов, сброс очков у ВСЕХ."""
     global SEASON
     wk = week_num()
     with LOCK:
@@ -139,16 +138,16 @@ def ensure_season():
                         ranked.append((uid, pts, p))
             ranked.sort(key=lambda x: x[1], reverse=True)
             if ranked:
-                winner = ranked[0][2].get("name") or "РёРіСЂРѕРє"
+                winner = ranked[0][2].get("name") or "игрок"
                 for i, (uid, pts, p) in enumerate(ranked[:10]):
                     if i < len(SEASON_PRIZES):
                         p["sdelta"] = int(p.get("sdelta", 0) or 0) + SEASON_PRIZES[i]
                 save_players()
                 try:
-                    bot.send_message(ADMIN_ID, f"рџЏ† РЎРµР·РѕРЅ {prev} Р·Р°РІРµСЂС€С‘РЅ! РџРѕР±РµРґРёС‚РµР»СЊ: {winner}. РўРѕРї-10 РїРѕР»СѓС‡РёР» Р·РІС‘Р·РґС‹.")
+                    bot.send_message(ADMIN_ID, f"🏆 Сезон {prev} завершён! Победитель: {winner}. Топ-10 получил звёзды.")
                 except Exception:
                     pass
-            # Р’РѕР№РЅР° РєР»Р°РЅРѕРІ Р·Р° РїСЂРѕС€Р»СѓСЋ РЅРµРґРµР»СЋ
+            # Война кланов за прошлую неделю
             if CLANS:
                 powers = {}
                 for name, cl in CLANS.items():
@@ -160,7 +159,7 @@ def ensure_season():
                             PLAYERS[m]["delta"] = int(PLAYERS[m].get("delta", 0) or 0) + CLAN_WAR_PRIZE
                     save_players()
                     try:
-                        bot.send_message(ADMIN_ID, f"вљ”пёЏ Р’РѕР№РЅР° РєР»Р°РЅРѕРІ: РїРѕР±РµРґРёР» В«{win_clan}В»! РЈС‡Р°СЃС‚РЅРёРєР°Рј +{CLAN_WAR_PRIZE} рџЄ™")
+                        bot.send_message(ADMIN_ID, f"⚔️ Война кланов: победил «{win_clan}»! Участникам +{CLAN_WAR_PRIZE} 🪙")
                     except Exception:
                         pass
         SEASON = {"num": wk, "paid": True}
@@ -189,7 +188,7 @@ def validate_init_data(init_data):
 
 def display_name(p):
     if p is None:
-        return "РРіСЂРѕРє"
+        return "Игрок"
     if isinstance(p, dict):
         uname = p.get("username")
         fname = p.get("first_name")
@@ -198,7 +197,7 @@ def display_name(p):
         fname = getattr(p, "first_name", None)
     if uname:
         return "@" + uname
-    return fname or "РРіСЂРѕРє"
+    return fname or "Игрок"
 
 
 def esc(s):
@@ -225,7 +224,7 @@ def remove_request(rid):
 
 
 def merge_user(user, data):
-    """Р‘Р°Р»Р°РЅСЃ = РєР»РёРµРЅС‚ + СЃРµСЂРІРµСЂРЅС‹Рµ РЅР°С‡РёСЃР»РµРЅРёСЏ. РћС‡РєРё СЃРµР·РѕРЅР° = СЂРµРєРѕСЂРґ в€’ СЃС‚Р°СЂС‚ РЅРµРґРµР»Рё."""
+    """Баланс = клиент + серверные начисления. Очки сезона = рекорд − старт недели."""
     uid = str(user.get("id", ""))
     if not uid:
         return None
@@ -243,7 +242,7 @@ def merge_user(user, data):
             grants = []
         best_new = max(int(old.get("best", 0) or 0), int(data.get("best", 0) or 0))
         inv = list(data.get("gifts", []) or []) if isinstance(data.get("gifts"), list) else list(old.get("inv", []) or [])
-        # РЎРµР·РѕРЅ: СЃС‚Р°СЂС‚ РЅРµРґРµР»Рё С„РёРєСЃРёСЂСѓРµРј РЅР° СЂРµРєРѕСЂРґРµ РёРіСЂРѕРєР° РЅР° РјРѕРјРµРЅС‚ СЃРјРµРЅС‹ РЅРµРґРµР»Рё
+        # Сезон: старт недели фиксируем на рекорде игрока на момент смены недели
         if old.get("seasonNum") == wk:
             season_start = int(old.get("seasonStart", 0) or 0)
             if season_start <= 0:
@@ -256,7 +255,7 @@ def merge_user(user, data):
         rec = {
             "id": uid,
             "username": (user.get("username") or "").lstrip("@"),
-            "name": user.get("first_name") or "РРіСЂРѕРє",
+            "name": user.get("first_name") or "Игрок",
             "wallet": int(data.get("wallet", old.get("wallet", 0)) or 0) + delta,
             "stars": int(data.get("stars", old.get("stars", 0)) or 0) + sdelta,
             "best": best_new,
@@ -264,7 +263,9 @@ def merge_user(user, data):
             "skins": skins,
             "currentSkin": data.get("currentSkin") if data.get("currentSkin") in skins else old.get("currentSkin") or "bear",
             "boostUntil": max(int(old.get("boostUntil", 0) or 0), int(data.get("boostUntil", 0) or 0)),
+            "passUntil": max(int(old.get("passUntil", 0) or 0), int(data.get("passUntil", 0) or 0)),
             "clan": old.get("clan"),
+            "gifted": old.get("gifted", []) or [],
             "delta": 0, "sdelta": 0, "grants": [],
             "seasonNum": wk, "seasonStart": season_start, "seasonPts": pts,
             "ts": time.time(),
@@ -276,24 +277,194 @@ def merge_user(user, data):
 
 
 def grant_or_create(uid, kind, n):
-    """РќР°С‡РёСЃР»РµРЅРёРµ Р·РІС‘Р·Рґ/РјРѕРЅРµС‚, РґР°Р¶Рµ РµСЃР»Рё РёРіСЂРѕРє РµС‰С‘ РЅРё СЂР°Р·Сѓ РЅРµ СЃРёРЅС…СЂРѕРЅРёР·РёСЂРѕРІР°Р»СЃСЏ."""
+    """Начисление звёзд/монет/буста, даже если игрок ещё ни разу не синхронизировался."""
     with LOCK:
         p = PLAYERS.get(uid)
         if not p:
-            PLAYERS[uid] = {"id": uid, "username": "", "name": "РРіСЂРѕРє",
+            PLAYERS[uid] = {"id": uid, "username": "", "name": "Игрок",
                             "wallet": 0, "stars": 0, "best": 0, "inv": [], "skins": [],
-                            "currentSkin": "bear", "boostUntil": 0, "clan": None,
-                            "delta": 0, "sdelta": 0, "grants": [], "ts": 0}
+                            "currentSkin": "bear", "boostUntil": 0, "passUntil": 0,
+                            "clan": None, "gifted": [],
+                            "delta": 0, "sdelta": 0, "grants": [],
+                            "seasonNum": week_num(), "seasonStart": 0, "seasonPts": 0, "ts": 0}
             p = PLAYERS[uid]
         if kind == "stars":
             p["sdelta"] = int(p.get("sdelta", 0) or 0) + n
         elif kind == "coins":
             p["delta"] = int(p.get("delta", 0) or 0) + n
+        elif kind == "skin":
+            if n not in (p.get("skins") or []):
+                p.setdefault("skins", []).append(n)
+        elif kind == "boost":
+            base = int(p.get("boostUntil", 0) or 0)
+            p["boostUntil"] = max(base, int(time.time() * 1000)) + n * 86400000
+        elif kind == "pass":
+            base = int(p.get("passUntil", 0) or 0)
+            p["passUntil"] = max(base, int(time.time() * 1000)) + 30 * 86400000
         save_players()
+        return True
 
 
+def notify_admin(text):
+    try:
+        bot.send_message(ADMIN_ID, text, parse_mode="HTML")
+    except Exception:
+        pass
+
+
+def notify_admin_request(req):
+    try:
+        name = esc(req.get("name") or "игрок")
+        uid = str(req.get("uid") or "?")
+        uname = (req.get("username") or "").strip()
+        markup = InlineKeyboardMarkup()
+        if uname:
+            markup.add(InlineKeyboardButton(f"💬 Написать @{uname}", url=f"https://t.me/{uname}"))
+        if req.get("type") == "stars":
+            n = req.get("n", 0)
+            markup.add(
+                InlineKeyboardButton("✅ Отправил", callback_data=f"wd_ok_{uid}_{n}"),
+                InlineKeyboardButton("❌ Отклонить", callback_data=f"wd_no_{uid}_{n}"))
+            bot.send_message(ADMIN_ID,
+                             f"💸💸💸 ВЫВОД ЗВЁЗД!\n\nИгрок: {name}\nID: <code>{uid}</code>\nСумма: {n} ⭐\n\n"
+                             f"👉 Переведи игроку {n} звёзд и нажми «Отправил».",
+                             parse_mode="HTML", reply_markup=markup)
+        else:
+            gift = esc(req.get("gift", "?"))
+            stars = req.get("stars", 0)
+            markup.add(
+                InlineKeyboardButton("✅ Отправил", callback_data=f"gft_ok_{uid}"),
+                InlineKeyboardButton("❌ Отклонить", callback_data=f"gft_no_{uid}"))
+            bot.send_message(ADMIN_ID,
+                             f"🔔🔔🔔 ЗАЯВКА НА ВЫВОД ПОДАРКА!\n\nИгрок: {name}\nID: <code>{uid}</code>\nПодарок: {gift} ({stars} ⭐)\n\n"
+                             f"👉 Отправь подарок игроку в Telegram и нажми «Отправил».",
+                             parse_mode="HTML", reply_markup=markup)
+    except Exception as e:
+        print("notify_admin_request error:", e)
+
+
+def cmd_data(message):
+    if message.from_user.id != ADMIN_ID:
+        return
+    now = time.time()
+    online = sum(1 for p in PLAYERS.values() if now - float(p.get("ts", 0) or 0) < ONLINE_SEC)
+    named = sum(1 for p in PLAYERS.values() if p.get("username"))
+    txt = (f"📊 <b>Данные сервера</b>\n\n"
+           f"Игроков всего: <b>{len(PLAYERS)}</b>\n"
+           f"С юзернеймом: <b>{named}</b>\n"
+           f"Онлайн (посл. {ONLINE_SEC // 60} мин): <b>{online}</b>\n"
+           f"Заявок на вывод: <b>{len(REQUESTS)}</b>\n"
+           f"Лотов на обмене: <b>{len(MARKET)}</b>\n"
+           f"Кланов: <b>{len(CLANS)}</b>\n"
+           f"Сезон: <b>{SEASON.get('num', '—')}</b>")
+    bot.send_message(message.chat.id, txt, parse_mode="HTML")
+
+
+@bot.message_handler(content_types=['successful_payment'])
+def got_payment(message):
+    payload = message.successful_payment.invoice_payload
+    amount = message.successful_payment.total_amount
+    uid = str(message.from_user.id)
+    name = display_name(message.from_user)
+
+    if payload.startswith("pay_"):
+        item_id = payload.split('_', 1)[1]
+        if item_id.startswith("boost"):
+            days = {"boost1": 1, "boost2": 2, "boost3": 5}.get(item_id, 1)
+            grant_or_create(uid, "boost", days)
+            text = "✅ Оплата прошла: буст x3!\nОткрой игру — буст активируется автоматически:"
+        elif item_id == "pass":
+            grant_or_create(uid, "pass", 1)
+            text = "✅ Оплата прошла: Пропуск активирован!\nОткрой игру — он включится автоматически:"
+        else:
+            text = "✅ Оплата прошла!\nОткрой игру:"
+        notify_admin(f"💰 ПОКУПКА! Игрок {esc(name)} купил {esc(item_id)}.")
+        markup = InlineKeyboardMarkup()
+        markup.add(InlineKeyboardButton("🎮 Открыть игру",
+                                        url=f"https://t.me/{BOT_USERNAME}/{APP_SHORT_NAME}?startapp=menu"))
+        bot.send_message(message.chat.id, text, reply_markup=markup)
+        return
+
+    grant_or_create(uid, "stars", amount)
+    notify_admin(f"💰 ПОПОЛНЕНИЕ! Игрок {esc(name)} купил {amount} звёзд — начислено на сервере.")
+    markup = InlineKeyboardMarkup()
+    markup.add(InlineKeyboardButton("🎮 Открыть игру",
+                                    url=f"https://t.me/{BOT_USERNAME}/{APP_SHORT_NAME}?startapp=menu"))
+    bot.send_message(message.chat.id,
+                     f"✅ Оплата прошла! {amount} ⭐ уже зачислены.\n"
+                     "Открой игру — звёзды будут на месте (перезайди, если она уже открыта):",
+                     reply_markup=markup)
+
+
+@bot.callback_query_handler(func=lambda c: c.data.startswith(("wd_ok_", "wd_no_", "gft_ok_", "gft_no_")))
+def cb_requests(c):
+    try:
+        d = c.data
+        if d.startswith("wd_ok_") or d.startswith("wd_no_"):
+            parts = d.split("_")
+            uid, n = parts[2], int(parts[3])
+            rid = None
+            with LOCK:
+                for r in REQUESTS:
+                    if r.get("uid") == uid and r.get("type") == "stars" and int(r.get("n", 0)) == n:
+                        rid = r["id"]
+                        break
+            if d.startswith("wd_ok_"):
+                if rid:
+                    remove_request(rid)
+                try:
+                    bot.send_message(int(uid), f"✅ Админ перевёл тебе {n} ⭐! Проверь баланс Telegram.")
+                except Exception:
+                    pass
+                try:
+                    bot.edit_message_text("✅ Отмечено: звёзды переведены.", c.message.chat.id, c.message.message_id)
+                except Exception:
+                    pass
+            else:
+                if rid:
+                    remove_request(rid)
+                try:
+                    bot.send_message(int(uid), "❌ Твоя заявка на вывод отклонена админом.")
+                except Exception:
+                    pass
+                try:
+                    bot.edit_message_text("❌ Заявка отклонена.", c.message.chat.id, c.message.message_id)
+                except Exception:
+                    pass
+        else:
+            parts = d.split("_")
+            uid = parts[2]
+            with LOCK:
+                rids = [r["id"] for r in REQUESTS if r.get("uid") == uid and r.get("type") != "stars"]
+            for rid in rids:
+                remove_request(rid)
+            if d.startswith("gft_ok_"):
+                try:
+                    bot.send_message(int(uid), "✅ Подарок отправлен! Проверь свои подарки в Telegram.")
+                except Exception:
+                    pass
+                try:
+                    bot.edit_message_text("✅ Отмечено: подарок выдан.", c.message.chat.id, c.message.message_id)
+                except Exception:
+                    pass
+            else:
+                try:
+                    bot.send_message(int(uid), "❌ Твоя заявка на вывод отклонена админом.")
+                except Exception:
+                    pass
+                try:
+                    bot.edit_message_text("❌ Заявка отклонена.", c.message.chat.id, c.message.message_id)
+                except Exception:
+                    pass
+        bot.answer_callback_query(c.id)
+    except Exception as e:
+        print("callback error:", e)
+        try:
+            bot.answer_callback_query(c.id)
+        except Exception:
+            pass
 def grant_to(uid, kind, n, note=""):
-    """РќР°С‡РёСЃР»РµРЅРёРµ РјРµР¶РґСѓ Р·Р°С…РѕРґР°РјРё: РјРѕРЅРµС‚С‹/Р·РІС‘Р·РґС‹/СЃРєРёРЅ/РїРѕРґР°СЂРѕРє."""
+    """Начисление между заходами: монеты/звёзды/скин/подарок."""
     with LOCK:
         p = PLAYERS.get(uid)
         if not p:
@@ -311,52 +482,6 @@ def grant_to(uid, kind, n, note=""):
         save_players()
         return True
 
-
-def notify_admin(text):
-    try:
-        bot.send_message(ADMIN_ID, text)
-    except Exception:
-        pass
-
-
-def notify_admin_request(req):
-    try:
-        name = esc(req.get("name") or "РёРіСЂРѕРє")
-        uid = esc(req.get("uid") or "?")
-        raw_uid = str(req.get("uid") or "")
-        username = (req.get("username") or "").lstrip("@")
-        if username:
-            link = f"https://t.me/{username}"
-            btn_text = f"рџ’¬ РќР°РїРёСЃР°С‚СЊ @{username}"
-        else:
-            link = f"https://t.me/{BOT_USERNAME}"
-            btn_text = "рџ’¬ РќР°РїРёСЃР°С‚СЊ РёРіСЂРѕРєСѓ (РїРѕ ID РЅРёР¶Рµ)"
-        if req.get("type") == "stars":
-            n = req.get("n", 0)
-            markup = InlineKeyboardMarkup()
-            markup.add(InlineKeyboardButton("вњ… РћС‚РїСЂР°РІРёР»", callback_data=f"wd_ok_{raw_uid}_{n}"))
-            markup.add(InlineKeyboardButton("вќЊ РћС‚РєР»РѕРЅРёС‚СЊ", callback_data=f"wd_no_{raw_uid}_{n}"))
-            markup.add(InlineKeyboardButton(btn_text, url=link))
-            bot.send_message(ADMIN_ID,
-                             f"рџ’ёрџ’ёрџ’ё Р’Р«Р’РћР” Р—Р’РЃР—Р”!\n\nРРіСЂРѕРє: {name}\nID: <code>{uid}</code>\nРЎСѓРјРјР°: {n} в­ђ\n\n"
-                             f"рџ‘‰ РџРµСЂРµРІРµРґРё РёРіСЂРѕРєСѓ {n} Р·РІС‘Р·Рґ (Telegram в†’ РџСЂРѕС„РёР»СЊ в†’ Р—РІС‘Р·РґС‹ в†’ РџРµСЂРµРІРµСЃС‚Рё).",
-                             parse_mode="HTML", reply_markup=markup)
-        else:
-            gift = esc(req.get("gift", "?"))
-            stars = req.get("stars", 0)
-            markup = InlineKeyboardMarkup()
-            markup.add(InlineKeyboardButton("вњ… РћС‚РїСЂР°РІРёР»", callback_data=f"gift_ok_{raw_uid}"))
-            markup.add(InlineKeyboardButton("вќЊ РћС‚РєР»РѕРЅРёС‚СЊ", callback_data=f"gift_no_{raw_uid}"))
-            markup.add(InlineKeyboardButton(btn_text, url=link))
-            bot.send_message(ADMIN_ID,
-                             f"рџ””рџ””рџ”” Р—РђРЇР’РљРђ РќРђ Р’Р«Р’РћР” РџРћР”РђР РљРђ!\n\nРРіСЂРѕРє: {name}\nID: <code>{uid}</code>\n"
-                             f"РџРѕРґР°СЂРѕРє: {gift} ({stars}в­ђ)\n\nрџ‘‰ РћС‚РєСЂРѕР№ С‡Р°С‚ СЃ РёРіСЂРѕРєРѕРј в†’ СЃРєСЂРµРїРєР° в†’ РџРѕРґР°СЂРѕРє в†’ РЅР° {stars} Р·РІС‘Р·Рґ в†’ РћС‚РїСЂР°РІРёС‚СЊ.",
-                             parse_mode="HTML", reply_markup=markup)
-    except Exception as e:
-        print("notify_admin_request error:", e)
-
-
-# ---------- Р”РЈР­Р›Р ----------
 
 def duel_join(uid, stake):
     with LOCK:
@@ -376,9 +501,9 @@ def duel_join(uid, stake):
                 rnd = crash_round()
                 DUELS[q["uid"]] = {"stake": stake, "mate": uid, "created": time.time(), "round": rnd}
                 DUELS[uid] = {"stake": stake, "mate": q["uid"], "created": time.time(), "round": rnd}
-                notify_admin(f"вљ”пёЏ Р”РЈР­Р›Р¬! {pa.get('name')} vs {pb.get('name')} РЅР° {stake} в­ђ (СЂР°СѓРЅРґ #{rnd})")
+                notify_admin(f"⚔️ ДУЭЛЬ! {pa.get('name')} vs {pb.get('name')} на {stake} ⭐ (раунд #{rnd})")
                 return {"ok": True}
-        QUEUE.append({"uid": uid, "stake": stake, "ts": time.time()})
+        QUEUE.append({"uid": uid, "stake": stake, "created": time.time()})
         return {"ok": True}
 
 
@@ -408,7 +533,7 @@ def duel_status(uid):
                 grant_to(winner, "stars", payout)
                 RESULTS[winner] = {"win": True, "payout": payout}
                 RESULTS[loser] = {"win": False, "payout": 0}
-                notify_admin(f"вљ”пёЏ Р”СѓСЌР»СЊ Р·Р°РІРµСЂС€РµРЅР°: РїРѕР±РµРґРёР» {PLAYERS.get(winner, {}).get('name')} (+{payout} в­ђ)")
+                notify_admin(f"⚔️ Дуэль завершена: победил {PLAYERS.get(winner, {}).get('name')} (+{payout} ⭐)")
             DUELS.pop(uid, None)
             DUELS.pop(mate, None)
             save_players()
@@ -453,28 +578,30 @@ class ApiHandler(BaseHTTPRequestHandler):
                 now = time.time()
                 with LOCK:
                     players = [dict(p) for p in PLAYERS.values()]
-                players.sort(key=lambda p: p.get("best", 0), reverse=True)
                 online = sum(1 for p in players if now - p.get("ts", 0) < ONLINE_SEC)
                 named = [p for p in players if p.get("username")]
-                payload = {"ok": True, "online": online, "total": len(players),
-                           "top": [{"id": p["id"], "name": "@" + p.get("username"), "best": p.get("best", 0),
-                                    "wallet": p.get("wallet", 0),
-                                    "online": (now - p.get("ts", 0)) < ONLINE_SEC} for p in named[:20]]}
-                self._reply(200, json.dumps(payload, ensure_ascii=False).encode("utf-8"))
+                named.sort(key=lambda p: p.get("best", 0), reverse=True)
+                top = [{"id": p["id"], "name": "@" + p["username"], "best": p.get("best", 0),
+                        "wallet": p.get("wallet", 0),
+                        "online": (now - p.get("ts", 0)) < ONLINE_SEC} for p in named[:20]]
+                self._reply(200, json.dumps({"ok": True, "online": online, "total": len(players),
+                                             "top": top}, ensure_ascii=False).encode("utf-8"))
             elif self.path.startswith("/api/season"):
                 ensure_season()
                 with LOCK:
-                    ranked = sorted([(uid, p) for uid, p in PLAYERS.items() if p.get("seasonNum") == week_num()],
+                    ranked = sorted([(uid, p) for uid, p in PLAYERS.items()
+                                     if p.get("username") and p.get("seasonNum") == week_num()],
                                     key=lambda kv: int(kv[1].get("seasonPts", 0) or 0), reverse=True)[:20]
-                    top = [{"id": uid, "name": "@" + (p.get("username") or ""), "pts": int(p.get("seasonPts", 0) or 0)}
-                           for uid, p in ranked if int(p.get("seasonPts", 0) or 0) > 0 and p.get("username")]
+                    top = [{"id": uid, "name": "@" + p["username"],
+                            "pts": int(p.get("seasonPts", 0) or 0)}
+                           for uid, p in ranked if int(p.get("seasonPts", 0) or 0) > 0]
                 secs_left = 7 * 86400 - (time.gmtime().tm_wday * 86400 + time.gmtime().tm_hour * 3600 +
                                          time.gmtime().tm_min * 60 + time.gmtime().tm_sec)
                 secs_left = max(0, secs_left)
                 days = secs_left // 86400
                 hours = (secs_left % 86400) // 3600
-                payload = {"ok": True, "num": week_num(), "top": top, "endsIn": f"{days}Рґ {hours}С‡"}
-                self._reply(200, json.dumps(payload, ensure_ascii=False).encode("utf-8"))
+                self._reply(200, json.dumps({"ok": True, "num": week_num(), "top": top,
+                                             "endsIn": f"{days}д {hours}ч"}, ensure_ascii=False).encode("utf-8"))
             elif self.path.startswith("/api/clans"):
                 ensure_season()
                 with LOCK:
@@ -494,20 +621,11 @@ class ApiHandler(BaseHTTPRequestHandler):
                 with LOCK:
                     lst = list(REQUESTS)
                 self._reply(200, json.dumps({"ok": True, "list": lst}, ensure_ascii=False).encode("utf-8"))
-            elif self.path in ("/", "/index.html"):
-                try:
-                    with open("index.html", "rb") as f:
-                        self._reply(200, f.read(), "text/html; charset=utf-8")
-                except Exception:
-                    self._reply(200, "<h1>РРіСЂР°: РѕС‚РєСЂРѕР№ С‡РµСЂРµР· Р±РѕС‚Р°</h1>".encode("utf-8"),
-                                "text/html; charset=utf-8")
-            elif self.path == "/api/ping":
-                self._reply(200, b'{"ok": true}')
             else:
                 self._reply(404, b'{"ok": false}')
         except Exception as e:
             print("GET error:", e)
-            traceback.print_exc()
+            self._reply(500, b'{"ok": false}')
 
     def do_POST(self):
         try:
@@ -518,17 +636,42 @@ class ApiHandler(BaseHTTPRequestHandler):
             except Exception:
                 data = {}
 
-            if self.path.startswith("/api/sync"):
+            if self.path.startswith("/api/requests/done"):
+                remove_request(data.get("id"))
+                self._reply(200, b'{"ok": true}')
+
+            elif self.path.startswith("/api/sync"):
                 user = validate_init_data(data.get("initData", ""))
                 if not user:
                     self._reply(401, b'{"ok": false, "error": "auth"}')
                     return
+                uid = str(user.get("id", ""))
+                uname = (user.get("username") or "").lstrip("@")
+                if uname:
+                    with LOCK:
+                        p = PLAYERS.get(uid)
+                        if p and p.get("username") != uname:
+                            p["username"] = uname
+                            save_players()
+                        changed = False
+                        for r in REQUESTS:
+                            if r.get("uid") == uid and r.get("username") != uname:
+                                r["username"] = uname
+                                changed = True
+                        if changed:
+                            save_json(REQUESTS_FILE, REQUESTS)
+                for r in (data.get("requests") or []):
+                    if isinstance(r, dict) and str(r.get("uid") or "") == uid and r.get("id"):
+                        add_request(r)
                 rec = merge_user(user, data)
                 if not rec:
                     self._reply(400, b'{"ok": false, "error": "bad user"}')
                     return
-                grant = rec.pop("grants", [])
                 lvl = player_level(rec)
+                now = time.time()
+                with LOCK:
+                    online = sum(1 for p in PLAYERS.values()
+                                 if now - float(p.get("ts", 0) or 0) < ONLINE_SEC)
                 payload = {"ok": True,
                            "you": {"id": rec["id"], "name": rec["name"], "wallet": rec["wallet"],
                                    "stars": rec["stars"], "best": rec["best"], "inv": rec.get("inv", []),
@@ -536,12 +679,10 @@ class ApiHandler(BaseHTTPRequestHandler):
                                    "boostUntil": rec.get("boostUntil", 0), "level": lvl,
                                    "seasonPts": rec.get("seasonPts", 0)},
                            "clanName": rec.get("clan"),
-                           "grant": grant}
+                           "grant": [],
+                           "online": online, "total": len(PLAYERS),
+                           "week": SEASON.get("num", "")}
                 self._reply(200, json.dumps(payload, ensure_ascii=False).encode("utf-8"))
-
-            elif self.path.startswith("/api/requests/done"):
-                remove_request(data.get("id"))
-                self._reply(200, b'{"ok": true}')
 
             elif self.path.startswith("/api/request"):
                 user = validate_init_data(data.get("initData", ""))
@@ -550,33 +691,12 @@ class ApiHandler(BaseHTTPRequestHandler):
                     return
                 req = data.get("req") or {}
                 req["uid"] = str(user.get("id", "")) or str(req.get("uid", ""))
-                req["username"] = user.get("username") or ""
+                req["username"] = (user.get("username") or "").lstrip("@")
                 req["name"] = display_name(user)
                 rid = add_request(req)
                 if rid:
                     notify_admin_request(req)
                 self._reply(200, json.dumps({"ok": True, "id": rid}, ensure_ascii=False).encode("utf-8"))
-
-            elif self.path.startswith("/api/giftcoins"):
-                user = validate_init_data(data.get("initData", ""))
-                if not user:
-                    self._reply(401, b'{"ok": false, "error": "auth"}')
-                    return
-                to = str(data.get("to") or "")
-                try:
-                    n = int(data.get("n") or 0)
-                except Exception:
-                    n = 0
-                if n < 10 or not to:
-                    self._reply(200, b'{"ok": false, "error": "bad"}')
-                    return
-                with LOCK:
-                    if to not in PLAYERS:
-                        self._reply(200, b'{"ok": false, "error": "nouser"}')
-                        return
-                grant_to(to, "coins", n)
-                notify_admin(f"рџЄ™ РџРѕРґР°СЂРѕРє РјРѕРЅРµС‚: {display_name(user)} в†’ {PLAYERS.get(to, {}).get('name')}: {n} рџЄ™")
-                self._reply(200, b'{"ok": true}')
 
             elif self.path.startswith("/api/clan"):
                 user = validate_init_data(data.get("initData", ""))
@@ -677,7 +797,7 @@ class ApiHandler(BaseHTTPRequestHandler):
                     if not me:
                         self._reply(200, b'{"ok": false, "error": "nouser"}')
                         return
-                    if action == "list":
+                    if action == "add":
                         sid = str(data.get("sid") or "")[:24]
                         price = int(data.get("price") or 0)
                         if not sid or price < 100:
@@ -686,37 +806,35 @@ class ApiHandler(BaseHTTPRequestHandler):
                         if sid not in (me.get("skins") or []):
                             self._reply(200, b'{"ok": false, "error": "noskin"}')
                             return
-                        (me.get("skins") or []).remove(sid)
-                        if me.get("currentSkin") == sid:
-                            me["currentSkin"] = "bear"
-                        MARKET.append({"sid": sid, "seller": uid, "sellerName": display_name(me),
-                                       "price": price, "ts": time.time()})
+                        me["skins"] = [s for s in me["skins"] if s != sid]
                         save_players()
+                        MARKET.append({"id": f"{uid}_{int(time.time()*1000)}", "seller": uid,
+                                       "sellerName": display_name(me), "sid": sid, "price": price,
+                                       "created": int(time.time()*1000)})
                         save_json(MARKET_FILE, MARKET)
                         self._reply(200, b'{"ok": true}')
                         return
                     if action == "buy":
-                        sid = str(data.get("sid") or "")
-                        seller = str(data.get("seller") or "")
-                        lot = None
-                        for l in MARKET:
-                            if l["sid"] == sid and str(l["seller"]) == seller:
-                                lot = l
-                                break
+                        lot_id = str(data.get("lot") or data.get("id") or "")
+                        lot = next((m for m in MARKET if m.get("id") == lot_id), None)
                         if not lot:
                             self._reply(200, b'{"ok": false, "error": "nolot"}')
                             return
-                        MARKET.remove(lot)
-                        save_json(MARKET_FILE, MARKET)
-                        payout = int(lot["price"] * (1 - MARKET_FEE))
-                        if sid not in (me.get("skins") or []):
-                            (me.get("skins") or []).append(sid)
+                        price = int(lot.get("price", 0) or 0)
+                        if int(me.get("wallet", 0) or 0) < price:
+                            self._reply(200, b'{"ok": false, "error": "wallet"}')
+                            return
+                        me["wallet"] = int(me["wallet"]) - price
+                        seller = PLAYERS.get(lot.get("seller"))
+                        if seller:
+                            seller["delta"] = int(seller.get("delta", 0) or 0) + int(price * (1 - MARKET_FEE))
+                        sid = lot.get("sid")
+                        if sid and sid not in (me.get("skins") or []):
+                            me.setdefault("skins", []).append(sid)
+                        MARKET[:] = [m for m in MARKET if m.get("id") != lot_id]
                         save_players()
-                        if seller != uid:
-                            grant_to(seller, "coins", payout)
-                            notify_admin(f"рџ”„ Р‘Р°СЂР°С…РѕР»РєР°: {display_name(user)} РєСѓРїРёР» {sid} Сѓ "
-                                         f"{lot.get('sellerName')} Р·Р° {lot['price']} рџЄ™ (РєРѕРјРёСЃСЃРёСЏ 5%)")
-                        self._reply(200, json.dumps({"ok": True, "payout": payout}).encode("utf-8"))
+                        save_json(MARKET_FILE, MARKET)
+                        self._reply(200, b'{"ok": true}')
                         return
                 self._reply(200, b'{"ok": false}')
 
@@ -734,23 +852,47 @@ class ApiHandler(BaseHTTPRequestHandler):
                     return
                 try:
                     link = bot.create_invoice_link(
-                        provider_token="",
-                        title=f"РџРѕРїРѕР»РЅРµРЅРёРµ {n} в­ђ",
-                        description=f"{n} Р·РІС‘Р·Рґ РґР»СЏ Mishka App",
+                        title=f"Пополнение {n} ⭐",
+                        description=f"{n} звёзд для Mishka App",
                         payload=f"topup_{n}",
                         currency="XTR",
-                        prices=[LabeledPrice(label=f"{n} в­ђ", amount=n)],
+                        prices=[LabeledPrice(label=f"{n} ⭐", amount=n)],
                     )
                     self._reply(200, json.dumps({"ok": True, "invoice": link}).encode("utf-8"))
                 except Exception as e:
-                    print("TOPUP FAILED:", repr(e))
-                    traceback.print_exc()
+                    print("topup error:", e)
                     self._reply(200, b'{"ok": false}')
+
+            elif self.path.startswith("/api/giftcoins"):
+                user = validate_init_data(data.get("initData", ""))
+                if not user:
+                    self._reply(401, b'{"ok": false, "error": "auth"}')
+                    return
+                to = str(data.get("to") or "")
+                try:
+                    n = int(data.get("n") or 0)
+                except Exception:
+                    n = 0
+                if n < 10 or not to:
+                    self._reply(200, b'{"ok": false, "error": "bad"}')
+                    return
+                with LOCK:
+                    if to not in PLAYERS:
+                        self._reply(200, b'{"ok": false, "error": "nouser"}')
+                        return
+                grant_to(to, "coins", n)
+                notify_admin(f"🪙 Подарок монет: {display_name(user)} → {PLAYERS.get(to, {}).get('name')}: {n} 🪙")
+                self._reply(200, b'{"ok": true}')
+
             else:
                 self._reply(404, b'{"ok": false}')
         except Exception as e:
             print("POST error:", e)
             traceback.print_exc()
+            try:
+                self._reply(500, b'{"ok": false}')
+            except Exception:
+                pass
 
     def log_message(self, *args):
         pass
@@ -770,192 +912,3 @@ def run_api():
             ThreadingHTTPServer(("0.0.0.0", port), ApiHandler).serve_forever()
         except Exception as e:
             print("API port", port, "failed:", e)
-
-
-load_all()
-threading.Thread(target=run_api, daemon=True).start()
-print("API-СЃРµСЂРІРµСЂ Р·Р°РїСѓС‰РµРЅ")
-
-# ================== Р‘РћРў ==================
-
-@bot.message_handler(commands=['topup'])
-def topup_menu(message):
-    markup = InlineKeyboardMarkup()
-    markup.add(InlineKeyboardButton("в­ђ 50 Р—РІС‘Р·Рґ (50 в­ђ)", callback_data="buy_stars_50"))
-    markup.add(InlineKeyboardButton("в­ђ 100 Р—РІС‘Р·Рґ (100 в­ђ)", callback_data="buy_stars_100"))
-    bot.send_message(message.chat.id, "Р’С‹Р±РµСЂРё РїР°РєРµС‚ РїРѕРїРѕР»РЅРµРЅРёСЏ Telegram Stars:", reply_markup=markup)
-
-
-@bot.callback_query_handler(func=lambda call: call.data.startswith('buy_stars_'))
-def process_topup(call):
-    amount = int(call.data.split('_')[2])
-    bot.send_invoice(
-        chat_id=call.message.chat.id,
-        title="РџРѕРїРѕР»РЅРµРЅРёРµ Р±Р°Р»Р°РЅСЃР°",
-        description=f"РџРѕРєСѓРїРєР° {amount} Р·РІС‘Р·Рґ РґР»СЏ РёРіСЂС‹",
-        invoice_payload=f"topup_{amount}",
-        provider_token="",
-        currency="XTR",
-        prices=[LabeledPrice(label=f"РџРѕРїРѕР»РЅРµРЅРёРµ РЅР° {amount} Stars", amount=amount)],
-        start_parameter="topup")
-
-
-@bot.message_handler(commands=['start'])
-def start(message):
-    text = message.text or ""
-    payload = text.replace("/start", "", 1).strip() if text.startswith("/start") else ""
-    name = display_name(message.from_user)
-    uid = message.from_user.id
-
-    if payload.startswith("gift_") and uid != ADMIN_ID:
-        try:
-            parts = payload.split("_")
-            stars = int(parts[2]) if len(parts) > 2 else 0
-            req = {"type": "gift", "gift": "РџРѕРґР°СЂРѕРє", "stars": stars, "uid": str(uid), "name": name}
-            add_request(req)
-            notify_admin_request(req)
-            bot.send_message(message.chat.id, "вњ… Р—Р°СЏРІРєР° РїСЂРёРЅСЏС‚Р°! РћР¶РёРґР°Р№ РїРѕРґР°СЂРѕРє рџЋЃ")
-        except Exception as e:
-            print("gift_ error:", e)
-    elif payload.startswith("wd_") and uid != ADMIN_ID:
-        try:
-            parts = payload.split("_")
-            stars = int(parts[2]) if len(parts) > 2 else 0
-            req = {"type": "stars", "n": stars, "uid": str(uid), "name": name}
-            add_request(req)
-            notify_admin_request(req)
-            bot.send_message(message.chat.id, "вњ… Р—Р°СЏРІРєР° РЅР° РІС‹РІРѕРґ РїСЂРёРЅСЏС‚Р°! рџ’ё")
-        except Exception as e:
-            print("wd_ error:", e)
-    elif payload.startswith("w_"):
-        try:
-            data = payload[2:].split("_")
-            stars = int(data[1])
-            gift_names = {15: "рџ§ё РњРёС€РєР°", 25: "рџЋЃ РџРѕРґР°СЂРѕС‡РµРє", 50: "рџЌѕ РЁР°РјРїР°РЅСЃРєРѕРµ", 100: "рџ’Ќ РљРѕР»РµС‡РєРѕ"}
-            gift = gift_names.get(stars, f"РїРѕРґР°СЂРѕРє РЅР° {stars}в­ђ")
-            req = {"type": "gift", "gift": gift, "stars": stars, "uid": str(uid), "name": name}
-            add_request(req)
-            notify_admin_request(req)
-            bot.send_message(message.chat.id, "вњ… Р—Р°СЏРІРєР° РїСЂРёРЅСЏС‚Р°! РћР¶РёРґР°Р№ РїРѕРґР°СЂРѕРє рџЋЃ")
-        except Exception as e:
-            print("w_ error:", e)
-    elif payload.startswith("buy_"):
-        try:
-            item_id = payload[4:]
-            prices = {"boost1": 30, "boost2": 50, "boost3": 100}
-            if item_id in prices:
-                bot.send_invoice(
-                    chat_id=message.chat.id,
-                    title=f"РџРѕРєСѓРїРєР°: Р±СѓСЃС‚ x3",
-                    description=f"Р‘СѓСЃС‚ x3 ({prices[item_id]}в­ђ)",
-                    invoice_payload=f"pay_{item_id}",
-                    provider_token="",
-                    currency="XTR",
-                    prices=[LabeledPrice(label="Р‘СѓСЃС‚ x3", amount=prices[item_id])],
-                    start_parameter="buy-item")
-            else:
-                bot.reply_to(message, "РўР°РєРѕРіРѕ С‚РѕРІР°СЂР° РЅРµС‚ рџ¤·")
-        except Exception as e:
-            print("buy_ error:", e)
-    else:
-        markup = InlineKeyboardMarkup()
-        markup.add(InlineKeyboardButton("рџЋ® РћС‚РєСЂС‹С‚СЊ РёРіСЂСѓ",
-                                        url=f"https://t.me/{BOT_USERNAME}/{APP_SHORT_NAME}?startapp=menu"))
-        bot.reply_to(message, "РџСЂРёРІРµС‚! РРіСЂР°Р№ РІ РёРіСЂСѓ РїРѕ РєРЅРѕРїРєРµ РЅРёР¶Рµ рџ‘‡\nР”Р»СЏ РїРѕРїРѕР»РЅРµРЅРёСЏ РЅР°Р¶РјРё в­ђ РІ СЃР°РјРѕР№ РёРіСЂРµ",
-                     reply_markup=markup)
-
-
-@bot.callback_query_handler(func=lambda call: call.data.startswith("gift_ok_") or call.data.startswith("gift_no_")
-                            or call.data.startswith("wd_ok_") or call.data.startswith("wd_no_"))
-def decision(call):
-    if call.from_user.id != ADMIN_ID:
-        bot.answer_callback_query(call.id, "РўРѕР»СЊРєРѕ РґР»СЏ Р°РґРјРёРЅР°!")
-        return
-    try:
-        parts = call.data.split("_")
-        action, kind = parts[0], parts[1]
-        user_id = int(parts[2])
-        if kind == "ok":
-            if action == "wd":
-                bot.send_message(user_id, f"рџ’ё Р’С‹РІРѕРґ {parts[3]} в­ђ РѕС‚РїСЂР°РІР»РµРЅ! РџСЂРѕРІРµСЂСЊ Telegram.")
-                bot.edit_message_text(f"вњ… Р’С‹РІРѕРґ {parts[3]} в­ђ РІС‹РґР°РЅ.", call.message.chat.id, call.message.message_id)
-            else:
-                bot.send_message(user_id, "рџЋЃ РџРѕРґР°СЂРѕРє РѕС‚РїСЂР°РІР»РµРЅ! РџСЂРѕРІРµСЂСЊ РµРіРѕ РІ Telegram.")
-                bot.edit_message_text("вњ… РћС‚РјРµС‡РµРЅРѕ: РїРѕРґР°СЂРѕРє РІС‹РґР°РЅ.", call.message.chat.id, call.message.message_id)
-        else:
-            bot.send_message(user_id, "вќЊ Рљ СЃРѕР¶Р°Р»РµРЅРёСЋ, С‚РІРѕСЋ Р·Р°СЏРІРєСѓ РѕС‚РєР»РѕРЅРёР»Рё.")
-            bot.edit_message_text("вќЊ Р—Р°СЏРІРєР° РѕС‚РєР»РѕРЅРµРЅР°.", call.message.chat.id, call.message.message_id)
-    except Exception as e:
-        print("decision error:", e)
-        traceback.print_exc()
-    bot.answer_callback_query(call.id)
-
-
-@bot.pre_checkout_query_handler(func=lambda query: True)
-def checkout(pre_checkout_query):
-    bot.answer_pre_checkout_query(pre_checkout_query.id, ok=True)
-
-
-@bot.message_handler(content_types=['successful_payment'])
-def got_payment(message):
-    payload = message.successful_payment.invoice_payload
-    amount = message.successful_payment.total_amount
-    uid = str(message.from_user.id)
-    name = display_name(message.from_user)
-
-    if payload.startswith("pay_"):
-        item_id = payload.split('_')[1]
-        markup = InlineKeyboardMarkup()
-        markup.add(InlineKeyboardButton("рџЋ® РћС‚РєСЂС‹С‚СЊ РёРіСЂСѓ",
-                                        url=f"https://t.me/{BOT_USERNAME}/{APP_SHORT_NAME}?startapp=boost_{item_id}"))
-        notify_admin(f"рџ’° РџРћРљРЈРџРљРђ! РРіСЂРѕРє {esc(name)} РєСѓРїРёР» {esc(item_id)} Р·Р° {amount}в­ђ!")
-        bot.send_message(message.chat.id,
-                         "вњ… РћРїР»Р°С‚Р° РїСЂРѕС€Р»Р°: Р±СѓСЃС‚ x3!\nРћС‚РєСЂРѕР№ РёРіСЂСѓ вЂ” Р±СѓСЃС‚ Р°РєС‚РёРІРёСЂСѓРµС‚СЃСЏ Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРё:",
-                         reply_markup=markup)
-        return
-
-    grant_or_create(uid, "stars", amount)
-    notify_admin(f"рџ’° РџРћРџРћР›РќР•РќРР•! РРіСЂРѕРє {esc(name)} РєСѓРїРёР» {amount} Р·РІС‘Р·Рґ вЂ” РЅР°С‡РёСЃР»РµРЅРѕ РЅР° СЃРµСЂРІРµСЂРµ.")
-    markup = InlineKeyboardMarkup()
-    markup.add(InlineKeyboardButton("рџЋ® РћС‚РєСЂС‹С‚СЊ РёРіСЂСѓ",
-                                    url=f"https://t.me/{BOT_USERNAME}/{APP_SHORT_NAME}?startapp=menu"))
-    bot.send_message(message.chat.id,
-                     f"вњ… РћРїР»Р°С‚Р° РїСЂРѕС€Р»Р°! {amount} в­ђ СѓР¶Рµ Р·Р°С‡РёСЃР»РµРЅС‹.\n"
-                     "РћС‚РєСЂРѕР№ РёРіСЂСѓ вЂ” Р·РІС‘Р·РґС‹ Р±СѓРґСѓС‚ РЅР° РјРµСЃС‚Рµ (РµСЃР»Рё РёРіСЂР° Р±С‹Р»Р° РѕС‚РєСЂС‹С‚Р° вЂ” Р·Р°РєСЂРѕР№ Рё Р·Р°Р№РґРё Р·Р°РЅРѕРІРѕ):",
-                     reply_markup=markup)
-
-
-@bot.message_handler(content_types=['web_app_data'])
-def web_app_data(message):
-    try:
-        data = json.loads(message.web_app_data.data)
-        name = display_name(message.from_user)
-        uid = message.from_user.id
-        if data.get('action') == 'withdraw_gift':
-            req = {"type": "gift", "gift": data.get('gift', '?'), "stars": data.get('stars', 0),
-                   "uid": str(uid), "name": name}
-            add_request(req)
-            notify_admin_request(req)
-        elif data.get('action') == 'withdraw_stars':
-            req = {"type": "stars", "n": data.get('stars', 0), "uid": str(uid), "name": name}
-            add_request(req)
-            notify_admin_request(req)
-    except Exception as e:
-        print("WebApp Error:", e)
-        traceback.print_exc()
-
-
-def periodic():
-    while True:
-        try:
-            ensure_season()
-            time.sleep(1800)
-        except Exception as e:
-            print("periodic error:", e)
-            time.sleep(60)
-
-
-threading.Thread(target=periodic, daemon=True).start()
-
-print("Р‘РѕС‚ Р·Р°РїСѓС‰РµРЅ, Р¶РґСѓ СЃРѕРѕР±С‰РµРЅРёСЏ...")
-bot.infinity_polling(timeout=10, long_polling_timeout=5, skip_pending=True)
