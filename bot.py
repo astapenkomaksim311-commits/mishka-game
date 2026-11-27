@@ -853,6 +853,7 @@ class ApiHandler(BaseHTTPRequestHandler):
                     return
                 try:
                     link = bot.create_invoice_link(
+                        provider_token="",
                         title=f"Пополнение {n} ⭐",
                         description=f"{n} звёзд для Mishka App",
                         payload=f"topup_{n}",
