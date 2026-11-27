@@ -1596,6 +1596,89 @@ const winner=pickDrop(wheelPool);const el=$('wheel-strip');const wi=buildStrip(e
 spinRoulette(el,wi,()=>{const txt=applyDrop(winner);
 $('wheel-result').innerText='🎉 '+txt;
 saveState();syncToServer();sfx('win');haptic('success');wheelBusy=false;updateWheelUI()})}
+// ===== ПАТЧ B: пропуск — 50 уровней, подарки 30/35/40/45/50 =====
+function passLevel(){return Math.min(50,Math.floor((state.passXP||0)/20))}
+function passCoins(l){if(l===1)return 100;if(l===2)return 150;return 175+(l-3)*15}
+function passStars(l){if(l%10===0)return 3;if(l%5===0)return 1;return 0}
+const PASS_GIFTS={30:'tg15',35:'tg15',40:'tg15',45:'tg15',50:'tg100'};
+function passGiftOf(l){return giftsData.find(x=>x.id===PASS_GIFTS[l])}
+function claimPass(l){const claimed=state.passClaimed.includes('f'+l);
+if(claimed){toast('Этот уровень уже забран',true);return}
+const lvl=passLevel();if(lvl<l){toast(`Уровень ${l} ещё не открыт — нужно ${l*20} 🎟 XP`,true);return}
+const prem=passActive();
+let coins=passCoins(l)*(prem?2:1),stars=passStars(l);
+state.passClaimed.push('f'+l);state.wallet+=coins;if(stars)state.stars+=stars;
+const g=passGiftOf(l);let giftTxt='';
+if(g){state.inv.push({g:g.id,ts:Date.now()});
+giftTxt=`\n🎁 Подарок ${g.emoji} ${g.name} — в инвентаре! Выведи (${g.stars} ⭐) или продай.`}
+saveState();syncToServer();sfx('gift');haptic('success');
+toast(`🎟 Уровень ${l}: +${coins} 🪙${stars?' +'+stars+' ⭐':''}`+giftTxt);
+renderPass()}
+function renderPass(){sfx('click');$('pass').style.display='flex';
+const top=$('pass-top'),lvl=passLevel();
+if(passActive()){const d=Math.ceil((state.passUntil-Date.now())/86400000);
+top.innerHTML=`<div class="card me"><div style="font-size:26px">🎟</div><div class="card-info">Пропуск активен: ${d} дн.<br><span style="font-size:11px;color:#8aa">Уровень ${lvl}/50 · XP ${state.passXP||0} · награды x2</span></div></div>`}
+else{top.innerHTML=`<div class="card"><div style="font-size:26px">🎟</div><div class="card-info">Пропуск не куплен<br><span style="font-size:11px;color:#8aa">50 уровней · награды x2 · подарки на 30/35/40/45/50 · 30 дней</span></div>
+<button class="card-btn" style="background:#8e44ad" onclick="buyPass()">⭐ 100</button></div>`}
+const c=$('pass-container');c.innerHTML='';
+for(let l=1;l<=50;l++){
+const reached=lvl>=l,cf=state.passClaimed.includes('f'+l);
+const g=passGiftOf(l);
+const rew=`🪙 ${passCoins(l)*(passActive()?2:1)}${passStars(l)?` · ⭐ ${passStars(l)}`:''}${g?` · ${g.emoji}`:''}`;
+c.innerHTML+=`<div class="card" style="padding:7px 10px${g?' ;border-color:#f1c40f':''}"><div style="font-size:14px;min-width:34px">${reached?'✅':'🔒'} ${l}</div>
+<div class="card-info" style="font-size:11px;color:#8aa">${rew}</div>
+<button class="card-btn" style="background:${cf?'#555':'#27ae60'};font-size:10px;padding:5px 8px" ${reached&&!cf?`onclick="claimPass(${l})"`:'disabled'}>${cf?'✓':'Забрать'}</button></div>`}}
+
+// ===== ПАТЧ B: квесты — 18 заданий, каждый день 10 новых =====
+const questsPool=[
+{id:'c1',ev:'coins',emoji:'🪙',name:'Собери 100 монет',goal:100,rCoins:40,xp:2},
+{id:'c2',ev:'coins',emoji:'🪙',name:'Собери 250 монет',goal:250,rCoins:70,xp:2},
+{id:'c3',ev:'coins',emoji:'🪙',name:'Собери 400 монет',goal:400,rCoins:110,xp:3},
+{id:'r1',ev:'runs',emoji:'🏃',name:'Сделай 2 забега',goal:2,rCoins:40,xp:2},
+{id:'r2',ev:'runs',emoji:'🏃',name:'Сделай 3 забега',goal:3,rCoins:55,xp:2},
+{id:'r3',ev:'runs',emoji:'🏃',name:'Сделай 5 забегов',goal:5,rCoins:90,xp:3},
+{id:'x1',ev:'crash',emoji:'🚀',name:'Поставь в краше 2 ставки',goal:2,rCoins:60,xp:2},
+{id:'x2',ev:'crash',emoji:'🚀',name:'Поставь в краше 3 ставки',goal:3,rCoins:85,xp:3},
+{id:'k1',ev:'cases',emoji:'📦',name:'Открой 1 кейс',goal:1,rStars:1,xp:2},
+{id:'k2',ev:'cases',emoji:'📦',name:'Открой 2 кейса',goal:2,rStars:2,xp:3},
+{id:'k3',ev:'cases',emoji:'📦',name:'Открой 3 кейса',goal:3,rCoins:150,xp:4},
+{id:'f1',ev:'catch',emoji:'🧺',name:'Сыграй в Ловца 1 раз',goal:1,rCoins:70,xp:2},
+{id:'f2',ev:'catch',emoji:'🧺',name:'Сыграй в Ловца 2 раза',goal:2,rCoins:120,xp:3},
+{id:'w1',ev:'wheel',emoji:'🎡',name:'Крутани колесо 1 раз',goal:1,rCoins:50,xp:2},
+{id:'w2',ev:'wheel',emoji:'🎡',name:'Крутани колесо 2 раза',goal:2,rCoins:90,xp:3},
+{id:'s1',ev:'score',emoji:'🎯',name:'Набери счёт 300 за забег',goal:300,rCoins:60,xp:2},
+{id:'s2',ev:'score',emoji:'🎯',name:'Набери счёт 600 за забег',goal:600,rCoins:100,xp:3},
+{id:'s3',ev:'score',emoji:'🎯',name:'Набери счёт 900 за забег',goal:900,rCoins:160,xp:4}];
+function todayQuests(){const h=dayHash(mskDay());let idx=[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17];
+let seed=h;for(let i=idx.length-1;i>0;i--){seed=(seed*1103515245+12345)>>>0;const j=seed%(i+1);const t=idx[i];idx[i]=idx[j];idx[j]=t}
+return idx.slice(0,10).map(i=>questsPool[i])}
+function ensureQuestDay(){const d=mskDay();
+if(!state.quests||state.quests.date!==d)state.quests={date:d,prog:{},claimed:{}};saveState()}
+function qAdd(ev,n){ensureQuestDay();let ch=false;
+todayQuests().forEach(q=>{if(q.ev!==ev)return;const p=state.quests.prog[q.id]||0;
+state.quests.prog[q.id]=p+n;ch=true});
+if(ch)saveState()}
+function qAddMax(ev,n){ensureQuestDay();let ch=false;
+todayQuests().forEach(q=>{if(q.ev!==ev)return;const p=state.quests.prog[q.id]||0;
+if(p<n){state.quests.prog[q.id]=n;ch=true}});
+if(ch)saveState()}
+function renderQuests(){sfx('click');ensureQuestDay();const c=$('quests-container');c.innerHTML='';
+const left=mskLeft(),h=Math.floor(left/3600000),m=Math.floor(left%3600000/60000);
+c.innerHTML+=`<div style="color:#667;font-size:11px;margin-bottom:6px;text-align:center">Набор из 10 квестов · смена через ${h}ч ${m}м (00:00 МСК)</div>`;
+todayQuests().forEach(q=>{const p=Math.min(state.quests.prog[q.id]||0,q.goal);
+const done=p>=q.goal,claimed=state.quests.claimed[q.id],pct=Math.floor(p/q.goal*100);
+c.innerHTML+=`<div class="card"><div style="font-size:26px">${q.emoji}</div>
+<div class="card-info">${q.name}
+<div style="color:#8aa;font-size:11px;margin-top:2px">${p} / ${q.goal} · награда: ${q.rCoins?'🪙 '+q.rCoins:''}${q.rStars?'⭐ '+q.rStars:''} · 🎟 +${q.xp}</div>
+<div class="prog-bar"><div class="prog-fill" style="width:${pct}%"></div></div></div>
+<button class="card-btn" style="background:${claimed?'#555':(done?'#f1c40f':'#444')};color:${claimed?'#999':(done?'#111':'#fff')}" ${done&&!claimed?`onclick="claimQuest('${q.id}')"`:'disabled'}>${claimed?'✓':(done?'Забрать':'…')}</button></div>`});
+$('quests').style.display='flex'}
+function claimQuest(id){ensureQuestDay();const q=questsPool.find(x=>x.id===id);
+if(!q||state.quests.claimed[id])return;
+if((state.quests.prog[id]||0)<q.goal)return;
+state.quests.claimed[id]=true;
+if(q.rCoins)state.wallet+=q.rCoins;if(q.rStars)state.stars+=q.rStars;addPassXP(q.xp||1);
+saveState();syncToServer();toast('📜 Квест выполнен!');sfx('cash');haptic('success');renderQuests()}
 
 </script>
 </body>
