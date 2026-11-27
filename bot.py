@@ -16,7 +16,7 @@ ADMIN_ID = 8834515141
 APP_SHORT_NAME = "app"
 BOT_USERNAME = "MishkaRunGame_bot"
 
-TOPUP_MIN = 5
+TOPUP_MIN = 10
 TOPUP_MAX = 200
 DUEL_TIMEOUT = 45
 MARKET_FEE = 0.05
@@ -122,7 +122,7 @@ def player_level(p):
 
 
 def ensure_season():
-    # РЎРјРµРЅР° РЅРµРґРµР»Рё: РІС‹РїР»Р°С‚Р° РїСЂРёР·РѕРІ СЃРµР·РѕРЅР° Рё РІРѕР№РЅР° РєР»Р°РЅРѕРІ, СЃР±СЂРѕСЃ РѕС‡РєРѕРІ Сѓ Р’РЎР•РҐ.
+    """РЎРјРµРЅР° РЅРµРґРµР»Рё: РІС‹РїР»Р°С‚Р° РїСЂРёР·РѕРІ СЃРµР·РѕРЅР° Рё РІРѕР№РЅР° РєР»Р°РЅРѕРІ, СЃР±СЂРѕСЃ РѕС‡РєРѕРІ Сѓ Р’РЎР•РҐ."""
     global SEASON
     wk = week_num()
     with LOCK:
@@ -224,7 +224,7 @@ def remove_request(rid):
 
 
 def merge_user(user, data):
-    # Р‘Р°Р»Р°РЅСЃ = РєР»РёРµРЅС‚ + СЃРµСЂРІРµСЂРЅС‹Рµ РЅР°С‡РёСЃР»РµРЅРёСЏ. РћС‡РєРё СЃРµР·РѕРЅР° = СЂРµРєРѕСЂРґ в€’ СЃС‚Р°СЂС‚ РЅРµРґРµР»Рё.
+    """Р‘Р°Р»Р°РЅСЃ = РєР»РёРµРЅС‚ + СЃРµСЂРІРµСЂРЅС‹Рµ РЅР°С‡РёСЃР»РµРЅРёСЏ. РћС‡РєРё СЃРµР·РѕРЅР° = СЂРµРєРѕСЂРґ в€’ СЃС‚Р°СЂС‚ РЅРµРґРµР»Рё."""
     uid = str(user.get("id", ""))
     if not uid:
         return None
@@ -275,7 +275,7 @@ def merge_user(user, data):
 
 
 def grant_or_create(uid, kind, n):
-    # РќР°С‡РёСЃР»РµРЅРёРµ Р·РІС‘Р·Рґ/РјРѕРЅРµС‚, РґР°Р¶Рµ РµСЃР»Рё РёРіСЂРѕРє РµС‰С‘ РЅРё СЂР°Р·Сѓ РЅРµ СЃРёРЅС…СЂРѕРЅРёР·РёСЂРѕРІР°Р»СЃСЏ.
+    """РќР°С‡РёСЃР»РµРЅРёРµ Р·РІС‘Р·Рґ/РјРѕРЅРµС‚, РґР°Р¶Рµ РµСЃР»Рё РёРіСЂРѕРє РµС‰С‘ РЅРё СЂР°Р·Сѓ РЅРµ СЃРёРЅС…СЂРѕРЅРёР·РёСЂРѕРІР°Р»СЃСЏ."""
     with LOCK:
         p = PLAYERS.get(uid)
         if not p:
@@ -292,7 +292,7 @@ def grant_or_create(uid, kind, n):
 
 
 def grant_to(uid, kind, n, note=""):
-    # РќР°С‡РёСЃР»РµРЅРёРµ РјРµР¶РґСѓ Р·Р°С…РѕРґР°РјРё: РјРѕРЅРµС‚С‹/Р·РІС‘Р·РґС‹/СЃРєРёРЅ/РїРѕРґР°СЂРѕРє.
+    """РќР°С‡РёСЃР»РµРЅРёРµ РјРµР¶РґСѓ Р·Р°С…РѕРґР°РјРё: РјРѕРЅРµС‚С‹/Р·РІС‘Р·РґС‹/СЃРєРёРЅ/РїРѕРґР°СЂРѕРє."""
     with LOCK:
         p = PLAYERS.get(uid)
         if not p:
@@ -719,6 +719,10 @@ class ApiHandler(BaseHTTPRequestHandler):
                 self._reply(200, b'{"ok": false}')
 
             elif self.path.startswith("/api/topup"):
+                user = validate_init_data(data.get("initData", ""))
+                if not user:
+                    self._reply(401, b'{"ok": false, "error": "auth"}')
+                    return
                 try:
                     n = int(data.get("stars") or 0)
                 except Exception:
@@ -805,8 +809,7 @@ def start(message):
         try:
             parts = payload.split("_")
             stars = int(parts[2]) if len(parts) > 2 else 0
-            req = {"type": "gift", "gift": "РџРѕРґР°СЂРѕРє", "stars": stars, "uid": str(uid), "name": name,
-                   "username": message.from_user.username or ""}
+            req = {"type": "gift", "gift": "РџРѕРґР°СЂРѕРє", "stars": stars, "uid": str(uid), "name": name}
             add_request(req)
             notify_admin_request(req)
             bot.send_message(message.chat.id, "вњ… Р—Р°СЏРІРєР° РїСЂРёРЅСЏС‚Р°! РћР¶РёРґР°Р№ РїРѕРґР°СЂРѕРє рџЋЃ")
@@ -816,8 +819,7 @@ def start(message):
         try:
             parts = payload.split("_")
             stars = int(parts[2]) if len(parts) > 2 else 0
-            req = {"type": "stars", "n": stars, "uid": str(uid), "name": name,
-                   "username": message.from_user.username or ""}
+            req = {"type": "stars", "n": stars, "uid": str(uid), "name": name}
             add_request(req)
             notify_admin_request(req)
             bot.send_message(message.chat.id, "вњ… Р—Р°СЏРІРєР° РЅР° РІС‹РІРѕРґ РїСЂРёРЅСЏС‚Р°! рџ’ё")
@@ -829,8 +831,7 @@ def start(message):
             stars = int(data[1])
             gift_names = {15: "рџ§ё РњРёС€РєР°", 25: "рџЋЃ РџРѕРґР°СЂРѕС‡РµРє", 50: "рџЌѕ РЁР°РјРїР°РЅСЃРєРѕРµ", 100: "рџ’Ќ РљРѕР»РµС‡РєРѕ"}
             gift = gift_names.get(stars, f"РїРѕРґР°СЂРѕРє РЅР° {stars}в­ђ")
-            req = {"type": "gift", "gift": gift, "stars": stars, "uid": str(uid), "name": name,
-                   "username": message.from_user.username or ""}
+            req = {"type": "gift", "gift": gift, "stars": stars, "uid": str(uid), "name": name}
             add_request(req)
             notify_admin_request(req)
             bot.send_message(message.chat.id, "вњ… Р—Р°СЏРІРєР° РїСЂРёРЅСЏС‚Р°! РћР¶РёРґР°Р№ РїРѕРґР°СЂРѕРє рџЋЃ")
@@ -899,27 +900,21 @@ def got_payment(message):
     amount = message.successful_payment.total_amount
     uid = str(message.from_user.id)
     name = display_name(message.from_user)
-
-    if payload.startswith("pay_"):
-        item_id = payload.split('_')[1]
-        notify_admin(f"рџ’° РџРћРљРЈРџРљРђ! РРіСЂРѕРє {esc(name)} РєСѓРїРёР» {esc(item_id)} Р·Р° {amount}в­ђ!")
-        markup = InlineKeyboardMarkup()
-        markup.add(InlineKeyboardButton("рџЋ® РћС‚РєСЂС‹С‚СЊ РёРіСЂСѓ",
-                                        url=f"https://t.me/{BOT_USERNAME}/{APP_SHORT_NAME}?startapp=boost_{item_id}"))
-        bot.send_message(message.chat.id,
-                         "вњ… РћРїР»Р°С‚Р° РїСЂРѕС€Р»Р°: Р±СѓСЃС‚ x3!\nРќР°Р¶РјРё РєРЅРѕРїРєСѓ вЂ” Р±СѓСЃС‚ Р°РєС‚РёРІРёСЂСѓРµС‚СЃСЏ:",
-                         reply_markup=markup)
-        return
-
-    # РџРѕРїРѕР»РЅРµРЅРёРµ Р·РІС‘Р·Рґ: РЅР°С‡РёСЃР»СЏРµРј РЅР° СЃРµСЂРІРµСЂРµ СЃСЂР°Р·Сѓ, РєРЅРѕРїРєР° С‚РѕР»СЊРєРѕ РѕС‚РєСЂС‹РІР°РµС‚ РёРіСЂСѓ
-    grant_or_create(uid, "stars", amount)
-    notify_admin(f"рџ’° РџРћРџРћР›РќР•РќРР•! РРіСЂРѕРє {esc(name)} РєСѓРїРёР» {amount} Р·РІС‘Р·Рґ вЂ” РЅР°С‡РёСЃР»РµРЅРѕ РЅР° СЃРµСЂРІРµСЂРµ.")
     markup = InlineKeyboardMarkup()
     markup.add(InlineKeyboardButton("рџЋ® РћС‚РєСЂС‹С‚СЊ РёРіСЂСѓ",
                                     url=f"https://t.me/{BOT_USERNAME}/{APP_SHORT_NAME}?startapp=menu"))
+    if payload.startswith("pay_"):
+        item_id = payload.split('_')[1]
+        notify_admin(f"рџ’° РџРћРљРЈРџРљРђ! РРіСЂРѕРє {esc(name)} РєСѓРїРёР» {esc(item_id)} Р·Р° {amount}в­ђ!")
+        bot.send_message(message.chat.id,
+                         "вњ… РћРїР»Р°С‚Р° РїСЂРѕС€Р»Р°: Р±СѓСЃС‚ x3!\nРћС‚РєСЂРѕР№ РёРіСЂСѓ вЂ” Р±СѓСЃС‚ Р°РєС‚РёРІРёСЂСѓРµС‚СЃСЏ Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРё:",
+                         reply_markup=markup)
+        return
+    grant_or_create(uid, "stars", amount)
+    notify_admin(f"рџ’° РџРћРџРћР›РќР•РќРР•! РРіСЂРѕРє {esc(name)} РєСѓРїРёР» {amount} Р·РІС‘Р·Рґ вЂ” РЅР°С‡РёСЃР»РµРЅРѕ РЅР° СЃРµСЂРІРµСЂРµ.")
     bot.send_message(message.chat.id,
                      f"вњ… РћРїР»Р°С‚Р° РїСЂРѕС€Р»Р°! {amount} в­ђ СѓР¶Рµ Р·Р°С‡РёСЃР»РµРЅС‹.\n"
-                     "РћС‚РєСЂРѕР№ РёРіСЂСѓ вЂ” Р·РІС‘Р·РґС‹ Р±СѓРґСѓС‚ РЅР° РјРµСЃС‚Рµ (РїРµСЂРµР·Р°Р№РґРё, РµСЃР»Рё РѕРЅР° СѓР¶Рµ РѕС‚РєСЂС‹С‚Р°):",
+                     "РћС‚РєСЂРѕР№ РёРіСЂСѓ вЂ” Р·РІС‘Р·РґС‹ Р±СѓРґСѓС‚ РЅР° РјРµСЃС‚Рµ (РїРµСЂРµР·Р°Р№РґРё, РµСЃР»Рё РѕРЅР° РѕС‚РєСЂС‹С‚Р°):",
                      reply_markup=markup)
 
 
@@ -931,13 +926,11 @@ def web_app_data(message):
         uid = message.from_user.id
         if data.get('action') == 'withdraw_gift':
             req = {"type": "gift", "gift": data.get('gift', '?'), "stars": data.get('stars', 0),
-                   "uid": str(uid), "name": name,
-                   "username": message.from_user.username or ""}
+                   "uid": str(uid), "name": name}
             add_request(req)
             notify_admin_request(req)
         elif data.get('action') == 'withdraw_stars':
-            req = {"type": "stars", "n": data.get('stars', 0), "uid": str(uid), "name": name,
-                   "username": message.from_user.username or ""}
+            req = {"type": "stars", "n": data.get('stars', 0), "uid": str(uid), "name": name}
             add_request(req)
             notify_admin_request(req)
     except Exception as e:
