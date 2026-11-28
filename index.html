@@ -491,15 +491,15 @@ if(bear.onG){bear.vy=JUMP;bear.onG=false;bear.sq=.75;
 for(let i=0;i<8;i++)parts.push({x:bear.x,y:groundY,vx:-1-Math.random()*2,vy:-Math.random()*2,l:20,c:'#9fb2c8'});sfx('jump');haptic('light')}
 else if(bear.y>-40)jumpBuf=8}
 
-function spawnObs(){const pool=speed<11?['tree','rock','spike']:['tree','rock','spike','bird'];
+function spawnObs(){const pool=['tree','rock','spike'];
 const k=pool[Math.floor(Math.random()*pool.length)];
 let o;
 if(k==='tree')o={k,y:groundY,w:26,h:38+Math.random()*12};
 else if(k==='rock')o={k,y:groundY,w:28+Math.random()*10,h:20+Math.random()*8};
-else if(k==='spike')o={k,y:groundY,w:18,h:22+Math.random()*8};
-else o={k,y:groundY-68-Math.random()*30,w:30,h:22,ph2:Math.random()*6.28};
+else o={k:'spike',y:groundY,w:18,h:22+Math.random()*8};
 obs.push(Object.assign(o,{x:W+40}));
 spawnGap=560+Math.random()*420}
+
 
 function runnerHit(o){if(shieldOn){shieldOn=false;sfx('shield');haptic('light');
 obs.splice(obs.indexOf(o),1);
