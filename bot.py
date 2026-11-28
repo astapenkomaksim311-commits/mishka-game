@@ -1,6 +1,7 @@
 import telebot
 import json
 import os
+import math
 import time
 import hmac
 import hashlib
@@ -42,6 +43,20 @@ DUELS = {}
 RESULTS = {}
 LOCK = threading.Lock()
 ONLINE_SEC = 180
+
+# ============================================================
+# КРАШ: серверные раунды с реальными ставками игроков
+# ============================================================
+CRASH_EPOCH = 1767225600000
+CRASH_BET_MS = 10000      # окно приёма ставок, мс
+CRASH_COOL_MS = 2500      # пауза после взрыва, мс
+CRASH_GROWTH = 0.2        # множитель = exp(0.2 * секунды)
+CRASH_MAXX = 5.0          # максимальный коэффициент
+CRASH_FLY_MS = int(math.log(CRASH_MAXX) / CRASH_GROWTH * 1000)  # 8047 мс
+CRASH_ROUND_MS = CRASH_BET_MS + CRASH_FLY_MS + CRASH_COOL_MS
+CRASH_MIN_AMT = 25
+CRASH_MAX_AMT = 5000
+CRASH_BETS = {}  # idx раунда -> {uid: {"name","amt","auto","cash"}}
 
 
 def load_json(path, default):
@@ -109,12 +124,117 @@ def crash_round(now=None):
     guard = now + 86400000
     while True:
         cp = cp_of(i)
-        d = (int(__import__("math").log(cp) / GROWTH * 1000)) if cp > 1 else 0
+        d = (int(math.log(cp) / GROWTH * 1000)) if cp > 1 else 0
         end = s + BET_MS + d + COOL_MS
         if end > now or s > guard:
             return i
         s = end
         i += 1
+
+
+# --- КРАШ: детерминированные коэффициенты раундов (одинаково у всех) ---
+def cr_hash(n):
+    h = n & 0xFFFFFFFF
+    h = ((h ^ (h >> 16)) * 2246822519) & 0xFFFFFFFF
+    h = ((h ^ (h >> 13)) * 3266489917) & 0xFFFFFFFF
+    h = (h ^ (h >> 16)) & 0xFFFFFFFF
+    return h / 4294967296.0
+
+
+def cr_mult_of(idx):
+    r = cr_hash((idx * 2654435761) % 4294967296)
+    if r < 0.45:
+        m = 1.01 + (r / 0.45) * 0.59
+    elif r < 0.85:
+        m = 1.60 + ((r - 0.45) / 0.40) * 1.40
+    else:
+        m = 3.00 + ((r - 0.85) / 0.15) * 2.00
+    return round(max(1.01, min(CRASH_MAXX, m)), 2)
+
+
+def cr_round_idx(ms):
+    return int((ms - CRASH_EPOCH) // CRASH_ROUND_MS)
+
+
+def cr_fly_ms(m):
+    return int(math.log(m) / CRASH_GROWTH * 1000) if m > 1.0 else 0
+
+
+def cr_phase(ms):
+    idx = cr_round_idx(ms)
+    off = (ms - CRASH_EPOCH) % CRASH_ROUND_MS
+    m = cr_mult_of(idx)
+    fly = cr_fly_ms(m)
+    if off < CRASH_BET_MS:
+        return idx, "bet", off, CRASH_BET_MS - off
+    if off < CRASH_BET_MS + fly:
+        return idx, "fly", off - CRASH_BET_MS, CRASH_BET_MS + fly - off
+    return idx, "boom", off - CRASH_BET_MS - fly, CRASH_ROUND_MS - off
+
+
+def cr_mult_at(ms):
+    idx, ph, t, left = cr_phase(ms)
+    if ph == "bet":
+        return 1.0
+    if ph == "boom":
+        return cr_mult_of(idx)
+    return round(min(cr_mult_of(idx), math.exp(CRASH_GROWTH * t / 1000.0)), 2)
+
+
+def cr_settle_auto(idx, ms):
+    """Авто-вывод на сервере: кому авто-икс уже достигнут — начисляем выигрыш."""
+    with LOCK:
+        rd = CRASH_BETS.get(idx)
+        if not rd:
+            return
+        m = cr_mult_at(ms)
+        changed = False
+        for uid, b in rd.items():
+            if not b.get("cash") and b.get("auto") and m >= b["auto"]:
+                mx = round(min(b["auto"], cr_mult_of(idx)), 2)
+                win = int(b["amt"] * mx)
+                p = PLAYERS.get(uid)
+                if p:
+                    p["wallet"] = int(p.get("wallet", 0) or 0) + win
+                    p["ts"] = time.time()
+                b["cash"] = mx
+                changed = True
+        if changed:
+            save_players()
+
+
+def cr_state_response(user, ms):
+    idx, ph, t, left = cr_phase(ms)
+    m = cr_mult_at(ms)
+    if ph == "fly":
+        cr_settle_auto(idx, ms)
+    cur = cr_round_idx(ms)
+    with LOCK:
+        rd = dict(CRASH_BETS.get(idx, {}))
+        online = sum(1 for p in PLAYERS.values()
+                     if time.time() - float(p.get("ts", 0) or 0) < ONLINE_SEC)
+    bets = []
+    for uid, b in rd.items():
+        bets.append({"uid": uid, "name": b.get("name") or "Игрок", "amt": b["amt"],
+                     "cash": bool(b.get("cash")),
+                     "mult": float(b["cash"]) if b.get("cash") else (m if ph != "bet" else 0.0)})
+    my = None
+    my_wallet = None
+    if user:
+        uid = str(user.get("id", ""))
+        b = rd.get(uid)
+        if b:
+            my = {"amt": b["amt"], "auto": b.get("auto"), "cash": bool(b.get("cash")),
+                  "mult": float(b["cash"]) if b.get("cash") else (m if ph != "bet" else 0.0)}
+        p = PLAYERS.get(uid)
+        if p:
+            my_wallet = int(p.get("wallet", 0) or 0)
+    hist = [cr_mult_of(cur - k) for k in range(1, 21) if cur - k >= 0]
+    next_ms = CRASH_ROUND_MS - ((ms - CRASH_EPOCH) % CRASH_ROUND_MS)
+    return {"ok": True, "now": ms, "idx": idx, "phase": ph, "t": t, "left": left,
+            "mult": m, "crashAt": cr_mult_of(idx) if ph == "boom" else None,
+            "nextMs": next_ms, "bets": bets, "me": my, "wallet": my_wallet,
+            "hist": hist, "online": online}
 
 
 def player_level(p):
@@ -464,6 +584,8 @@ def cb_requests(c):
             bot.answer_callback_query(c.id)
         except Exception:
             pass
+
+
 def grant_to(uid, kind, n, note=""):
     """Начисление между заходами: монеты/звёзды/скин/подарок."""
     with LOCK:
@@ -886,6 +1008,92 @@ class ApiHandler(BaseHTTPRequestHandler):
                 notify_admin(f"🪙 Подарок монет: {display_name(user)} → {PLAYERS.get(to, {}).get('name')}: {n} 🪙")
                 self._reply(200, b'{"ok": true}')
 
+            # ============================================================
+            # КРАШ: состояние раунда / ставка / забрать
+            # ============================================================
+            elif self.path.startswith("/api/crash/state"):
+                user = validate_init_data(data.get("initData", ""))
+                ms = int(time.time() * 1000)
+                cur = cr_round_idx(ms)
+                with LOCK:
+                    for k in [k for k in CRASH_BETS if k < cur - 2]:
+                        CRASH_BETS.pop(k, None)
+                self._reply(200, json.dumps(cr_state_response(user, ms), ensure_ascii=False).encode("utf-8"))
+
+            elif self.path.startswith("/api/crash/bet"):
+                user = validate_init_data(data.get("initData", ""))
+                if not user:
+                    self._reply(401, b'{"ok": false, "error": "auth"}')
+                    return
+                uid = str(user.get("id", ""))
+                ms = int(time.time() * 1000)
+                idx, ph, t, left = cr_phase(ms)
+                if ph != "bet":
+                    self._reply(200, b'{"ok": false, "error": "closed"}')
+                    return
+                try:
+                    amt = int(data.get("amount") or 0)
+                except Exception:
+                    amt = 0
+                if amt < CRASH_MIN_AMT or amt > CRASH_MAX_AMT:
+                    self._reply(200, b'{"ok": false, "error": "range"}')
+                    return
+                auto = data.get("auto")
+                if auto is not None:
+                    try:
+                        auto = round(max(1.10, min(4.00, float(auto))), 2)
+                    except Exception:
+                        auto = None
+                with LOCK:
+                    me = PLAYERS.get(uid)
+                    if not me:
+                        self._reply(200, b'{"ok": false, "error": "nouser"}')
+                        return
+                    if int(me.get("wallet", 0) or 0) < amt:
+                        self._reply(200, b'{"ok": false, "error": "wallet"}')
+                        return
+                    rd = CRASH_BETS.setdefault(idx, {})
+                    if uid in rd:
+                        self._reply(200, b'{"ok": false, "error": "already"}')
+                        return
+                    me["wallet"] = int(me.get("wallet", 0) or 0) - amt
+                    rd[uid] = {"name": display_name(user), "amt": amt, "auto": auto, "cash": None}
+                    save_players()
+                    wallet = me["wallet"]
+                self._reply(200, json.dumps({"ok": True, "wallet": wallet}).encode("utf-8"))
+
+            elif self.path.startswith("/api/crash/cashout"):
+                user = validate_init_data(data.get("initData", ""))
+                if not user:
+                    self._reply(401, b'{"ok": false, "error": "auth"}')
+                    return
+                uid = str(user.get("id", ""))
+                ms = int(time.time() * 1000)
+                idx, ph, t, left = cr_phase(ms)
+                try:
+                    ridx = int(data.get("idx") or 0)
+                except Exception:
+                    ridx = idx
+                if ph != "fly" or ridx != idx:
+                    self._reply(200, b'{"ok": false, "error": "closed"}')
+                    return
+                m = cr_mult_at(ms)
+                with LOCK:
+                    rd = CRASH_BETS.get(idx)
+                    b = rd.get(uid) if rd else None
+                    me = PLAYERS.get(uid)
+                    if not b or b.get("cash") is not None or not me:
+                        self._reply(200, b'{"ok": false, "error": "nobet"}')
+                        return
+                    win = int(b["amt"] * m)
+                    me["wallet"] = int(me.get("wallet", 0) or 0) + win
+                    me["ts"] = time.time()
+                    b["cash"] = m
+                    save_players()
+                    wallet = me["wallet"]
+                self._reply(200, json.dumps({"ok": True, "win": win, "mult": m,
+                                             "wallet": wallet}).encode("utf-8"))
+
             else:
                 self._reply(404, b'{"ok": false}')
         except Exception as e:
@@ -914,6 +1122,8 @@ def run_api():
             ThreadingHTTPServer(("0.0.0.0", port), ApiHandler).serve_forever()
         except Exception as e:
             print("API port", port, "failed:", e)
+
+
 @bot.message_handler(commands=['start'])
 def cmd_start(message):
     ensure_season()
