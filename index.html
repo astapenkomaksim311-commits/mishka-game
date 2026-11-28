@@ -94,13 +94,6 @@ h1{color:#7fd4ff;font-size:28px;margin:0 0 4px;animation:glowPulse 2.6s ease-in-
 .btn-cashout{background:#f1c40f;color:#000;animation:pulseGlow 1s ease-in-out infinite}
 .btn-cooldown{background:#333;color:#888}
 .btn-insufficient{background:#5a2a2a;color:#ff9c40}
-#catch-screen{position:absolute;inset:0;background:linear-gradient(180deg,#1a0a2e,#0a0a1e);display:none;flex-direction:column;z-index:15}
-#catch-canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
-.catch-hud{position:absolute;top:calc(8px + env(safe-area-inset-top));width:100%;display:flex;justify-content:center;gap:8px;z-index:2}
-#catch-intro{position:absolute;inset:0;background:rgba(10,8,22,.96);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:4;text-align:center;padding:20px}
-#catch-intro .ci-e{font-size:52px;animation:floaty 2s ease-in-out infinite}
-#catch-intro .ci-t{font-size:22px;font-weight:900;color:#1abc9c;margin:10px 0 6px}
-#catch-intro .ci-d{color:#8aa;font-size:13px;max-width:300px;line-height:1.5;margin-bottom:18px}
 .col-grid{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;max-width:350px}
 .col-cell{width:72px;height:72px;background:#1a1a20;border:1px solid #333;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:30px}
 .col-cell.got{border-color:#f1c40f;background:#2a2413}
@@ -153,8 +146,6 @@ h1{color:#7fd4ff;font-size:28px;margin:0 0 4px;animation:glowPulse 2.6s ease-in-
   </div>
   <div class="btn-row">
     <button class="btn btn-teal" onclick="renderDaily()">🎯 Испытание</button>
-  </div>
-  <div class="btn-row">
     <button class="btn btn-ink" onclick="renderCol()">🧩 Талисманы</button>
   </div>
   <div class="btn-row">
@@ -290,6 +281,20 @@ h1{color:#7fd4ff;font-size:28px;margin:0 0 4px;animation:glowPulse 2.6s ease-in-
   <button class="close-modal" onclick="closeModal('leaderboard')">✕</button>
   <div class="modal-header" style="color:#f1c40f">🏆 Лидеры</div>
   <div id="lb-container" style="width:100%;display:flex;flex-direction:column;align-items:center"></div>
+</div>
+
+<div id="shopday" class="modal">
+  <button class="close-modal" onclick="closeModal('shopday')">✕</button>
+  <div class="modal-header" style="color:#f39c12">🏪 Магазин дня</div>
+  <div class="modal-sub">Три скина со скидкой, меняются каждый день в 00:00 МСК. Один экземпляр каждого в день.</div>
+  <div id="shopday-container" style="width:100%;display:flex;flex-direction:column;align-items:center"></div>
+</div>
+
+<div id="duels" class="modal">
+  <button class="close-modal" onclick="closeModal('duels')">✕</button>
+  <div class="modal-header" style="color:#e74c3c">🗡 Дуэли</div>
+  <div class="modal-sub">Вызови соперника на ставку в краше: кто заберёт больше — забирает банк.</div>
+  <div id="duels-container" style="width:100%;display:flex;flex-direction:column;align-items:center"></div>
 </div>
 
 <div id="vignette"></div>
@@ -431,8 +436,6 @@ if(!state.quests)state.quests={date:'',prog:{},claimed:{}};
 if(!state.upgrades)state.upgrades={magnet:0,coin:0,shield:0};
 if(!state.stats)state.stats={games:0,coinsEarned:0,crashWins:0,caseOpens:0,spins:0,maxMult:0};
 if(state.vipUntil===undefined)state.vipUntil=0;
-if(state.lastWheel===undefined)state.lastWheel=0;
-if(state.clanName===undefined)state.clanName=null;
 if(state.daily===undefined)state.daily={date:'',best:0,claimed:false};
 if(state.shopBought===undefined)state.shopBought={date:'',ids:[]};
 sound.on=state.musicOn;
@@ -482,7 +485,6 @@ async function apiGet(ep){try{const r=await fetch(API+ep);return await r.json()}
 async function syncToServer(){try{if(!tg.initData)return;
 const res=await fetch(API+'/api/sync',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({initData:tg.initData,wallet:state.wallet,stars:state.stars,best:state.best,gifts:state.inv.map(x=>x.g),skins:state.ownedSkins,currentSkin:state.currentSkin,boostUntil:state.boostUntil,requests:state.pendingMine||[]})});const d=await res.json();
 if(d.ok&&d.you){['wallet','stars','best'].forEach(k=>{const sv=(d.you[k]||0);if(sv!==(state[k]||0)){state[k]=sv}});
-if(d.clanName!==undefined&&d.clanName!==state.clanName){state.clanName=d.clanName||null;updateHUD()}
 if(Array.isArray(d.grant)){let got=[];
 d.grant.forEach(g=>{if(g.type==='coins'){state.wallet+=g.n;got.push('+'+g.n+' 🪙')}
 else if(g.type==='stars'){state.stars+=g.n;got.push('+'+g.n+' ⭐')}
@@ -627,7 +629,7 @@ if(d.type==='skin'){if(!state.ownedSkins.includes(d.id))state.ownedSkins.push(d.
 if(d.type==='boost'){const base=boostActive()?state.boostUntil:Date.now();state.boostUntil=base+d.days*86400000;return `⚡ Буст x3 на ${d.days} дн.!`}
 if(d.type==='vip'){state.vipUntil=Math.max(Date.now(),state.vipUntil||0)+30*86400000;return '👑 VIP на 30 дней!'}
 if(d.type==='talisman'){const before=state.col.length;maybeDropCol();
-return before<state.col.length?'🧩 Новый талисман!':'🧩 +тайтл (дубль)'}
+return before<state.col.length?'🧩 Новый талисман!':'🧩 Дубль талисмана'}
 return 'Что-то выпало!'}
 function pickDrop(pool){const total=pool.reduce((s,x)=>s+x.w,0);let r=Math.random()*total;
 for(const d of pool){r-=d.w;if(r<=0)return d}return pool[pool.length-1]}
@@ -716,7 +718,7 @@ skinsData.filter(s=>s.stars).forEach(s=>{
 const active=boostActive();
 c.innerHTML+=`<div class="card"><div><span class="skin-emoji fx-flame">${s.emoji}</span></div>
 <div class="card-info">${s.name}<br><span style="color:#f39c12;font-size:12px">⭐ ${s.stars}</span></div>
-<button class="card-btn" style="background:#f39c12;color:#000" onclick="buyBoostInvoice('${s.id}')">Купить</button></div>`});
+<button class="card-btn" style="background:#f39c12;color:#000" onclick="buyBoostStars(${s.stars})">Купить</button></div>`});
 if(boostActive())c.innerHTML+=`<div style="color:#f39c12;font-size:12px;text-align:center;margin-top:6px">⚡ Буст активен ещё ${Math.ceil(boostLeftMs()/3600000)} ч — монеты x3!</div>`;
 $('shop').style.display='flex'}
 function buySkin(id){sfx('click');const s=skinsData.find(x=>x.id===id);if(!s)return;
@@ -724,9 +726,7 @@ if(state.ownedSkins.includes(id)){state.currentSkin=id;saveState();toast(`${s.em
 if(state.wallet<s.coins){tg.showAlert(`Не хватает монет! Нужно 🪙 ${s.coins}, у тебя 🪙 ${state.wallet}.`);haptic('heavy');return}
 state.wallet-=s.coins;state.ownedSkins.push(id);state.currentSkin=id;
 saveState();syncToServer();toast(`🎉 ${s.emoji} ${s.name} куплен и надет!`);sfx('win');haptic('success');renderShop()}
-function buyBoostInvoice(id){sfx('click');
-if(id==='boost1'){buyBoostStars(1,30)}else if(id==='boost2'){buyBoostStars(2,50)}else buyBoostStars(5,100)}
-async function buyBoostStars(days,stars){
+async function buyBoostStars(stars){
 const r=await apiPost('/api/topup',{initData:tg.initData||'',stars:stars});
 if(r&&r.ok&&r.invoice){try{tg.openInvoice(r.invoice);return}catch(e){}}
 tg.showAlert('Сервер оплаты недоступен. Попробуй позже.');haptic('heavy')}
@@ -974,19 +974,160 @@ const rows=[['Забегов сыграно',s.games],['Монет зарабо�
 ['Скинов',state.ownedSkins.length]];
 c.innerHTML=rows.map(r=>`<div class="stat-row"><span>${r[0]}</span><b>${r[1]}</b></div>`).join('');
 $('stats').style.display='flex'}
-<div id="shopday" class="modal">
-  <button class="close-modal" onclick="closeModal('shopday')">✕</button>
-  <div class="modal-header" style="color:#f39c12">🏪 Магазин дня</div>
-  <div class="modal-sub">Три скина со скидкой, меняются каждый день в 00:00 МСК. Один экземпляр каждого в день.</div>
-  <div id="shopday-container" style="width:100%;display:flex;flex-direction:column;align-items:center"></div>
-</div>
+// ================= РАННЕР =================
+const cv=$('game'),ctx=cv.getContext('2d');
+let W=0,H=0,DPR=1;
+function resizeCv(){DPR=Math.min(2,window.devicePixelRatio||1);W=window.innerWidth;H=window.innerHeight;
+cv.width=W*DPR;cv.height=H*DPR;cv.style.width=W+'px';cv.style.height=H+'px';
+ctx.setTransform(DPR,0,0,DPR,0,0);groundY=H-Math.max(70,H*.14)}
+window.addEventListener('resize',()=>{resizeCv();initBg()});
 
-<div id="duels" class="modal">
-  <button class="close-modal" onclick="closeModal('duels')">✕</button>
-  <div class="modal-header" style="color:#e74c3c">🗡 Дуэли</div>
-  <div class="modal-sub">Вызовей соперника на ставку в краше: кто заберёт больше — забирает банк.</div>
-  <div id="duels-container" style="width:100%;display:flex;flex-direction:column;align-items:center"></div>
-</div>
+const BASE_SPEED=4.2,MAX_SPEED=10.5,GRAV=.62,JUMP=-11.6;
+let isRunner=false,rOver=false,paused=false;
+let speed=0,score=0,runCoins=0,dist=0,tick=0,spawnGap=60;
+let bear={x:90,y:0,vy:0,onG:true,sq:1,rot:0};
+let obs=[],pips=[],parts=[],clouds=[],stars=[];
+let groundY=0,shieldOn=false,shieldT=0,shakeR=0,bgPhase=0;
+const skinOf=()=>skinsData.find(s=>s.id===state.currentSkin)||skinsData[0];
+
+function initBg(){stars=[];for(let i=0;i<70;i++)stars.push({x:Math.random()*W,y:Math.random()*H*.6,r:Math.random()*1.4+.4,p:Math.random()*6.28,sp:.5+Math.random()});
+clouds=[];for(let i=0;i<5;i++)clouds.push({x:Math.random()*W,y:H*.06+Math.random()*H*.24,w:70+Math.random()*100,s:.25+Math.random()*.5})}
+
+function startRunner(){sfx('click');resizeCv();
+$('menu').style.display='none';$('game-over').style.display='none';
+$('runner-hud').style.display='block';
+isRunner=true;rOver=false;paused=false;
+speed=BASE_SPEED*.55;score=0;runCoins=0;dist=0;tick=0;spawnGap=60;shakeR=0;shieldT=0;
+bear={x:Math.max(70,W*.16),y:0,vy:0,onG:true,sq:1,rot:0};
+obs=[];pips=[];parts=[];shieldOn=false;
+if((state.upgrades.shield||0)>0&&Math.random()<state.upgrades.shield*.08){shieldOn=true;toast('🛡 Щит активен!');sfx('shield')}
+initBg();updateRunnerHud();setMusic('runner')}
+function restartRunner(){startRunner()}
+function exitRunner(){isRunner=false;$('menu').style.display='flex';$('runner-hud').style.display='none';$('game-over').style.display='none';setMusic('menu');updateHUD()}
+function pauseRunner(){if(!isRunner||rOver)return;paused=true;$('pause-overlay').style.display='flex'}
+function resumeRunner(){paused=false;$('pause-overlay').style.display='none'}
+
+function runnerJump(){if(!isRunner||rOver||paused)return;
+if(bear.onG){bear.vy=JUMP;bear.onG=false;bear.sq=.7;
+for(let i=0;i<8;i++)parts.push({x:bear.x,y:groundY,vx:-1-Math.random()*2,vy:-Math.random()*2,l:20,c:'#cfd8dc'});sfx('jump');haptic('light')}}
+
+function spawnObs(){const kinds=['tree','rock','spike','bird'];
+const k=kinds[Math.floor(Math.random()*Math.min(4,1+Math.floor(speed/2.4)))];
+let o;
+if(k==='tree')o={k,y:groundY,w:26,h:48+Math.random()*22};
+else if(k==='rock')o={k,y:groundY,w:32+Math.random()*12,h:24+Math.random()*10};
+else if(k==='spike')o={k,y:groundY,w:20,h:28+Math.random()*12};
+else o={k,y:groundY-50-Math.random()*42,w:30,h:22,ph2:Math.random()*6.28};
+obs.push(Object.assign(o,{x:W+40}))}
+function spawnCoins(){const n=3+Math.floor(Math.random()*4),baseY=groundY-(70+Math.random()*90);
+for(let i=0;i<n;i++)pips.push({x:W+40+i*30,y:baseY-Math.sin(i/2)*26,r:11,ph:Math.random()*6.28})}
+
+function runnerHit(o){if(shieldOn){shieldOn=false;sfx('shield');haptic('light');shakeR=6;
+obs.splice(obs.indexOf(o),1);
+for(let i=0;i<12;i++)parts.push({x:o.x,y:o.y-o.h/2,vx:(Math.random()-.5)*4,vy:-Math.random()*4,l:24,c:'#9ad7ff'});
+return}
+dieRunner()}
+function dieRunner(){rOver=true;sfx('boom');haptic('heavy');shakeR=10;
+for(let i=0;i<26;i++)parts.push({x:bear.x,y:bear.y+groundY-20,vx:(Math.random()-.5)*7,vy:-Math.random()*6-1,l:34+Math.random()*20,c:i%2?'#ff8a65':'#ffca28'});
+const gained=Math.floor(runCoins*coinValue()*colBonus()*getMult());
+state.wallet+=gained;state.stats.games++;state.stats.coinsEarned+=gained;
+state.best=Math.max(state.best||0,Math.floor(score));
+qAdd('coins',Math.floor(runCoins));qAdd('runs',1);
+seasonAdd('s_runs',1);seasonMax('s_score',Math.floor(score));
+addPassXP(1);checkLevelGifts();
+$('final-score').innerText='Счёт: '+Math.floor(score)+' · собрано 🪙 '+gained+(state.best===Math.floor(score)?' · НОВЫЙ РЕКОРД!':'');
+saveState();syncToServer();
+setTimeout(()=>{if(rOver)$('game-over').style.display='block'},650);
+updateRunnerHud();updateHUD()}
+
+function runnerTick(){if(!isRunner||paused||rOver)return;
+const mod=dailyMod();
+const coinMul=mod.id==='lucky'?1.5:(mod.id==='storm'?1.25:1);
+const magMul=mod.id==='harvest'?1.5:1;
+const target=BASE_SPEED+(MAX_SPEED-BASE_SPEED)*(1-Math.exp(-score/3500));
+speed+=(target-speed)*.035;
+dist+=speed;tick++;score+=speed*.12;
+if(shieldOn)shieldT++;
+bgPhase+=speed*.01;
+spawnGap-=speed;
+if(spawnGap<=0){spawnObs();spawnGap=(210+Math.random()*(330-Math.min(160,speed*14)))/speed*4;
+if(Math.random()<.75)spawnCoins()}
+bear.vy+=GRAV;bear.y+=bear.vy;
+if(bear.y>=0){if(!bear.onG)bear.sq=1.25;bear.y=0;bear.vy=0;bear.onG=true}
+bear.sq+=(1-bear.sq)*.12;
+bear.rot=bear.onG?0:Math.max(-.35,Math.min(.5,bear.vy*.045));
+if(bear.onG&&tick%4===0)parts.push({x:bear.x-8,y:groundY,vx:-1-Math.random(),vy:-Math.random()*1.2,l:16,c:'#8d6e63'});
+for(let i=obs.length-1;i>=0;i--){const o=obs[i];o.x-=speed;
+if(o.k==='bird'){o.ph2+=.1;o.y+=Math.sin(o.ph2)*.6}
+if(o.x<-60){obs.splice(i,1);continue}
+const bx=bear.x,by=bear.y+groundY-18;
+if(bx+16>o.x-o.w/2&&bx-16<o.x+o.w/2&&by>o.y-o.h-8&&bear.y+groundY>o.y-o.h)runnerHit(o)}
+for(let i=pips.length-1;i>=0;i--){const p=pips[i];p.x-=speed;p.ph+=.12;
+const mr=magnetRadius()*magMul;
+const dx=bear.x-p.x,dy=(bear.y+groundY-18)-p.y,d2=Math.sqrt(dx*dx+dy*dy);
+if(d2<mr){p.x+=dx*.16;p.y+=dy*.16}
+if(d2<26){pips.splice(i,1);runCoins+=coinMul;sfx('coin');
+parts.push({x:p.x,y:p.y,vx:0,vy:-2,l:26,txt:coinMul>1?'+'+(Math.round(coinMul*10)/10):'+1',c:'#f1c40f'});
+continue}
+if(p.x<-30)pips.splice(i,1)}
+for(let i=parts.length-1;i>=0;i--){const pt=parts[i];pt.x+=(pt.vx||0);pt.y+=(pt.vy||0);pt.vy=(pt.vy||0)+.08;pt.l--;if(pt.l<=0)parts.splice(i,1)}
+if(shakeR>0)shakeR*=.88;
+if(tick%12===0)updateRunnerHud()}
+
+function updateRunnerHud(){$('rh-score').innerText='Счёт: '+Math.floor(score);
+$('rh-best').innerText='Рекорд: '+Math.floor(state.best||0);
+$('rh-coins').innerText='🪙 '+Math.floor(runCoins)+(shieldOn?' · 🛡 щит':'')}
+
+function drawRunner(){ctx.clearRect(0,0,W,H);
+const sky=ctx.createLinearGradient(0,0,0,H);
+sky.addColorStop(0,'#0b1026');sky.addColorStop(.55,'#1b2a4a');sky.addColorStop(1,'#0e1526');
+ctx.fillStyle=sky;ctx.fillRect(0,0,W,H);
+ctx.save();
+if(shakeR>0.3)ctx.translate((Math.random()-.5)*shakeR,(Math.random()-.5)*shakeR);
+stars.forEach(s=>{s.p+=.02*s.sp;ctx.globalAlpha=.4+.6*Math.abs(Math.sin(s.p));
+ctx.fillStyle='#dfe9ff';ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,6.28);ctx.fill()});
+ctx.globalAlpha=1;
+ctx.fillStyle='rgba(230,240,255,.9)';ctx.beginPath();ctx.arc(W*.8,H*.14,26,0,6.28);ctx.fill();
+ctx.fillStyle='#1b2a4a';ctx.beginPath();ctx.arc(W*.8+10,H*.12,22,0,6.28);ctx.fill();
+clouds.forEach(c=>{c.x-=speed*.12*c.s;if(c.x<-c.w*2)c.x=W+c.w;
+ctx.fillStyle='rgba(255,255,255,.06)';ctx.beginPath();ctx.ellipse(c.x,c.y,c.w,c.w*.3,0,0,6.28);ctx.fill()});
+ctx.fillStyle='#141d33';ctx.beginPath();ctx.moveTo(0,groundY);
+for(let x=0;x<=W;x+=60){const h=40+Math.sin((x+dist*.2)*.008)*32;ctx.lineTo(x,groundY-h)}
+ctx.lineTo(W,groundY);ctx.fill();
+ctx.fillStyle='#1c2436';ctx.fillRect(0,groundY,W,H-groundY);
+ctx.fillStyle='#28324a';
+for(let x=-(dist%40);x<W;x+=40)ctx.fillRect(x,groundY,20,4);
+ctx.strokeStyle='rgba(127,212,255,.12)';ctx.beginPath();ctx.moveTo(0,groundY);ctx.lineTo(W,groundY);ctx.stroke();
+obs.forEach(o=>{const sway=o.k==='bird'?Math.sin(o.ph2*2)*3:0;
+if(o.k==='tree'){ctx.fillStyle='#5d4037';ctx.fillRect(o.x-5,o.y-o.h,10,o.h);
+ctx.fillStyle='#2e7d32';ctx.beginPath();ctx.arc(o.x,o.y-o.h-10,18,0,6.28);ctx.arc(o.x-13,o.y-o.h+2,13,0,6.28);ctx.arc(o.x+13,o.y-o.h+2,13,0,6.28);ctx.fill()}
+else if(o.k==='rock'){ctx.fillStyle='#546e7a';ctx.beginPath();ctx.moveTo(o.x-o.w/2,o.y);
+ctx.lineTo(o.x-o.w*.2,o.y-o.h);ctx.lineTo(o.x+o.w*.25,o.y-o.h*.8);ctx.lineTo(o.x+o.w/2,o.y);ctx.fill()}
+else if(o.k==='spike'){ctx.fillStyle='#b0bec5';ctx.beginPath();ctx.moveTo(o.x-o.w/2,o.y);
+ctx.lineTo(o.x,o.y-o.h);ctx.lineTo(o.x+o.w/2,o.y);ctx.fill()}
+else{ctx.fillStyle='#8d6e63';ctx.beginPath();ctx.ellipse(o.x+sway,o.y-o.h/2,o.w/2,o.h/2,0,0,6.28);ctx.fill();
+ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(o.x+8+sway,o.y-o.h/2-5,3,0,6.28);ctx.fill();
+ctx.strokeStyle='#8d6e63';ctx.lineWidth=2;
+ctx.beginPath();ctx.moveTo(o.x-14+sway,o.y-o.h/2);ctx.lineTo(o.x-24+Math.sin(o.ph2*3)*8,o.y-o.h/2-6);
+ctx.moveTo(o.x+14+sway,o.y-o.h/2);ctx.lineTo(o.x+24-Math.sin(o.ph2*3)*8,o.y-o.h/2-6);ctx.stroke()}});
+pips.forEach(p=>{ctx.save();ctx.translate(p.x,p.y);ctx.scale(Math.abs(Math.cos(p.ph))*.7+.3,1);
+ctx.fillStyle='#f1c40f';ctx.shadowColor='#f1c40f';ctx.shadowBlur=10;
+ctx.beginPath();ctx.arc(0,0,p.r,0,6.28);ctx.fill();
+ctx.fillStyle='#f9e07f';ctx.beginPath();ctx.arc(0,0,p.r*.6,0,6.28);ctx.fill();ctx.restore()});
+parts.forEach(pt=>{if(pt.l<=0)return;
+if(pt.txt){ctx.globalAlpha=Math.min(1,pt.l/20);ctx.fillStyle=pt.c;ctx.font='bold 12px Segoe UI';
+ctx.fillText(pt.txt,pt.x,pt.y)}
+else{ctx.globalAlpha=Math.min(1,pt.l/24);ctx.fillStyle=pt.c;
+ctx.beginPath();ctx.arc(pt.x,pt.y,2.4,0,6.28);ctx.fill()}});
+ctx.globalAlpha=1;
+const s=skinOf(),bx=bear.x,by=bear.y+groundY-18;
+ctx.save();ctx.translate(bx,by);ctx.rotate(bear.rot);
+const sqx=2-bear.sq;ctx.scale(sqx,bear.sq);
+if(shieldOn){ctx.strokeStyle='rgba(154,215,255,'+(.5+.3*Math.sin(tick*.2))+')';ctx.lineWidth=3;
+ctx.beginPath();ctx.arc(0,0,26+Math.sin(tick*.2)*2,0,6.28);ctx.stroke()}
+ctx.font='36px serif';ctx.textAlign='center';ctx.textBaseline='middle';
+ctx.fillText(s.emoji,0,0);ctx.restore();
+ctx.restore()}
 // ================= КРАШ =================
 const cv2=$('crash-canvas'),cctx=cv2.getContext('2d');
 let cW=0,cH=0;
@@ -1051,7 +1192,6 @@ if(!window.__onT||Date.now()-window.__onT>10000){window.__onT=Date.now();
 apiGet('/api/online').then(r=>{const n=(r&&r.ok)?(r.online||null):null;
 $('crash-online').innerText=n?('🟢 '+n+' играют'):'🟢 —'}).catch(()=>{$('crash-online').innerText='🟢 —'})}
 if(crashPhase==='wait'){cWaitT--;
-// звуковой отсчёт: последние 3 секунды — тик каждую секунду
 if(cWaitT>0&&cWaitT<=180&&cWaitT%60===0)sfx('tick');
 const b=$('crash-bet'),btn=$('crash-action-btn');
 if(cWaitT>60){btn.className='crash-action-btn btn-start';
