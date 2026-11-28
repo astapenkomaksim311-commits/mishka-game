@@ -50,7 +50,7 @@ ONLINE_SEC = 180
 CRASH_EPOCH = 1767225600000
 CRASH_BET_MS = 10000      # окно приёма ставок, мс
 CRASH_COOL_MS = 2500      # пауза после взрыва, мс
-CRASH_GROWTH = 0.2        # множитель = exp(0.2 * секунды)
+CRASH_GROWTH = 0.06        # множитель = exp(0.2 * секунды)
 CRASH_MAXX = 5.0          # максимальный коэффициент
 CRASH_FLY_MS = int(math.log(CRASH_MAXX) / CRASH_GROWTH * 1000)  # 8047 мс
 CRASH_ROUND_MS = CRASH_BET_MS + CRASH_FLY_MS + CRASH_COOL_MS
