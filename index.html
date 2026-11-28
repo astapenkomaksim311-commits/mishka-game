@@ -109,7 +109,6 @@ h1{color:#7fd4ff;font-size:28px;margin:0 0 4px;animation:glowPulse 2.6s ease-in-
 .rh-line{background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.15);border-radius:12px;padding:4px 12px;font-weight:900;font-size:14px;text-align:center;max-width:92vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .rh-sub{font-size:11px;color:#f1c40f}
 </style>
-</style>
 </head>
 <body>
 <div id="hud">
@@ -127,7 +126,6 @@ h1{color:#7fd4ff;font-size:28px;margin:0 0 4px;animation:glowPulse 2.6s ease-in-
   <button class="btn btn-red" onclick="openCrash()">🚀 Краш · играют все</button>
   <div class="btn-row">
     <button class="btn btn-teal" onclick="renderCases()">📦 Кейсы</button>
-    <button class="btn btn-purple" onclick="renderWheel()">🎡 Колесо</button>
   </div>
   <div class="btn-row">
     <button class="btn btn-gold" onclick="renderShop()">🛒 Скины</button>
@@ -155,11 +153,9 @@ h1{color:#7fd4ff;font-size:28px;margin:0 0 4px;animation:glowPulse 2.6s ease-in-
   </div>
   <div class="btn-row">
     <button class="btn btn-teal" onclick="renderDaily()">🎯 Испытание</button>
-    <button class="btn btn-mint" onclick="openCatch()">🧺 Ловец</button>
   </div>
   <div class="btn-row">
     <button class="btn btn-ink" onclick="renderCol()">🧩 Талисманы</button>
-    <button class="btn btn-green" onclick="renderClans()">🛡 Клан</button>
   </div>
   <div class="btn-row">
     <button class="btn" style="background:#8e44ad" onclick="renderMarket()">🔄 Обмен</button>
@@ -210,7 +206,7 @@ h1{color:#7fd4ff;font-size:28px;margin:0 0 4px;animation:glowPulse 2.6s ease-in-
 <div id="col" class="modal">
   <button class="close-modal" onclick="closeModal('col')">✕</button>
   <div class="modal-header" style="color:#f1c40f">🧩 Талисманы</div>
-  <div class="modal-sub">8 талисманов падают из кейсов и колеса. Каждый собранный даёт +3% монет навсегда. Полный набор — +30%!</div>
+  <div class="modal-sub">8 талисманов падают из кейсов. Каждый собранный даёт +3% монет навсегда. Полный набор — +30%!</div>
   <div class="col-grid" id="col-container"></div>
   <div id="col-info" style="color:#8aa;font-size:12px;margin-top:10px;text-align:center;max-width:350px"></div>
 </div>
@@ -227,26 +223,6 @@ h1{color:#7fd4ff;font-size:28px;margin:0 0 4px;animation:glowPulse 2.6s ease-in-
   </div>
   <div style="color:#667;font-size:12px;margin-bottom:6px;text-align:center">— Лоты игроков —</div>
   <div id="market-container" style="width:100%;display:flex;flex-direction:column;align-items:center"></div>
-</div>
-
-<div id="clans" class="modal">
-  <button class="close-modal" onclick="closeModal('clans')">✕</button>
-  <div class="modal-header" style="color:#27ae60">🛡 Кланы</div>
-  <div id="clans-container" style="width:100%;display:flex;flex-direction:column;align-items:center"></div>
-</div>
-
-<div id="shopday" class="modal">
-  <button class="close-modal" onclick="closeModal('shopday')">✕</button>
-  <div class="modal-header" style="color:#f39c12">🏪 Магазин дня</div>
-  <div class="modal-sub">Три товара со скидкой до 40%. Обновление каждый день в 00:00 по МСК.</div>
-  <div id="shopday-container" style="width:100%;display:flex;flex-direction:column;align-items:center"></div>
-</div>
-
-<div id="duels" class="modal">
-  <button class="close-modal" onclick="closeModal('duels')">✕</button>
-  <div class="modal-header" style="color:#e74c3c">🗡 Дуэли в краше</div>
-  <div class="modal-sub">Реальные игроки с такой же ставкой. У кого кэшаут выше — забирает банк. Ничья — возврат.</div>
-  <div id="duels-container" style="width:100%;display:flex;flex-direction:column;align-items:center"></div>
 </div>
 
 <div id="gifts-shop" class="modal">
@@ -285,15 +261,6 @@ h1{color:#7fd4ff;font-size:28px;margin:0 0 4px;animation:glowPulse 2.6s ease-in-
   </div>
 </div>
 
-<div id="wheel" class="modal">
-  <button class="close-modal" onclick="closeModal('wheel')">✕</button>
-  <div class="modal-header" style="color:#8e44ad">🎡 Колесо фортуны</div>
-  <div id="wheel-timer" style="font-size:14px;font-weight:bold;margin-bottom:8px;text-align:center"></div>
-  <div class="roul-wrap"><div class="roul-arrow top"></div><div class="roul-strip" id="wheel-strip"></div><div class="roul-arrow bottom"></div></div>
-  <div class="big-result" id="wheel-result"></div>
-  <button class="btn btn-purple" id="wheel-btn" onclick="doSpin()">Крутить за 🪙 500</button>
-</div>
-
 <div id="upgrades" class="modal">
   <button class="close-modal" onclick="closeModal('upgrades')">✕</button>
   <div class="modal-header" style="color:#34495e">🔨 Прокачка</div>
@@ -303,7 +270,7 @@ h1{color:#7fd4ff;font-size:28px;margin:0 0 4px;animation:glowPulse 2.6s ease-in-
 <div id="quests" class="modal">
   <button class="close-modal" onclick="closeModal('quests')">✕</button>
   <div class="modal-header" style="color:#1abc9c">📜 Квесты дня</div>
-  <div class="modal-sub">Тяжёлые награды. Обновление каждый день в 00:00 по МСК.</div>
+  <div class="modal-sub">Обновление каждый день в 00:00 по МСК.</div>
   <div id="quests-container" style="width:100%;display:flex;flex-direction:column;align-items:center"></div>
 </div>
 
@@ -343,25 +310,6 @@ h1{color:#7fd4ff;font-size:28px;margin:0 0 4px;animation:glowPulse 2.6s ease-in-
   <p id="final-score" style="font-weight:bold;font-size:18px"></p>
   <button class="btn btn-red" onclick="restartRunner()">Ещё раз</button>
   <button class="btn" style="background:#333" onclick="exitRunner()">В меню</button>
-</div>
-
-<div id="catch-screen">
-  <canvas id="catch-canvas"></canvas>
-  <div class="catch-hud">
-    <div class="hist-badge" id="catch-timer">45с</div>
-    <div class="hist-badge" id="catch-score">🪙 0 · ⭐ 0</div>
-  </div>
-  <div id="catch-end" style="position:absolute;top:38%;width:100%;text-align:center;display:none;z-index:3">
-    <div class="big-result" id="catch-res"></div>
-    <button class="btn btn-mint" style="max-width:250px;margin:10px auto" onclick="exitCatch()">Забрать и выйти</button>
-  </div>
-  <button class="btn" style="position:absolute;bottom:calc(20px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);width:60%;max-width:250px;z-index:3;background:rgba(51,51,51,.85)" onclick="exitCatch()">Выйти</button>
-  <div id="catch-intro">
-    <div class="ci-e">🧺</div>
-    <div class="ci-t">Ловец подарков</div>
-    <div class="ci-d">45 секунд. Води пальцем — ловишь падающее. 🪙 монеты, 💎 алмазы, ⭐ и 🎁 звёзды. 💣 бомба отнимает монеты — уворачивайся!</div>
-    <button class="btn btn-mint" style="max-width:250px" onclick="catchStart()">▶ Начать игру</button>
-  </div>
 </div>
 
 <div id="crash-screen">
@@ -431,7 +379,7 @@ else if(k==='gem'){tone(1200,'sine',.14,.08);tone(1600,'sine',.12,.1,.06);tone(2
 else if(k==='bomb'){tone(150,'sawtooth',.22,.3);noise(.18,.3);tone(70,'sine',.2,.4)}
 else if(k==='boom'){noise(.32,.55);tone(120,'sawtooth',.26,.4);tone(80,'square',.2,.5);tone(50,'sine',.28,.8);toneSlide(320,40,'sine',.14,.6)}
 else if(k==='cash'){[523,659,784,1046].forEach((f,i)=>tone(f,'sine',.15,.18,i*.08));tone(1568,'sine',.08,.3,.35)}
-else if(k==='tick'){tone(850,'sine',.035,.03)}
+else if(k==='tick'){tone(850,'sine',.05,.05)}
 else if(k==='beep'){tone(990,'sine',.09,.07)}
 else if(k==='lose'){[392,311,262,196].forEach((f,i)=>toneSlide(f,f*.8,'sawtooth',.13,.22,i*.13))}
 else if(k==='shield'){tone(587,'sine',.13,.16);tone(880,'sine',.13,.2,.08);tone(1174,'sine',.09,.25,.16)}
@@ -494,44 +442,6 @@ const myName=()=>{const u=tg.initDataUnsafe&&tg.initDataUnsafe.user;if(!u)return
 function isAdmin(){return myUid()===ADMIN_ID}
 function mskDay(){return new Date(Date.now()+3*3600000).toISOString().slice(0,10)}
 function mskLeft(){const now=new Date(Date.now()+3*3600000);const ms=now.getUTCHours()*3600000+now.getUTCMinutes()*60000+now.getUTCSeconds()*1000;return 86400000-ms}
-const skinsData=[
-{id:'bear',emoji:'🐻',name:'Мишка',coins:0,fx:'none'},
-{id:'bunny',emoji:'🐰',name:'Зайка',coins:500,fx:'bounce'},
-{id:'frog',emoji:'🐸',name:'Жаба',coins:800,fx:'bounce'},
-{id:'turtle',emoji:'🐢',name:'Черепаха',coins:900,fx:'snow'},
-{id:'cat',emoji:'🐱',name:'Котик',coins:1200,fx:'sparkle'},
-{id:'penguin',emoji:'🐧',name:'Пингвин',coins:1500,fx:'snow'},
-{id:'owl',emoji:'🦉',name:'Сова',coins:1800,fx:'sparkle'},
-{id:'fox',emoji:'🦊',name:'Лисёнок',coins:2500,fx:'flame'},
-{id:'wolf',emoji:'🐺',name:'Волк',coins:3500,fx:'snow'},
-{id:'panda',emoji:'🐼',name:'Панда',coins:4000,fx:'snow'},
-{id:'tiger',emoji:'🐯',name:'Тигр',coins:6000,fx:'sparkle'},
-{id:'ghost',emoji:'👻',name:'Призрак',coins:7500,fx:'sparkle'},
-{id:'unicorn',emoji:'🦄',name:'Единорог x2',coins:8000,mult:2,fx:'sparkle'},
-{id:'robot',emoji:'🤖',name:'Робот',coins:9000,fx:'sparkle'},
-{id:'lion',emoji:'🦁',name:'Лев x2',coins:12000,mult:2,fx:'flame'},
-{id:'dragon',emoji:'🐉',name:'Дракон x2',coins:15000,mult:2,fx:'fire'},
-{id:'gold',emoji:'🐲',name:'Золотой дракон x3',coins:25000,mult:3,fx:'fire'},
-{id:'gorilla',emoji:'🦍',name:'Горилла x2',caseOnly:true,mult:2,fx:'fire'},
-{id:'alien',emoji:'👾',name:'Пришелец x2',caseOnly:true,mult:2,fx:'sparkle'},
-{id:'mint',emoji:'🐬',name:'Минт-дельфин x2',caseOnly:true,mult:2,fx:'snow'},
-{id:'dino',emoji:'🦖',name:'Дино x3',caseOnly:true,mult:3,fx:'flame'},
-{id:'shark',emoji:'🦈',name:'Акула x3',caseOnly:true,mult:3,fx:'snow'},
-{id:'santa',emoji:'🎅',name:'Санта x3',caseOnly:true,mult:3,fx:'sparkle'},
-{id:'reindeer',emoji:'🦌',name:'Олень x2',caseOnly:true,mult:2,fx:'snow'},
-{id:'boost1',emoji:'⚡',name:'Буст x3 — 1 день',stars:30},
-{id:'boost2',emoji:'⚡',name:'Буст x3 — 2 дня',stars:50},
-{id:'boost3',emoji:'⚡',name:'Буст x3 — 5 дней',stars:100}];
-if(!Array.isArray(state.ownedSkins))state.ownedSkins=['bear'];
-state.ownedSkins=state.ownedSkins.filter(id=>skinsData.some(s=>s.id===id&&!s.stars));
-if(!state.ownedSkins.includes('bear'))state.ownedSkins.push('bear');
-if(!skinsData.some(s=>s.id===state.currentSkin&&!s.stars))state.currentSkin='bear';
-
-const giftsData=[
-{id:'tg15',emoji:'🧸',name:'Мишка',stars:15,coins:1500},
-{id:'tg25',emoji:'🎁',name:'Подарочек',stars:25,coins:2500},
-{id:'tg50',emoji:'🍾',name:'Шампанское',stars:50,coins:5000},
-{id:'tg100',emoji:'💍',name:'Колечко',stars:100,coins:10000}];
 
 const MAX_LEVEL=50,LVL_STEP=300;
 const LEVEL_GIFTS={30:'tg15',35:'tg15',40:'tg15',45:'tg15',50:'tg100'};
@@ -612,8 +522,7 @@ const questsData=[
 {id:'coins',emoji:'🪙',name:'Собери 300 монет',goal:300,rCoins:150,xp:3},
 {id:'runs',emoji:'🏃',name:'Сделай 8 забегов',goal:8,rCoins:180,xp:3},
 {id:'crash',emoji:'🚀',name:'Поставь в краше 6 ставок',goal:6,rCoins:200,xp:3},
-{id:'cases',emoji:'📦',name:'Открой 3 кейса',goal:3,rStars:3,xp:3},
-{id:'catch',emoji:'🧺',name:'Сыграй 5 раз в Ловца',goal:5,rCoins:220,xp:3}];
+{id:'cases',emoji:'📦',name:'Открой 3 кейса',goal:3,rStars:3,xp:3}];
 function ensureQuestDay(){const d=mskDay();if(state.quests.date!==d)state.quests={date:d,prog:{},claimed:{}}}
 function qAdd(id,n){ensureQuestDay();if(!questsData.find(q=>q.id===id))return;state.quests.prog[id]=(state.quests.prog[id]||0)+n;saveState()}
 function qAddMax(id,n){ensureQuestDay();if(!questsData.find(q=>q.id===id))return;if((state.quests.prog[id]||0)<n){state.quests.prog[id]=n;saveState()}}
@@ -637,6 +546,44 @@ state.quests.claimed[id]=true;
 if(q.rCoins)state.wallet+=q.rCoins;
 if(q.rStars)state.stars+=q.rStars;
 saveState();syncToServer();toast('📜 Квест выполнен!');sfx('cash');haptic('success');renderQuests()}
+const skinsData=[
+{id:'bear',emoji:'🐻',name:'Мишка',coins:0,fx:'none'},
+{id:'bunny',emoji:'🐰',name:'Зайка',coins:500,fx:'bounce'},
+{id:'frog',emoji:'🐸',name:'Жаба',coins:800,fx:'bounce'},
+{id:'turtle',emoji:'🐢',name:'Черепаха',coins:900,fx:'snow'},
+{id:'cat',emoji:'🐱',name:'Котик',coins:1200,fx:'sparkle'},
+{id:'penguin',emoji:'🐧',name:'Пингвин',coins:1500,fx:'snow'},
+{id:'owl',emoji:'🦉',name:'Сова',coins:1800,fx:'sparkle'},
+{id:'fox',emoji:'🦊',name:'Лисёнок',coins:2500,fx:'flame'},
+{id:'wolf',emoji:'🐺',name:'Волк',coins:3500,fx:'snow'},
+{id:'panda',emoji:'🐼',name:'Панда',coins:4000,fx:'snow'},
+{id:'tiger',emoji:'🐯',name:'Тигр',coins:6000,fx:'sparkle'},
+{id:'ghost',emoji:'👻',name:'Призрак',coins:7500,fx:'sparkle'},
+{id:'unicorn',emoji:'🦄',name:'Единорог x2',coins:8000,mult:2,fx:'sparkle'},
+{id:'robot',emoji:'🤖',name:'Робот',coins:9000,fx:'sparkle'},
+{id:'lion',emoji:'🦁',name:'Лев x2',coins:12000,mult:2,fx:'flame'},
+{id:'dragon',emoji:'🐉',name:'Дракон x2',coins:15000,mult:2,fx:'fire'},
+{id:'gold',emoji:'🐲',name:'Золотой дракон x3',coins:25000,mult:3,fx:'fire'},
+{id:'gorilla',emoji:'🦍',name:'Горилла x2',caseOnly:true,mult:2,fx:'fire'},
+{id:'alien',emoji:'👾',name:'Пришелец x2',caseOnly:true,mult:2,fx:'sparkle'},
+{id:'mint',emoji:'🐬',name:'Минт-дельфин x2',caseOnly:true,mult:2,fx:'snow'},
+{id:'dino',emoji:'🦖',name:'Дино x3',caseOnly:true,mult:3,fx:'flame'},
+{id:'shark',emoji:'🦈',name:'Акула x3',caseOnly:true,mult:3,fx:'snow'},
+{id:'santa',emoji:'🎅',name:'Санта x3',caseOnly:true,mult:3,fx:'snow'},
+{id:'reindeer',emoji:'🦌',name:'Олень x2',caseOnly:true,mult:2,fx:'snow'},
+{id:'boost1',emoji:'⚡',name:'Буст x3 — 1 день',stars:30},
+{id:'boost2',emoji:'⚡',name:'Буст x3 — 2 дня',stars:50},
+{id:'boost3',emoji:'⚡',name:'Буст x3 — 5 дней',stars:100}];
+if(!Array.isArray(state.ownedSkins))state.ownedSkins=['bear'];
+state.ownedSkins=state.ownedSkins.filter(id=>skinsData.some(s=>s.id===id&&!s.stars));
+if(!state.ownedSkins.includes('bear'))state.ownedSkins.push('bear');
+if(!skinsData.some(s=>s.id===state.currentSkin&&!s.stars))state.currentSkin='bear';
+
+const giftsData=[
+{id:'tg15',emoji:'🧸',name:'Мишка',stars:15,coins:2500},
+{id:'tg25',emoji:'🎁',name:'Подарочек',stars:25,coins:5000},
+{id:'tg50',emoji:'🍾',name:'Шампанское',stars:50,coins:7500},
+{id:'tg100',emoji:'💍',name:'Колечко',stars:100,coins:10000}];
 
 const casesData=[
 {id:'frog',emoji:'🐸',name:'Лягушачий кейс',price:1500,color:'#27ae60',pool:[
@@ -655,6 +602,7 @@ const casesData=[
 {type:'coins',n:3000,w:22},{type:'coins',n:6000,w:14},{type:'coins',n:10000,w:8},{type:'stars',n:30,w:12},{type:'stars',n:100,w:5},
 {type:'skin',id:'unicorn',w:7},{type:'skin',id:'lion',w:5},{type:'skin',id:'dragon',w:4},{type:'skin',id:'shark',w:4},
 {type:'skin',id:'dino',w:3},{type:'skin',id:'gold',w:1.5},{type:'vip',w:2},{type:'boost',days:5,w:6},{type:'talisman',w:2}]}];
+
 const colItems=[
 {e:'🍬',n:'Конфета'},{e:'❄️',n:'Снежинка'},{e:'🔔',n:'Колокольчик'},{e:'🧦',n:'Носок'},
 {e:'🕯️',n:'Свеча'},{e:'☕',n:'Какао'},{e:'🎿',n:'Лыжи'},{e:'🧣',n:'Шарф'}];
@@ -666,7 +614,7 @@ toast(state.col.length>=8?'🧩 ПОЛНЫЙ НАБОР! +30% к монетам 
 function renderCol(){sfx('click');const c=$('col-container');c.innerHTML='';
 colItems.forEach(x=>{const got=state.col.includes(x.e);
 c.innerHTML+=`<div class="col-cell${got?' got':''}">${got?x.e:'❓'}<div class="cc-n">${x.n}</div></div>`});
-$('col-info').innerText=`Собрано ${state.col.length}/8 · бонус монет +${state.col.length*3}% ${state.col.length>=8?'· МАКСИМУМ x1.30 ✓':'· талисманы падают из кейсов и колеса'}`;
+$('col-info').innerText=`Собрано ${state.col.length}/8 · бонус монет +${state.col.length*3}% ${state.col.length>=8?'· МАКСИМУМ x1.30 ✓':'· талисманы падают из кейсов'}`;
 $('col').style.display='flex'}
 
 function dropLabel(d){if(d.type==='coins')return `+${d.n}🪙`;if(d.type==='stars')return `+${d.n}⭐`;
@@ -758,45 +706,6 @@ if(d.best<500){toast('Испытание не выполнено',true);return}
 d.claimed=true;state.wallet+=120;state.stars+=1;
 saveState();syncToServer();toast('🎯 Испытание дня выполнено! +120 🪙 +1 ⭐');sfx('cash');haptic('success');renderDaily()}
 
-const WHEEL_POOL=[{label:'🪙 100',type:'coins',n:100,w:20},{label:'🪙 300',type:'coins',n:300,w:16},
-{label:'🪙 800',type:'coins',n:800,w:10},{label:'🪙 2000',type:'coins',n:2000,w:4},
-{label:'⭐ 5',type:'stars',n:5,w:8},{label:'⭐ 15',type:'stars',n:15,w:4},
-{label:'⚡ 1д',type:'boost',days:1,w:6},{label:'🧩',type:'talisman',w:6},{label:'Пусто',type:'none',w:26}];
-function wheelReady(){return Date.now()-state.lastWheel>=4*3600000}
-function wheelLeftMs(){return Math.max(0,4*3600000-(Date.now()-state.lastWheel))}
-function renderWheel(){sfx('click');const c=$('wheel');const el=$('wheel-strip');el.innerHTML='';
-WHEEL_POOL.forEach(d=>{const s=document.createElement('div');s.className='roul-item';
-s.innerHTML=`<div class="ri-e">${d.label.length<=4?d.label:'🎡'}</div><div class="ri-l">${d.label}</div>`;el.appendChild(s)});
-$('wheel-result').innerText='';
-const b=$('wheel-btn');
-if(wheelReady()){b.disabled=false;b.style.opacity='1';b.innerText='Крутить за 🪙 500'}
-else{b.disabled=true;b.style.opacity='.5';
-const l=wheelLeftMs(),h=Math.floor(l/3600000),m=Math.floor(l%3600000/60000);
-b.innerText=`Ждать ещё ${h}ч ${m}м`}
-$('wheel-timer').innerText='Крутить можно раз в 4 часа';
-$('wheel').style.display='flex'}
-function doSpin(){if(!wheelReady()){toast('⏳ Колесо ещё не готово',true);return}
-if(state.wallet<500){tg.showAlert(`Не хватает монет! Нужно 🪙 500, у тебя 🪙 ${state.wallet}.`);haptic('heavy');return}
-state.wallet-=500;state.stats.spins++;saveState();syncToServer();
-const winner=pickDrop(WHEEL_POOL);const el=$('wheel-strip');
-const idx=WHEEL_POOL.indexOf(winner);
-sfx('open');
-const targetX=-(idx*78-160+Math.random()*30);
-let cur=0,start=null;const dur=3000+Math.random()*400;
-function step(ts){if(!start)start=ts;const t=Math.min(1,(ts-start)/dur);
-const e=1-Math.pow(1-t,3);cur=targetX*e;
-el.style.transform=`translateX(${cur}px)`;
-if(t<1)requestAnimationFrame(step);else{
-state.lastWheel=Date.now();
-if(winner.type==='none'){$('wheel-result').innerText='💨 Пусто, попробуй через 4 часа';sfx('lose')}
-else{$('wheel-result').innerText='🎉 '+applyDrop(winner);
-if(winner.type==='talisman'){const before=state.col.length;maybeDropCol()}
-sfx(winner.type==='coins'||winner.type==='stars'?'cash':'gift')}
-haptic('success');saveState();syncToServer();
-const b=$('wheel-btn');b.disabled=true;b.style.opacity='.5';
-const l=wheelLeftMs();b.innerText=`Ждать ещё ${Math.floor(l/3600000)}ч ${Math.floor(l%3600000/60000)}м`}}
-requestAnimationFrame(step)}
-
 function renderShop(){sfx('click');const c=$('skins-container');c.innerHTML='';
 skinsData.filter(s=>!s.caseOnly&&!s.stars).forEach(s=>{
 const owned=state.ownedSkins.includes(s.id),active=state.currentSkin===s.id;
@@ -819,7 +728,7 @@ function buyBoostInvoice(id){sfx('click');
 if(id==='boost1'){buyBoostStars(1,30)}else if(id==='boost2'){buyBoostStars(2,50)}else buyBoostStars(5,100)}
 async function buyBoostStars(days,stars){
 const r=await apiPost('/api/topup',{initData:tg.initData||'',stars:stars});
-if(r&&r.ok&&r.invoice){try{tg.openInvoice(r.invoice);toast('⚡ После оплаты буст включится сам');return}catch(e){}}
+if(r&&r.ok&&r.invoice){try{tg.openInvoice(r.invoice);return}catch(e){}}
 tg.showAlert('Сервер оплаты недоступен. Попробуй позже.');haptic('heavy')}
 
 const UPGRADES=[
@@ -841,6 +750,7 @@ const cost=upgCost(u);
 if(state.wallet<cost){tg.showAlert(`Не хватает монет! Нужно 🪙 ${cost}, у тебя 🪙 ${state.wallet}.`);haptic('heavy');return}
 state.wallet-=cost;state.upgrades[id]=lv+1;
 saveState();syncToServer();toast(`${u.emoji} ${u.name} → ур. ${lv+1}!`);sfx('cash');haptic('success');renderUpgrades()}
+
 const PASS_LEVELS=50;
 function passActive(){return state.passUntil&&Date.now()<state.passUntil}
 function passDaysLeft(){return Math.ceil(Math.max(0,state.passUntil-Date.now())/86400000)}
@@ -885,21 +795,18 @@ saveState();syncToServer();sfx('cash');haptic('success');renderPass()}
 async function buyPass(){
 toast('Открываю счёт оплаты…');
 const r=await apiPost('/api/topup',{initData:tg.initData||'',stars:50});
-if(r&&r.ok&&r.invoice){try{tg.openInvoice(r.invoice);toast('🎟 После оплаты пропуск включится сам');return}catch(e){}}
+if(r&&r.ok&&r.invoice){try{tg.openInvoice(r.invoice);return}catch(e){}}
 tg.showAlert('Сервер оплаты недоступен. Попробуй позже.');haptic('heavy')}
-
-const GIFT_RATE=.9;
 function renderGifts(){sfx('click');const c=$('gifts-container');c.innerHTML='';
-giftsData.forEach(g=>{const price=Math.ceil(g.stars/GIFT_RATE/10)*10*10;
+giftsData.forEach(g=>{
 c.innerHTML+=`<div class="card"><div style="font-size:30px">${g.emoji}</div>
 <div class="card-info">${g.name}<br><span style="font-size:11px;color:#8aa">вывод: ${g.stars} ⭐ · продажа: ${g.stars} ⭐</span><br>
-<span style="color:#f1c40f;font-size:12px">🪙 ${price}</span></div>
+<span style="color:#f1c40f;font-size:12px">🪙 ${g.coins}</span></div>
 <button class="card-btn" style="background:#e74c3c" onclick="buyGift('${g.id}')">Купить</button></div>`});
 $('gifts-shop').style.display='flex'}
 function buyGift(id){sfx('click');const g=giftsData.find(x=>x.id===id);if(!g)return;
-const price=Math.ceil(g.stars/GIFT_RATE/10)*10*10;
-if(state.wallet<price){tg.showAlert(`Не хватает монет! Нужно 🪙 ${price}, у тебя 🪙 ${state.wallet}.`);haptic('heavy');return}
-state.wallet-=price;state.inv.push({g:id,ts:Date.now()});state.pendingMine.push({type:'gift',id,ts:Date.now()});
+if(state.wallet<g.coins){tg.showAlert(`Не хватает монет! Нужно 🪙 ${g.coins}, у тебя 🪙 ${state.wallet}.`);haptic('heavy');return}
+state.wallet-=g.coins;state.inv.push({g:id,ts:Date.now()});state.pendingMine.push({type:'gift',id,ts:Date.now()});
 saveState();syncToServer();toast(`${g.emoji} ${g.name} куплен — жди в инвентаре!`);sfx('gift');haptic('success')}
 function toggleWithdraw(){sfx('click');const b=$('wd-box');b.style.display=b.style.display==='none'?'block':'none'}
 async function confirmWithdraw(){const n=parseInt($('wd-amount').value)||0;
@@ -954,7 +861,7 @@ c.innerHTML='';
 r.top.forEach((p,i)=>{
 const medal=i===0?'🥇':(i===1?'🥈':(i===2?'🥉':`${i+1}.`));
 c.innerHTML+=`<div class="card${p.uid===myUid()?' me':''}"><div>${medal}</div>
-<div class="card-info">${p.name}${p.clan?` <span style="color:#4cd137;font-size:11px">[${p.clan}]</span>`:''}<br>
+<div class="card-info">${p.name}<br>
 <span style="font-size:11px;color:#8aa">ур. ${p.level||1} · рекорд ${p.best||0}</span></div>
 <div style="font-weight:bold;color:#f1c40f">🪙 ${p.wallet||0}</div></div>`})}
 
@@ -1005,7 +912,7 @@ c.innerHTML+=`<div class="card"><div class="card-info">${l.emoji} ${l.name}<br>
 <div style="text-align:center;margin-right:6px"><div style="color:#f1c40f;font-weight:bold">🪙 ${l.price}</div></div>
 <button class="card-btn" style="background:${mine?'#555':'#27ae60'}" ${mine?'disabled':''} onclick="buyLot(${l.lid})">${mine?'Твой':'Купить'}</button></div>`})}
 async function confirmSell(){const id=$('mk-skin').value,price=parseInt($('mk-price').value)||0;
-if(!id||id==='bear'){toast('Выбери скин',true);return}
+if(!id||id==='bear'||!skinsData.some(x=>x.id===id)){toast('Выбери скин',true);return}
 if(price<100){toast('Цена от 100 🪙',true);return}
 const r=await apiPost('/api/market/sell',{initData:tg.initData||'',skin:id,price:price});
 if(r&&r.ok){$('mk-price').value='';toast('🔄 Скин выставлен на обмен!');sfx('cash');renderMarket()}
@@ -1013,35 +920,6 @@ else{toast(r&&r.msg?r.msg:'Не вышло выставить лот',true);hapt
 async function buyLot(lid){const r=await apiPost('/api/market/buy',{initData:tg.initData||'',lid:lid});
 if(r&&r.ok){toast('🎉 Скин куплен с рынка!');sfx('win');haptic('success');renderMarket()}
 else{toast(r&&r.msg?r.msg:'Не удалось купить',true);haptic('heavy')}}
-
-async function renderClans(){sfx('click');$('clans').style.display='flex';
-const c=$('clans-container');c.innerHTML='<div style="color:#667;font-size:13px">Загружаю…</div>';
-const r=await apiGet('/api/clans');
-if(!r||!r.ok){c.innerHTML='<div style="color:#e74c3c;font-size:13px">Сервер недоступен</div>';return}
-let html='';
-if(state.clanName)html+=`<div class="card me"><div style="font-size:24px">🛡</div>
-<div class="card-info">Твой клан: ${state.clanName}<br><span style="font-size:11px;color:#8aa">+бонус к монетам в клане</span></div>
-<button class="card-btn" style="background:#e74c3c" onclick="leaveClan()">Выйти</button></div>`;
-else html+=`<div class="crash-input-label">Создать клан (500 🪙) или вступить</div>
-<div class="crash-input-box"><input type="text" id="clan-name" placeholder="Название клана" maxlength="16">
-<button class="quick-bet" onclick="createClan()">Создать</button></div>`;
-html+='<div style="color:#667;font-size:12px;margin:8px 0 4px">— Кланы игры —</div>';
-(r.clans||[]).forEach(cl=>{html+=`<div class="card"><div class="card-info">🛡 ${cl.name}<br>
-<span style="font-size:11px;color:#8aa">участников: ${cl.members} · рейтинг: ${cl.score}</span></div>
-<button class="card-btn" style="background:#27ae60" ${state.clanName?'disabled':''} onclick="joinClan('${cl.name}')">Вступить</button></div>`});
-c.innerHTML=html}
-async function createClan(){const n=$('clan-name').value.trim();
-if(!n){toast('Придумай название клана',true);return}
-if(state.wallet<500){toast('Нужно 🪙 500 на создание клана',true);haptic('heavy');return}
-const r=await apiPost('/api/clans/create',{initData:tg.initData||'',name:n});
-if(r&&r.ok){state.wallet-=500;state.clanName=n;saveState();syncToServer();
-toast('🛡 Клан создан!');sfx('win');renderClans()}
-else{toast(r&&r.msg?r.msg:'Не удалось создать клан',true)}}
-async function joinClan(n){const r=await apiPost('/api/clans/join',{initData:tg.initData||'',name:n});
-if(r&&r.ok){state.clanName=n;saveState();syncToServer();toast(`🛡 Ты в клане ${n}!`);sfx('win');renderClans()}
-else{toast(r&&r.msg?r.msg:'Не удалось вступить',true)}}
-async function leaveClan(){await apiPost('/api/clans/leave',{initData:tg.initData||''});
-state.clanName=null;saveState();toast('Ты покинул клан');renderClans()}
 
 function shopDayItems(){const d=mskDay();let h=0;for(const ch of d)h=(h*37+ch.charCodeAt(0))>>>0;
 const pool=skinsData.filter(s=>!s.caseOnly&&!s.stars&&s.coins>0);
@@ -1057,7 +935,7 @@ c.innerHTML+=`<div class="card"><div><span class="skin-emoji fx-${it.skin.fx}">$
 <div class="card-info">${it.skin.name}<br>
 <span style="font-size:11px;color:#8aa">скидка ${it.disc}%</span><br>
 <span style="color:#f1c40f;font-size:12px">🪙 ${it.price} <s style="color:#666;font-size:10px">${it.skin.coins}</s></span></div>
-<button class="card-btn" style="background:${owned?'#555':(bought?'#333':'#f39c12;color:#000')}" ${owned||bought?'disabled':''} onclick="buyShopDay('${it.skin.id}')">${owned?'Есть':(bought?'✓':'Купить')}</button></div>`});
+<button class="card-btn" style="background:${owned?'#555':(bought?'#333':'#f39c12')}" ${owned||bought?'disabled':''} onclick="buyShopDay('${it.skin.id}')">${owned?'Есть':(bought?'✓':'Купить')}</button></div>`});
 $('shopday').style.display='flex'}
 function buyShopDay(id){const it=shopDayItems().find(x=>x.skin.id===id);if(!it)return;
 if(state.wallet<it.price){toast(`Не хватает монет! Нужно 🪙 ${it.price}`,true);haptic('heavy');return}
@@ -1071,7 +949,7 @@ const r=await apiGet('/api/duels');
 if(!r||!r.ok){c.innerHTML='<div style="color:#e74c3c;font-size:13px">Сервер недоступен — дуэли на паузе</div>';return}
 c.innerHTML='';
 if(!(r.duels||[]).length){c.innerHTML='<div style="color:#667;font-size:13px">Открытых дуэлей нет. Создай свою!</div>'}
-r.duels.forEach(d=>{const mine=d.uid===myUid();
+(r.duels||[]).forEach(d=>{const mine=d.uid===myUid();
 c.innerHTML+=`<div class="card"><div class="card-info">🗡 ${d.name}<br>
 <span style="font-size:11px;color:#8aa">ставка ${d.bet} ⭐ · режим: до кэшаута</span></div>
 <button class="card-btn" style="background:${mine?'#555':'#e74c3c'}" ${mine?'disabled':''} onclick="joinDuel(${d.did})">${mine?'Твоя':'Принять'}</button></div>`});
@@ -1090,228 +968,56 @@ else{toast(r&&r.msg?r.msg:'Дуэль уже занята',true);haptic('heavy')
 
 function renderStats(){sfx('click');const c=$('stats-container');const s=state.stats;
 const rows=[['Забегов сыграно',s.games],['Монет заработано','🪙 '+s.coinsEarned],
-['Побед в краше',s.crashWins],['Кейсов открыто',s.caseOpens],['Круток колеса',s.spins],
+['Побед в краше',s.crashWins],['Кейсов открыто',s.caseOpens],
 ['Лучший множитель','x'+(s.maxMult||0).toFixed(2)],['Рекорд забега',Math.floor(state.best||0)],
 ['Уровень',level()+' / '+MAX_LEVEL],['Талисманов',state.col.length+' / 8'],
 ['Скинов',state.ownedSkins.length]];
 c.innerHTML=rows.map(r=>`<div class="stat-row"><span>${r[0]}</span><b>${r[1]}</b></div>`).join('');
 $('stats').style.display='flex'}
-// ================= РАННЕР =================
-const cv=$('game'),ctx=cv.getContext('2d');
-let W=0,H=0,DPR=1;
-function resizeCv(){DPR=Math.min(2,window.devicePixelRatio||1);W=window.innerWidth;H=window.innerHeight;
-cv.width=W*DPR;cv.height=H*DPR;cv.style.width=W+'px';cv.style.height=H+'px';
-ctx.setTransform(DPR,0,0,DPR,0,0);groundY=H-Math.max(70,H*.14)}
-window.addEventListener('resize',()=>{resizeCv();initBg()});
+<div id="shopday" class="modal">
+  <button class="close-modal" onclick="closeModal('shopday')">✕</button>
+  <div class="modal-header" style="color:#f39c12">🏪 Магазин дня</div>
+  <div class="modal-sub">Три скина со скидкой, меняются каждый день в 00:00 МСК. Один экземпляр каждого в день.</div>
+  <div id="shopday-container" style="width:100%;display:flex;flex-direction:column;align-items:center"></div>
+</div>
 
-const BASE_SPEED=4.2,MAX_SPEED=12.5,GRAV=.62,JUMP=-12.2,JUMP2=-10.4;
-let isRunner=false,rOver=false,paused=false;
-let speed=0,score=0,runCoins=0,dist=0,tick=0,spawnGap=60;
-let bear={x:90,y:0,vy:0,onG:true,jumps:0,sq:1,rot:0,inv:0};
-let obs=[],pips=[],parts=[],clouds=[],stars=[];
-let groundY=0,shieldOn=false,shieldT=0,shakeR=0,bgPhase=0;
-const skinOf=()=>skinsData.find(s=>s.id===state.currentSkin)||skinsData[0];
-
-function initBg(){stars=[];for(let i=0;i<70;i++)stars.push({x:Math.random()*W,y:Math.random()*H*.6,r:Math.random()*1.4+.4,p:Math.random()*6.28,sp:.5+Math.random()});
-clouds=[];for(let i=0;i<5;i++)clouds.push({x:Math.random()*W,y:H*.06+Math.random()*H*.24,w:70+Math.random()*100,s:.25+Math.random()*.5})}
-
-function startRunner(){sfx('click');resizeCv();
-$('menu').style.display='none';$('game-over').style.display='none';
-$('runner-hud').style.display='block';
-isRunner=true;rOver=false;paused=false;
-speed=BASE_SPEED*.55;score=0;runCoins=0;dist=0;tick=0;spawnGap=60;shakeR=0;
-bear={x:Math.max(70,W*.16),y:0,vy:0,onG:true,jumps:0,sq:1,rot:0,inv:0};
-obs=[];pips=[];parts=[];shieldOn=false;shieldT=0;
-if((state.upgrades.shield||0)>0&&Math.random()<state.upgrades.shield*.08){shieldOn=true;shieldT=0;toast('🛡 Щит активен!');sfx('shield')}
-initBg();updateRunnerHud();setMusic('runner')}
-function restartRunner(){startRunner()}
-function exitRunner(){isRunner=false;rOver=true;$('menu').style.display='flex';$('runner-hud').style.display='none';$('game-over').style.display='none';setMusic('menu')}
-function pauseRunner(){if(!isRunner||rOver)return;paused=true;$('pause-overlay').style.display='flex'}
-function resumeRunner(){paused=false;$('pause-overlay').style.display='none'}
-
-function runnerJump(){if(!isRunner||rOver||paused)return;
-if(bear.onG){bear.vy=JUMP;bear.onG=false;bear.jumps=1;bear.sq=.7;
-for(let i=0;i<8;i++)parts.push({x:bear.x,y:groundY,vx:-1-Math.random()*2,vy:-Math.random()*2,l:20,c:'#cfd8dc'});sfx('jump');haptic('light')}
-else if(bear.jumps===1){bear.vy=JUMP2;bear.jumps=2;bear.sq=.75;
-for(let i=0;i<10;i++)parts.push({x:bear.x,y:bear.y+groundY-20,vx:(Math.random()-.5)*3,vy:1+Math.random()*2,l:22,c:'#b0bec5'});
-sfx('jump');tone(660,'sine',.05,.08,.06)}}
-
-function spawnObs(){const mod=dailyMod();
-const storm=mod.id==='storm';
-const gapMul=storm?.72:1;
-const kinds=['tree','rock','spike','bird'];
-const k=kinds[Math.floor(Math.random()*Math.min(4,1+Math.floor(speed/2.4)))];
-let o;
-if(k==='tree')o={k,y:groundY,w:26,h:52+Math.random()*26,ph:0};
-else if(k==='rock')o={k,y:groundY,w:34+Math.random()*14,h:26+Math.random()*10,ph:0};
-else if(k==='spike')o={k,y:groundY,w:20,h:30+Math.random()*14,ph:0};
-else o={k,y:groundY-52-Math.random()*46,w:30,h:22,ph:Math.random()*6.28,wob:Math.random()*6.28};
-obs.push(Object.assign(o,{x:W+40,ph2:Math.random()*6.28}))}
-function spawnCoins(){const n=3+Math.floor(Math.random()*4),baseY=groundY-(70+Math.random()*90);
-for(let i=0;i<n;i++)pips.push({x:W+40+i*30,y:baseY-Math.sin(i/2)*26,r:11,ph:Math.random()*6.28,life:0})}
-
-function runnerHit(o){if(bear.inv>0)return;
-if(shieldOn){shieldOn=false;sfx('shield');haptic('light');shakeR=6;
-obs.splice(obs.indexOf(o),1);
-for(let i=0;i<12;i++)parts.push({x:o.x,y:o.y-o.h/2,vx:(Math.random()-.5)*4,vy:-Math.random()*4,l:24,c:'#9ad7ff'});
-return}
-dieRunner()}
-function dieRunner(){rOver=true;sfx('boom');haptic('heavy');shakeR=10;
-for(let i=0;i<26;i++)parts.push({x:bear.x,y:bear.y+groundY-20,vx:(Math.random()-.5)*7,vy:-Math.random()*6-1,l:34+Math.random()*20,c:i%2?'#ff8a65':'#ffca28'});
-const gained=Math.floor(runCoins*coinValue()*colBonus()*getMult());
-state.wallet+=gained;state.stats.games++;state.stats.coinsEarned+=gained;
-state.best=Math.max(state.best||0,Math.floor(score));
-qAdd('coins',Math.floor(runCoins));qAdd('runs',1);
-seasonAdd('s_runs',1);seasonMax('s_score',Math.floor(score));
-addPassXP(1);checkLevelGifts();
-$('final-score').innerText=`Счёт: ${Math.floor(score)} · собрано 🪙 ${gained}${state.best===Math.floor(score)?' · НОВЫЙ РЕКОРД!':''}`;
-saveState();syncToServer();
-setTimeout(()=>{if(rOver)$('game-over').style.display='block'},650);
-updateHUD()}
-
-function runnerTick(){if(!isRunner||paused)return;
-const mod=dailyMod();
-const coinMul=mod.id==='lucky'?1.5:(mod.id==='storm'?1.25:1);
-const magMul=mod.id==='harvest'?1.5:1;
-// ——— плавный разгон: цель растёт по кривой от счёта, скорость мягко догоняет ———
-const target=BASE_SPEED+(MAX_SPEED-BASE_SPEED)*(1-Math.exp(-score/3500));
-speed+=(target-speed)*.035;
-if(rOver)speed=Math.max(0,speed*.9);
-dist+=speed;tick++;score+=speed*.12;
-if(shieldOn)shieldT++;
-bgPhase+=speed*.01;
-// спавн
-spawnGap-=speed;
-if(spawnGap<=0&&!rOver){spawnObs();spawnGap=(210+Math.random()*(330-Math.min(160,speed*14)))/speed*4;
-if(Math.random()<.75)spawnCoins()}
-// медведь
-bear.vy+=GRAV;bear.y+=bear.vy;
-if(bear.y>=0){if(!bear.onG){bear.sq=1.25;sfxTickLand()}bear.y=0;bear.vy=0;bear.onG=true;bear.jumps=0}
-bear.sq+=(1-bear.sq)*.12;
-bear.rot=bear.onG?0:Math.max(-.35,Math.min(.5,bear.vy*.045));
-bear.inv=Math.max(0,bear.inv-1);
-if(bear.onG&&tick%4===0)parts.push({x:bear.x-8,y:groundY,vx:-1-Math.random(),vy:-Math.random()*1.2,l:16,c:'#8d6e63'});
-// препятствия
-for(let i=obs.length-1;i>=0;i--){const o=obs[i];o.x-=speed;
-if(o.k==='bird'){o.ph2+=.1;o.y+=Math.sin(o.ph2)*.6}
-if(o.x<-60){obs.splice(i,1);continue}
-const bx=bear.x,by=bear.y+groundY-18;
-if(bx+16>o.x-o.w/2&&bx-16<o.x+o.w/2&&by>o.y-o.h-8&&bear.y+groundY>o.y-o.h)runnerHit(o)}
-// монеты
-for(let i=pips.length-1;i>=0;i--){const p=pips[i];p.x-=speed;p.ph+=.12;
-const mr=magnetRadius()*magMul;
-const dx=bear.x-p.x,dy=(bear.y+groundY-18)-p.y,d2=Math.sqrt(dx*dx+dy*dy);
-if(d2<mr){p.x+=dx*.16;p.y+=dy*.16}
-if(d2<26&&!rOver){pips.splice(i,1);runCoins++;state.stats.coinsEarned?0:0;sfx('coin');
-parts.push({x:p.x,y:p.y,vx:0,vy:-2,l:26,txt:'+'+(coinMul>1?Math.round(coinMul*10)/10:'1'),c:'#f1c40f'});
-continue}
-if(p.x<-30)pips.splice(i,1)}
-// частицы
-for(let i=parts.length-1;i>=0;i--){const pt=parts[i];pt.x+=(pt.vx||0)*(pt.txt?0:speed*.3)-speed*.55*(pt.txt?1:0);pt.y+=(pt.vy||0);pt.vy=(pt.vy||0)+.08;if(pt.txt)pt.vy=-.6;pt.l--;if(pt.l<=0)parts.splice(i,1)}
-if(shakeR>0)shakeR*=.88;
-if(tick%12===0)updateRunnerHud()}
-
-function sfxTickLand(){if(tick%2===0)noise(.02,.06)}
-
-function updateRunnerHud(){$('rh-score').innerText='Счёт: '+Math.floor(score);
-$('rh-best').innerText='Рекорд: '+Math.floor(state.best||0);
-$('rh-coins').innerText='🪙 '+runCoins+(shieldOn?' · 🛡 щит':'')}
-
-// ——— отрисовка раннера ———
-function drawRunner(){ctx.clearRect(0,0,W,H);
-const sky=ctx.createLinearGradient(0,0,0,H);
-sky.addColorStop(0,'#0b1026');sky.addColorStop(.55,'#1b2a4a');sky.addColorStop(1,'#0e1526');
-ctx.fillStyle=sky;ctx.fillRect(0,0,W,H);
-ctx.save();
-if(shakeR>0.3)ctx.translate((Math.random()-.5)*shakeR,(Math.random()-.5)*shakeR);
-// звёзды
-stars.forEach(s=>{s.p+=.02*s.sp;ctx.globalAlpha=.4+.6*Math.abs(Math.sin(s.p));
-ctx.fillStyle='#dfe9ff';ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,6.28);ctx.fill()});
-ctx.globalAlpha=1;
-// луна
-ctx.fillStyle='rgba(230,240,255,.9)';ctx.beginPath();ctx.arc(W*.8,H*.14,26,0,6.28);ctx.fill();
-ctx.fillStyle='#1b2a4a';ctx.beginPath();ctx.arc(W*.8+10,H*.12,22,0,6.28);ctx.fill();
-// облака
-clouds.forEach(c=>{c.x-=speed*.12*c.s;if(c.x<-c.w*2)c.x=W+c.w;
-ctx.fillStyle='rgba(255,255,255,.06)';ctx.beginPath();ctx.ellipse(c.x,c.y,c.w,c.w*.3,0,0,6.28);ctx.fill()});
-// дальние горы
-ctx.fillStyle='#141d33';ctx.beginPath();ctx.moveTo(0,groundY);
-for(let x=0;x<=W;x+=60){const h=40+Math.sin((x+dist*.2)*.008)*32;ctx.lineTo(x,groundY-h)}
-ctx.lineTo(W,groundY);ctx.fill();
-// земля
-ctx.fillStyle='#1c2436';ctx.fillRect(0,groundY,W,H-groundY);
-ctx.fillStyle='#28324a';
-for(let x=-(dist%40);x<W;x+=40)ctx.fillRect(x,groundY,20,4);
-ctx.strokeStyle='rgba(127,212,255,.12)';ctx.beginPath();ctx.moveTo(0,groundY);ctx.lineTo(W,groundY);ctx.stroke();
-// препятствия
-obs.forEach(o=>{const sway=o.k==='bird'?Math.sin(o.ph2*2)*3:0;
-if(o.k==='tree'){ctx.fillStyle='#5d4037';ctx.fillRect(o.x-5,o.y-o.h,10,o.h);
-ctx.fillStyle='#2e7d32';ctx.beginPath();ctx.arc(o.x,o.y-o.h-10+sway*.2,20,0,6.28);ctx.arc(o.x-14,o.y-o.h+2,14,0,6.28);ctx.arc(o.x+14,o.y-o.h+2,14,0,6.28);ctx.fill()}
-else if(o.k==='rock'){ctx.fillStyle='#546e7a';ctx.beginPath();ctx.moveTo(o.x-o.w/2,o.y);
-ctx.lineTo(o.x-o.w*.2,o.y-o.h);ctx.lineTo(o.x+o.w*.25,o.y-o.h*.8);ctx.lineTo(o.x+o.w/2,o.y);ctx.fill()}
-else if(o.k==='spike'){ctx.fillStyle='#b0bec5';ctx.beginPath();ctx.moveTo(o.x-o.w/2,o.y);
-ctx.lineTo(o.x,o.y-o.h);ctx.lineTo(o.x+o.w/2,o.y);ctx.fill()}
-else{ctx.fillStyle='#8d6e63';ctx.beginPath();ctx.ellipse(o.x+sway,o.y-o.h/2,o.w/2,o.h/2,0,0,6.28);ctx.fill();
-ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(o.x+8+sway,o.y-o.h/2-5,3,0,6.28);ctx.fill();
-ctx.strokeStyle='#8d6e63';ctx.lineWidth=2;
-ctx.beginPath();ctx.moveTo(o.x-14+sway,o.y-o.h/2);ctx.lineTo(o.x-24+Math.sin(o.ph2*3)*8,o.y-o.h/2-6);
-ctx.moveTo(o.x+14+sway,o.y-o.h/2);ctx.lineTo(o.x+24-Math.sin(o.ph2*3)*8,o.y-o.h/2-6);ctx.stroke()}});
-// монеты
-pips.forEach(p=>{ctx.save();ctx.translate(p.x,p.y);ctx.scale(Math.abs(Math.cos(p.ph))*.7+.3,1);
-ctx.fillStyle='#f1c40f';ctx.shadowColor='#f1c40f';ctx.shadowBlur=10;
-ctx.beginPath();ctx.arc(0,0,p.r,0,6.28);ctx.fill();
-ctx.fillStyle='#f9e07f';ctx.beginPath();ctx.arc(0,0,p.r*.6,0,6.28);ctx.fill();ctx.restore()});
-// частицы
-parts.forEach(pt=>{if(pt.l<=0)return;
-if(pt.txt){ctx.globalAlpha=Math.min(1,pt.l/20);ctx.fillStyle=pt.c;ctx.font='bold 12px Segoe UI';
-ctx.fillText(pt.txt,pt.x,pt.y)}
-else{ctx.globalAlpha=Math.min(1,pt.l/24);ctx.fillStyle=pt.c;
-ctx.beginPath();ctx.arc(pt.x,pt.y,2.4,0,6.28);ctx.fill()}});
-ctx.globalAlpha=1;
-// медведь
-const s=skinOf(),bx=bear.x,by=bear.y+groundY-18;
-ctx.save();ctx.translate(bx,by);ctx.rotate(bear.rot);
-const sqx=2-bear.sq;
-ctx.scale(sqx,bear.sq);
-if(shieldOn){ctx.strokeStyle='rgba(154,215,255,'+(.5+.3*Math.sin(tick*.2))+')';ctx.lineWidth=3;
-ctx.beginPath();ctx.arc(0,0,26+Math.sin(tick*.2)*2,0,6.28);ctx.stroke()}
-ctx.font='36px serif';ctx.textAlign='center';ctx.textBaseline='middle';
-ctx.fillText(s.emoji,0,0);ctx.restore();
-ctx.restore()}
-
-function runnerLoop(){if(isRunner){runnerTick();drawRunner();
-if(!rOver)requestAnimationFrame(runnerLoop)}}
-// ================= КРАШ · ЖИВОЙ =================
+<div id="duels" class="modal">
+  <button class="close-modal" onclick="closeModal('duels')">✕</button>
+  <div class="modal-header" style="color:#e74c3c">🗡 Дуэли</div>
+  <div class="modal-sub">Вызовей соперника на ставку в краше: кто заберёт больше — забирает банк.</div>
+  <div id="duels-container" style="width:100%;display:flex;flex-direction:column;align-items:center"></div>
+</div>
+// ================= КРАШ =================
 const cv2=$('crash-canvas'),cctx=cv2.getContext('2d');
 let cW=0,cH=0;
 function resizeCrash(){cW=window.innerWidth;cH=window.innerHeight;
 cv2.width=cW*DPR;cv2.height=cH*DPR;cv2.style.width=cW+'px';cv2.style.height=cH+'px';
 cctx.setTransform(DPR,0,0,DPR,0,0)}
-window.addEventListener('resize',()=>{if(isCrash)resizeCrash();if(isCatch)resizeCatch()});
+window.addEventListener('resize',()=>{if(isCrash)resizeCrash()});
 
 let isCrash=false,crashPhase='wait',cMult=1,crashAt=2,cFlyT=0,cWaitT=0,cCd=0;
-let cActive=false,cashed=false,crashBet=0,cHist=[],cOnline=12,cShake=0,cFlash=0;
+let cActive=false,cashed=false,crashBet=0,cHist=[],cShake=0,cFlash=0;
 let curvePts=[],shards=[],lastTickMult=1,cStarsBg=[];
+const CRASH_MAX=5;
 
-function initCrashBg(){cStarsBg=[];for(let i=0;i<60;i++)cStarsBg.push({x:Math.random()*cW,y:Math.random()*cH*.8,r:Math.random()*1.3+.3,p:Math.random()*6.28})}
+function initCrashBg(){cStarsBg=[];for(let i=0;i<60;i++)cStarsBg.push({x:Math.random()*cW,y:Math.random()*cH*.75,r:Math.random()*1.3+.3,p:Math.random()*6.28})}
 function openCrash(){sfx('click');$('menu').style.display='none';$('crash-screen').style.display='flex';
 isCrash=true;resizeCrash();initCrashBg();cHist=[];renderHist();crashWait();updateHUD()}
 function exitCrash(){engineStop();isCrash=false;crashPhase='off';$('crash-screen').style.display='none';$('menu').style.display='flex';updateHUD()}
 function setBet(v){const i=$('crash-bet');i.value=v==='max'?String(Math.max(1,state.stars)):String(v)}
 function pushHist(m){cHist.unshift(m);if(cHist.length>12)cHist.pop();renderHist()}
 function renderHist(){const c=$('crash-hist');if(!c)return;c.innerHTML='';
-cHist.forEach(m=>{const col=m<2?'#4cd137':(m<5?'#f1c40f':'#e74c3c');
+cHist.forEach(m=>{const col=m<2?'#4cd137':(m<4?'#f1c40f':'#e74c3c');
 c.innerHTML+=`<div class="hist-badge" style="color:${col}">x${m.toFixed(2)}</div>`})}
 
 function crashWait(){crashPhase='wait';cWaitT=280;cActive=false;cashed=false;cMult=1;lastTickMult=1;
 engineStop();curvePts=[];shards=[];cShake=0;cFlash=0;
-$('crash-multiplier').style.textShadow='0 0 30px #f1c40f';
 $('crash-multiplier').classList.remove('pulsing')}
 
 function crashTryBet(){const b=parseInt($('crash-bet').value)||0;
 if(b<1){toast('Ставка от 1 ⭐',true);return}
 if(state.stars<b){toast(`Не хватает звёзд! У тебя ${state.stars} ⭐`,true);haptic('heavy');
-$('crash-action-btn').className='crash-action-btn btn-insufficient';$('crash-action-btn').innerText='Мало звёзд';return}
+const btn=$('crash-action-btn');btn.className='crash-action-btn btn-insufficient';btn.innerText='Мало звёзд';return}
 state.stars-=b;crashBet=b;cActive=true;cashed=false;
 qAdd('crash',1);seasonAdd('s_crash',1);addPassXP(1);
 saveState();syncToServer();updateHUD();sfx('click');haptic('light');
@@ -1340,15 +1046,20 @@ else haptic('light');
 $('crash-multiplier').classList.remove('pulsing')}
 
 function crashTick(){if(!isCrash)return;
-if(Math.random()<.006){cOnline=5+Math.floor(Math.random()*36);
-$('crash-online').innerText='🟢 '+cOnline+' играют'}
+// настоящий онлайн с сервера — раз в 10 секунд
+if(!window.__onT||Date.now()-window.__onT>10000){window.__onT=Date.now();
+apiGet('/api/online').then(r=>{const n=(r&&r.ok)?(r.online||null):null;
+$('crash-online').innerText=n?('🟢 '+n+' играют'):'🟢 —'}).catch(()=>{$('crash-online').innerText='🟢 —'})}
 if(crashPhase==='wait'){cWaitT--;
+// звуковой отсчёт: последние 3 секунды — тик каждую секунду
+if(cWaitT>0&&cWaitT<=180&&cWaitT%60===0)sfx('tick');
 const b=$('crash-bet'),btn=$('crash-action-btn');
 if(cWaitT>60){btn.className='crash-action-btn btn-start';
 btn.innerText=(cActive?'Ставка принята ⭐'+crashBet:'СТАВКА ⭐ '+(parseInt(b.value)||0))}
-else{btn.className='crash-action-btn btn-cooldown';btn.innerText='🚀 Полёт через '+(cWaitT/60).toFixed(1)+'с'}
+else{btn.className='crash-action-btn btn-cooldown';
+btn.innerText='🚀 Полёт через '+(cWaitT/60).toFixed(1)+'с'+(cWaitT<=180?' ▸ тик!':'')}
 if(cWaitT<=0){crashPhase='fly';cFlyT=0;cMult=1;curvePts=[];lastTickMult=1;
-crashAt=Math.max(1.01,Math.floor((0.99/(1-Math.random()))*100)/100);
+crashAt=Math.max(1.01,Math.min(CRASH_MAX,Math.floor((0.99/(1-Math.random()))*100)/100));
 sfx('launch');engineStart();$('crash-multiplier').classList.add('pulsing')}}
 else if(crashPhase==='fly'){cFlyT++;
 cMult=Math.exp(.0016*cFlyT);
@@ -1363,14 +1074,13 @@ mEl.style.textShadow=cMult>=2?`0 0 ${Math.min(46,12+(cMult-2)*8)}px #f1c40f`:'0 
 if(cActive&&!cashed){const btn=$('crash-action-btn');
 btn.className='crash-action-btn btn-cashout';
 btn.innerText='Забрать x'+cMult.toFixed(2)+' ⭐'}
-else if(cActive){const btn=$('crash-action-btn');btn.className='crash-action-btn btn-cooldown';btn.innerText='✅ Забрано'}
+else if(cashed){const btn=$('crash-action-btn');btn.className='crash-action-btn btn-cooldown';btn.innerText='✅ Забрано'}
 else{const btn=$('crash-action-btn');btn.className='crash-action-btn btn-cooldown';btn.innerText='Ракета летит…'}
 if(cMult>=crashAt)crashExplode()}
 else if(crashPhase==='boom'){cCd--;cShake*=.9;cFlash*=.9;
 const mEl=$('crash-multiplier');
 mEl.innerText='💥 x'+cMult.toFixed(2);
 mEl.style.textShadow='0 0 20px #e74c3c';
-if(cActive){}else{}
 if(cCd<=0)crashWait()}}
 
 function drawCrash(){cctx.clearRect(0,0,cW,cH);
@@ -1382,11 +1092,9 @@ if(cShake>.4)cctx.translate((Math.random()-.5)*cShake,(Math.random()-.5)*cShake)
 cStarsBg.forEach(s=>{s.p+=.02;cctx.globalAlpha=.35+.55*Math.abs(Math.sin(s.p));
 cctx.fillStyle='#dfe9ff';cctx.beginPath();cctx.arc(s.x,s.y,s.r,0,6.28);cctx.fill()});
 cctx.globalAlpha=1;
-// сетка-ориентир
 cctx.strokeStyle='rgba(255,255,255,.05)';cctx.lineWidth=1;
 for(let gx=0;gx<cW;gx+=80){cctx.beginPath();cctx.moveTo(gx,0);cctx.lineTo(gx,cH);cctx.stroke()}
 for(let gy=cH;gy>0;gy-=90){cctx.beginPath();cctx.moveTo(0,gy);cctx.lineTo(cW,gy);cctx.stroke()}
-// кривая
 if(curvePts.length>1||crashPhase==='fly'){const baseY=cH*.82;
 if(crashPhase==='fly'){const px=Math.min(cW*.92,40+cFlyT*90);
 const py=baseY-Math.min(cH*.6,(Math.pow(cMult,1.12)-1)*cH*.17);
@@ -1402,78 +1110,19 @@ cctx.save();cctx.translate(h.x+(Math.random()-.5)*amp,h.y-14+(Math.random()-.5)*
 cctx.rotate((Math.random()-.5)*.12);
 cctx.font='38px serif';cctx.textAlign='center';cctx.fillText('🚀',0,0);
 cctx.restore()}}}
-// осколки взрыва
 shards.forEach(s=>{s.x+=s.vx;s.y+=s.vy;s.vy+=.12;s.l--;
 if(s.l<=0)return;cctx.globalAlpha=Math.min(1,s.l/30);
 cctx.fillStyle=s.c;cctx.beginPath();cctx.arc(s.x,s.y,s.r,0,6.28);cctx.fill()});
 cctx.globalAlpha=1;
-// вспышка
 if(cFlash>.02){cctx.fillStyle='rgba(255,255,255,'+cFlash+')';cctx.fillRect(0,0,cW,cH)}
 cctx.restore()}
-
-// ================= ЛОВЕЦ =================
-const cv3=$('catch-canvas'),cctx3=cv3.getContext('2d');
-let isCatch=false,catchRun=false,cTimer=45*60,cCoins=0,cStars=0,cItems=[],basketX=0,cSpawnT=0,cTimeN=0;
-let c3W=0,c3H=0;
-function resizeCatch(){c3W=window.innerWidth;c3H=window.innerHeight;
-cv3.width=c3W*DPR;cv3.height=c3H*DPR;cv3.style.width=c3W+'px';cv3.style.height=c3H+'px';
-cctx3.setTransform(DPR,0,0,DPR,0,0);basketX=c3W/2}
-function openCatch(){sfx('click');$('menu').style.display='none';$('catch-screen').style.display='flex';
-isCatch=true;catchRun=false;resizeCatch();
-$('catch-intro').style.display='flex';$('catch-end').style.display='none';
-$('catch-res').innerText='';catchHud()}
-function catchStart(){sfx('beep');catchRun=true;cTimer=45*60;cCoins=0;cStars=0;cItems=[];cSpawnT=0;
-$('catch-intro').style.display='none';$('catch-end').style.display='none'}
-function exitCatch(){if(catchRun)endCatch();
-isCatch=false;catchRun=false;$('catch-screen').style.display='none';$('menu').style.display='flex'}
-function catchHud(){$('catch-timer').innerText=Math.ceil(cTimer/60)+'с';
-$('catch-score').innerText='🪙 '+cCoins+' · ⭐ '+cStars}
-const CATCH_TYPES=[
-{e:'🪙',w:50,fn:()=>{cCoins+=1;sfx('coin')}},
-{e:'🎁',w:12,fn:()=>{cCoins+=3;sfx('gift')}},
-{e:'💎',w:8,fn:()=>{cCoins+=5;sfx('gem')}},
-{e:'⭐',w:4,fn:()=>{cStars+=1;sfx('cash')}},
-{e:'💣',w:14,fn:()=>{cCoins=Math.max(0,cCoins-20);sfx('bomb');haptic('heavy')}}];
-function spawnCatch(){const total=CATCH_TYPES.reduce((s,t)=>s+t.w,0);
-let r=Math.random()*total,ty=CATCH_TYPES[0];
-for(const t of CATCH_TYPES){r-=t.w;if(r<=0){ty=t;break}}
-cItems.push({x:30+Math.random()*(c3W-60),y:-30,vy:2.2+Math.random()*1.6,ty:ty,ph:Math.random()*6.28})}
-function endCatch(){if(!catchRun)return;catchRun=false;
-const gained=Math.floor(cCoins*coinValue()*colBonus()*getMult());
-state.wallet+=gained;state.stars+=cStars;
-qAdd('catch',1);addPassXP(1);saveState();syncToServer();updateHUD();
-$('catch-res').innerText=`🪙 +${gained} · ⭐ +${cStars}`;
-$('catch-end').style.display='block';sfx('cash');haptic('success')}
-function catchTick(){if(!isCatch)return;
-if(catchRun){cTimer--;cSpawnT--;cTimeN++;
-if(cTimer<=0)endCatch();
-if(cSpawnT<=0){spawnCatch();cSpawnT=Math.max(16,34-Math.floor((45*60-cTimer)/300))}
-for(let i=cItems.length-1;i>=0;i--){const it=cItems[i];it.y+=it.vy;it.ph+=.1;
-if(it.y>c3H-96&&Math.abs(it.x-basketX)<46){cItems.splice(i,1);it.ty.fn();continue}
-if(it.y>c3H+30)cItems.splice(i,1)}
-if(cTimeN%8===0)catchHud()}}
-function drawCatch(){cctx3.clearRect(0,0,c3W,c3H);
-const bg=cctx3.createLinearGradient(0,0,0,c3H);
-bg.addColorStop(0,'#1a0a2e');bg.addColorStop(1,'#0a0a1e');
-cctx3.fillStyle=bg;cctx3.fillRect(0,0,c3W,c3H);
-for(let i=0;i<26;i++){const sx=(i*137)%c3W,sy=(i*89)%c3H;
-cctx3.globalAlpha=.3+.4*Math.abs(Math.sin(cTimeN*.02+i));
-cctx3.fillStyle='#dfe9ff';cctx3.beginPath();cctx3.arc(sx,sy,1.2,0,6.28);cctx3.fill()}
-cctx3.globalAlpha=1;
-cItems.forEach(it=>{cctx3.font='30px serif';cctx3.textAlign='center';
-cctx3.fillText(it.ty.e,it.x,it.y)});
-cctx3.font='34px serif';cctx3.fillText('🧺',basketX,c3H-70)}
 
 // ================= ВВОД =================
 document.addEventListener('touchstart',e=>{if(isRunner&&!paused&&!rOver&&!(e.target&&e.target.closest('button')))runnerJump()},{passive:true});
 document.addEventListener('mousedown',()=>{if(isRunner&&!paused&&!rOver)runnerJump()});
 document.addEventListener('keydown',e=>{if((e.code==='Space'||e.code==='ArrowUp')&&isRunner&&!paused&&!rOver){runnerJump();e.preventDefault()}});
-document.addEventListener('touchmove',e=>{if(!isCatch||!catchRun)return;const t=e.touches&&e.touches[0];
-if(t)basketX=Math.max(40,Math.min(c3W-40,t.clientX))},{passive:true});
-document.addEventListener('mousemove',e=>{if(!isCatch||!catchRun)return;
-basketX=Math.max(40,Math.min(c3W-40,e.clientX))});
 
-// ================= МЕНЮ-ФОН =================
+// ================= ФОН МЕНЮ =================
 let mSnow=[],mFall=[],mT=0;
 function initMenuBg(){mSnow=[];mFall=[];
 for(let i=0;i<60;i++)mSnow.push({x:Math.random()*W,y:Math.random()*H,r:1+Math.random()*2,sp:.4+Math.random()*.9,dr:(Math.random()-.5)*.4})}
@@ -1482,51 +1131,45 @@ ctx.clearRect(0,0,W,H);
 const sky=ctx.createLinearGradient(0,0,0,H);
 sky.addColorStop(0,'#0a0e1e');sky.addColorStop(.6,'#141c33');sky.addColorStop(1,'#0a0f1c');
 ctx.fillStyle=sky;ctx.fillRect(0,0,W,H);
-// две луны
 ctx.fillStyle='rgba(230,240,255,.85)';ctx.beginPath();ctx.arc(W*.78,H*.12,30,0,6.28);ctx.fill();
 ctx.fillStyle='#141c33';ctx.beginPath();ctx.arc(W*.78+11,H*.10,25,0,6.28);ctx.fill();
 ctx.fillStyle='rgba(230,240,255,.4)';ctx.beginPath();ctx.arc(W*.2,H*.2,16,0,6.28);ctx.fill();
 ctx.fillStyle='#141c33';ctx.beginPath();ctx.arc(W*.2-6,H*.19,13,0,6.28);ctx.fill();
-// звёзды
 for(let i=0;i<40;i++){const sx=(i*211)%W,sy=(i*127)%(H*.5);
 ctx.globalAlpha=.3+.5*Math.abs(Math.sin(mT*.03+i));
 ctx.fillStyle='#dfe9ff';ctx.fillRect(sx,sy,1.4,1.4)}
 ctx.globalAlpha=1;
-// падающие звёзды
 if(Math.random()<.008)mFall.push({x:Math.random()*W,y:Math.random()*H*.3,vx:3+Math.random()*3,vy:2+Math.random()*2,l:36});
 mFall.forEach(f=>{f.x+=f.vx;f.y+=f.vy;f.l--;
 if(f.l>0){ctx.strokeStyle='rgba(159,255,220,'+(f.l/36)+')';ctx.lineWidth=1.6;
 ctx.beginPath();ctx.moveTo(f.x,f.y);ctx.lineTo(f.x-f.vx*4,f.y-f.vy*4);ctx.stroke()}});
 mFall=mFall.filter(f=>f.l>0);
-// снег
 mSnow.forEach(s=>{s.y+=s.sp;s.x+=s.dr;
 if(s.y>H){s.y=-6;s.x=Math.random()*W}
 ctx.globalAlpha=.55;ctx.fillStyle='#e3f2fd';
 ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,6.28);ctx.fill()});
 ctx.globalAlpha=1;
-// холмы и сугробы
 ctx.fillStyle='#111a2e';ctx.beginPath();ctx.moveTo(0,H*.8);
 for(let x=0;x<=W;x+=70)ctx.lineTo(x,H*.8-Math.sin(x*.008+mT*.002)*26);
 ctx.lineTo(W,H);ctx.lineTo(0,H);ctx.fill();
 ctx.fillStyle='#16213a';ctx.fillRect(0,H-26,W,26)}
 
-// ================= ГЛАВНЫЙ ЦИКЛ И ЗАПУСК =================
+// ================= ЗАПУСК =================
 function inviteFriend(){sfx('click');
 const link='https://t.me/'+BOT_USERNAME+'?start='+myUid();
 const txt='Заходи в Мишку 🐻 — гоняем на скинах и подарках!';
 try{tg.openTelegramLink('https://t.me/share/url?url='+encodeURIComponent(link)+'&text='+encodeURIComponent(txt))}
-catch(e){try{navigator.clipboard.writeText(link);toast('Ссылка скопирована!')}catch(e2){toast('Ссылка: '+link)}}}
+catch(e){toast('Ссылка: '+link)}}
 
 function mainLoop(){mT++;
 if(isRunner){runnerTick();drawRunner()}
 else if(isCrash){crashTick();drawCrash()}
-else if(isCatch){catchTick();drawCatch()}
 else menuTick();
 requestAnimationFrame(mainLoop)}
 
 resizeCv();initBg();initMenuBg();
 $('runner-hud').style.display='none';
-$('crash-online').innerText='🟢 12 играют';
+$('crash-online').innerText='🟢 …';
 updateHUD();ensureQuestDay();
 setMusic('menu');
 requestAnimationFrame(mainLoop);
